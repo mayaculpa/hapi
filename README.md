@@ -1,6 +1,6 @@
 # HAPI 
 Hydro­ponic Automa­tion Plat­form Ini­tia­tive (HAPI) Repo
-
+To learn more about the HAPI project, please visit [HAPI HQ](http://hapihq.com)
 # Contributing 
 
 If you would like to help us with our code, follow the following steps.
