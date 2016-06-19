@@ -1,3 +1,4 @@
+![sticker1.png](https://github.com/mayaculpa/hapi/blob/master/images/sticker1.png "Logo")
 # HAPI 
 Welcome to the Hydro­ponic Automa­tion Plat­form Ini­tia­tive (HAPI) Repository.  
 To learn more about the HAPI project, please visit [HAPI HQ](http://hapihq.com)
