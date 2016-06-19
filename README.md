@@ -1,5 +1,5 @@
 # HAPI 
-Welcome to the Hydro­ponic Automa­tion Plat­form Ini­tia­tive (HAPI) Repository
+Welcome to the Hydro­ponic Automa­tion Plat­form Ini­tia­tive (HAPI) Repository.  
 To learn more about the HAPI project, please visit [HAPI HQ](http://hapihq.com)
 # Contributing 
 
