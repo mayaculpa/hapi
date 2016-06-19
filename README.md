@@ -1,9 +1,9 @@
 # HAPI 
-Hydro­ponic Automa­tion Plat­form Ini­tia­tive (HAPI) Repo
+Welcome to the Hydro­ponic Automa­tion Plat­form Ini­tia­tive (HAPI) Repository
 To learn more about the HAPI project, please visit [HAPI HQ](http://hapihq.com)
 # Contributing 
 
-If you would like to help us with our code, follow the following steps.
+If you would like to help us with our code, follow these steps.
 
 1. Fork the repo  
 ![Fork.png](https://github.com/mayaculpa/hapi/blob/master/images/Fork.png "Fork")
