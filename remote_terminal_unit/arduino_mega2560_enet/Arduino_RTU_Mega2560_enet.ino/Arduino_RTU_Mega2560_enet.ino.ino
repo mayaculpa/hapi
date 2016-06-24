@@ -423,7 +423,7 @@ void setup() {
   inputString.reserve(200);  // reserve 200 bytes for the inputString:
   // Initialize Digital Pins for Input or Output - From the Array pinControl
 
-  for (int x=71; x<70; x++) {
+  for (int x=0; x<70; x++) {
       if (pinControl[x]==1) {   pinMode(x, INPUT);}        // Digital Input
       if (pinControl[x]==2) {   pinMode(x, INPUT_PULLUP);} // Digital Inputs w/ Pullup Resistors
       if (pinControl[x]==3) {   pinMode(x, OUTPUT);}       // Digital Outputs
