@@ -21,3 +21,6 @@ VALUES (7, "Log Data", "RTU1", "env", 'minute', 1, "", 1);
 
 INSERT INTO interval_schedule(job_id, job_name, rtuid, command, time_unit, interval, at_time, enabled)
 VALUES (8, "Log Data", "RTU1", "sta", 'minute', 60, "", 1);
+
+INSERT INTO interval_schedule(job_id, job_name, rtuid, command, time_unit, interval, at_time, enabled)
+VALUES (9, "Log Weather", "virtual", "get_weather()", 'minute', 5, "", 1);

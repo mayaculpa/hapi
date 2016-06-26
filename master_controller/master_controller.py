@@ -1,4 +1,25 @@
 # -*- coding: utf-8 -*-
+#!/usr/bin/python
+
+# HAPI Master Controller v1.0
+# Author: Tyler Reed
+# Release: June 24th, 2016
+#*********************************************************************
+#Copyright 2016 Maya Culpa, LLC
+#
+#This program is free software: you can redistribute it and/or modify
+#it under the terms of the GNU General Public License as published by
+#the Free Software Foundation, either version 3 of the License, or
+#(at your option) any later version.
+#
+#This program is distributed in the hope that it will be useful,
+#but WITHOUT ANY WARRANTY; without even the implied warranty of
+#MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#GNU General Public License for more details.
+#
+#You should have received a copy of the GNU General Public License
+#along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#*********************************************************************
 
 import sqlite3
 import telnetlib
@@ -7,10 +28,50 @@ import operator
 import time
 import schedule
 import datetime
+import urllib2
+import json
+
+# wunderground key ffb22aac10a07be6
 
 rtus = []
 reload(sys)
 sys.setdefaultencoding('UTF-8')
+
+def get_weather():
+    response = ""
+    f = urllib2.urlopen('http://api.wunderground.com/api/ffb22aac10a07be6/geolookup/conditions/q/OH/Columbus.json')
+    json_string = f.read()
+    parsed_json = json.loads(json_string)
+    #location = parsed_json['location']['city']
+    #temp_f = parsed_json['current_observation']['temp_f']
+    #temp_c = parsed_json['current_observation']['temp_c']
+    #rel_hmd = parsed_json['current_observation']['relative_humidity']
+    #pressure = parsed_json['current_observation']['pressure_mb']
+    #print "Current weather in %s" % (location)
+    #print "    Temperature is: %sF, %sC" % (temp_f, temp_c)
+    #print "    Relative Humidity is: %s" % (rel_hmd)
+    #print "    Atmospheric Pressure is: %smb" % (pressure)
+    response = parsed_json['current_observation']
+    f.close()
+    return response
+
+def get_image():
+    response = ""
+    f = urllib2.urlopen('http://api.wunderground.com/api/ffb22aac10a07be6/geolookup/conditions/q/OH/Columbus.json')
+    json_string = f.read()
+    parsed_json = json.loads(json_string)
+    #location = parsed_json['location']['city']
+    #temp_f = parsed_json['current_observation']['temp_f']
+    #temp_c = parsed_json['current_observation']['temp_c']
+    #rel_hmd = parsed_json['current_observation']['relative_humidity']
+    #pressure = parsed_json['current_observation']['pressure_mb']
+    #print "Current weather in %s" % (location)
+    #print "    Temperature is: %sF, %sC" % (temp_f, temp_c)
+    #print "    Relative Humidity is: %s" % (rel_hmd)
+    #print "    Atmospheric Pressure is: %smb" % (pressure)
+    response = parsed_json['current_observation']
+    f.close()
+    return response
 
 class RemoteTerminalUnit(object):
     def __init__(self):
@@ -39,6 +100,23 @@ class PinMode(object):
         self.mode = 0
         self.default_value = 0
         self.pos = 0
+
+class Asset(object):
+    def __init__(self):
+        self.asset_id = -1
+        self.rtuid = ""
+        self.abbreviation = ""
+        self.name = ""
+        self.pin = ""
+        self.unit = ""
+
+def push_log_data(sensor_name):
+    log = RawLog()
+    log.read_raw_log()
+    for entry in log.log_entries:
+        data = json.loads(entry.data)
+        print data.rtuid, data.timestamp, sensor_name, data[sensor_name]
+
 
 def get_rtu_list():
     rtu_list = []
@@ -81,7 +159,30 @@ def get_pin_modes(rtu):
 
     return
 
+def get_assets():
+    assets = []
+    try:
+        conn = sqlite3.connect('hapi.db')
+        c=conn.cursor()
+        sql = "SELECT asset_id, rtuid, abbreviation, name, pin, unit FROM assets;"
+        rows = c.execute(sql)
+        for field in rows:
+            asset = Asset()
+            asset.asset_id = field[0]
+            asset.rtuid = field[1]
+            asset.abbreviation = field[2]
+            asset.name = field[3]
+            asset.pin = field[4]
+            asset.unit = field[5]
+            assets.append(asset)
+        conn.close()
+    except Exception, excpt:
+        print "Error loading asset table. %s", excpt
+
+    return assets
+
 def validate_environment(rtus):
+    print "Validating environment..."
     problem_rtus = []
     for rtu in rtus:
         if rtu.online == 1:
@@ -127,7 +228,7 @@ def validate_environment(rtus):
                 print "RTU", rtu.rtuid, "has a non-congruent pin mode."
                 problem_rtus.append(rtu)
             else:
-                print "Pin mode congruence between", rtu.rtuid, "and the database."
+                print "Pin mode congruence verified between", rtu.rtuid, "and the database."
 
     return problem_rtus
 
@@ -187,51 +288,117 @@ def prepare_jobs(jobs):
 
 def run_job(job):
     print 'Running', job.command, "on", job.rtuid
+    command = ""
+    response = ""
     job_rtu = None
-    for rtu_el in rtus:
-        if rtu_el.rtuid == job.rtuid:
-            job_rtu = rtu_el
-        else:
-            print rtu_el.rtuid != job.rtuid
 
-    if job_rtu != None:
+
+    if job.rtuid.lower() == "virtual":
+        response = eval(job.command)
+        print response
+        log_sensor_data(response, True)
+    else:
         try:
-            print "Connecting to", job_rtu.rtuid, "at", job_rtu.address
-            tn = telnetlib.Telnet()
-            tn.open(job_rtu.address, 80, 5)
-            print "Executing command", job.command
-            command = job.command
-            tn.write(command)
-            response = tn.read_all()
-            print response
-            tn.close()
-            if (job.job_name == "Log Data"):
-                conn = sqlite3.connect('hapi.db')
-                c=conn.cursor()
-                response = response.replace('"', '')
-                command = 'INSERT INTO log (rtuid, timestamp, data) VALUES (\"' + job.rtuid + '\",\"' + str(datetime.datetime.now()) + '\",\"' + response + '\")'
-                print command
-                c.execute(command)
-                conn.commit()
-                conn.close()
+            for rtu_el in rtus:
+                if rtu_el.rtuid == job.rtuid:
+                    if rtu_el.online == 1:
+                        job_rtu = rtu_el
 
-            print "RTU: ", job_rtu.rtuid, "ran", job.command
+            if (job_rtu != None):
+                tn = telnetlib.Telnet()
+                tn.open(job_rtu.address, 80, 5)
+                command = job.command
+                tn.write(command)
+                response = tn.read_all()
+                tn.close()
+
+                if (job.job_name == "Log Data"):
+                    log_sensor_data(response, False)
+                elif (job.job_name == "Log Status"):
+                    pass
+                else:
+                    log_command(job)
+
         except Exception, excpt:
             print "Error running job", job.job_name, "on", job_rtu.rtuid, excpt
 
+def log_command(job):
+
+    timestamp = '"' + str(datetime.datetime.now()) + '"'
+    command = "INSERT INTO command_log (rtuid, timestamp, command) VALUES (" + job.rtuid + ", " + timestamp + ", " + job.job_name + ")"
+    print command
+    conn = sqlite3.connect('hapi.db')
+    c=conn.cursor()
+    c.execute(command)
+    conn.commit()
+    conn.close()
+
+def log_sensor_data(data, virtual):
+    assets = get_assets()
+    if virtual == False:
+        for asset in assets:
+            parsed_json = json.loads(data)
+            if asset.rtuid == parsed_json['name']:
+                value = parsed_json[asset.pin]
+                timestamp = '"' + str(datetime.datetime.now()) + '"'
+                command = "INSERT INTO sensor_data (asset_id, timestamp, value) VALUES (" + str(asset.asset_id) + ", " + timestamp + ", " + value + ")"
+                print command
+                conn = sqlite3.connect('hapi.db')
+                c=conn.cursor()
+                c.execute(command)
+                conn.commit()
+                conn.close()
+    else:
+        # For virtual assets, assume that the data is already parsed JSON
+        for asset in assets:
+            if asset.rtuid == "virtual":
+                if asset.abbreviation == "weather":
+                    value = data[asset.pin]
+                    timestamp = '"' + str(datetime.datetime.now()) + '"'
+                    command = "INSERT INTO sensor_data (asset_id, timestamp, value) VALUES (" + str(asset.asset_id) + ", " + timestamp + ", " + str(value) + ")"
+                    print command
+                    conn = sqlite3.connect('hapi.db')
+                    c=conn.cursor()
+                    c.execute(command)
+                    conn.commit()
+                    conn.close()
+
+
+    #location = parsed_json['location']['city']
+    #temp_f = parsed_json['current_observation']['temp_f']
+    #temp_c = parsed_json['current_observation']['temp_c']
+    #rel_hmd = parsed_json['current_observation']['relative_humidity']
+    #pressure = parsed_json['current_observation']['pressure_mb']
+    #print "Current weather in %s" % (location)
+    #print "    Temperature is: %sF, %sC" % (temp_f, temp_c)
+    #print "    Relative Humidity is: %s" % (rel_hmd)
+    #print "    Atmospheric Pressure is: %smb" % (pressure)
+    #response = parsed_json['current_observation']
+
+
+
 def main(argv):
     global rtus
+    #push_log_data('trm')
     rtus = get_rtu_list()
     problem_rtus = validate_environment(rtus)
     for rtu in problem_rtus:
         print "RTU", rtu.rtuid, "could not be found or has incongruent pin modes."
 
-    print "There are", len(rtus), "RTUs."
+    if len(rtus) == 0:
+        print "There are no RTUs online."
+    elif len(rtus) == 1:
+        print "There is 1 RTU online."
+    else:
+        print "There are", len(rtus), "online."
     jobs = load_interval_schedule()
     prepare_jobs(jobs)
 
     #print len(jobs)
     while 1:
+        #x = eval("get_weather()")
+        #print x
+        time.sleep(60)
         schedule.run_pending()
         time.sleep(1)
 
