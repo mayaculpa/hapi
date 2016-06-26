@@ -7,7 +7,7 @@ To learn more about the HAPI project, please visit [HAPI HQ](http://hapihq.com)
 If you would like to help us with our code, follow these steps.
 
 1. Fork the repo  
-![Fork.png](https://github.com/mayaculpa/hapi/blob/master/images/Fork.png "Fork")
+![Fork.png](https://github.com/mayaculpa/hapi/blob/master/images/Fork.png =480x300 "Fork")
 2. Create the changes on the file in your new forked repository  
 ![Edit.png](https://github.com/mayaculpa/hapi/blob/master/images/Edits.png "Editing")
 3. Commit the changes (Commits to your forked branch)
