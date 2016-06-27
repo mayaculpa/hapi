@@ -341,7 +341,8 @@ def log_sensor_data(data, virtual):
             if asset.rtuid == parsed_json['name']:
                 value = parsed_json[asset.pin]
                 timestamp = '"' + str(datetime.datetime.now()) + '"'
-                command = "INSERT INTO sensor_data (asset_id, timestamp, value) VALUES (" + str(asset.asset_id) + ", " + timestamp + ", " + value + ")"
+                unit = asset.unit
+                command = "INSERT INTO sensor_data (asset_id, timestamp, value, unit) VALUES (" + str(asset.asset_id) + ", " + timestamp + ", " + value + ", " + unit + ")"
                 print command
                 conn = sqlite3.connect('hapi.db')
                 c=conn.cursor()
@@ -396,17 +397,8 @@ def main(argv):
 
     #print len(jobs)
     while 1:
-        #x = eval("get_weather()")
-        #print x
-        time.sleep(60)
         schedule.run_pending()
-        time.sleep(1)
-
-     # try:
-     #      opts, args = getopt.getopt(argv,"hm:")
-     # except getopt.GetoptError:
-     #      print("command_broker.py -m <mode>")
-     #      sys.exit(2)
+        time.sleep(60)
 
 if __name__ == "__main__":
     main(sys.argv[1:])

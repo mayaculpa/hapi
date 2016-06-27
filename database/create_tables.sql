@@ -26,5 +26,3 @@ CREATE TABLE log (rtuid text, timestamp text, data text);
 CREATE TABLE sensor_data (asset_id int, timestamp text, unit text, value float);
 CREATE TABLE command_log (rtuid text, timestamp text, command text);
 CREATE TABLE site (site_id int, name text, wunder_key text, operator text, email text, phone text, location text, longitude text, latitude text);
-
-
