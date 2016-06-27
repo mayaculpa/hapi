@@ -341,7 +341,7 @@ def log_sensor_data(data, virtual):
             if asset.rtuid == parsed_json['name']:
                 value = parsed_json[asset.pin]
                 timestamp = '"' + str(datetime.datetime.now()) + '"'
-                unit = asset.unit
+                unit = '"' + asset.unit + '"'
                 command = "INSERT INTO sensor_data (asset_id, timestamp, value, unit) VALUES (" + str(asset.asset_id) + ", " + timestamp + ", " + value + ", " + unit + ")"
                 print command
                 conn = sqlite3.connect('hapi.db')
