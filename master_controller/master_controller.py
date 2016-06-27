@@ -56,7 +56,9 @@ def get_weather():
     return response
 
 def get_image():
-    response = ""
+    command = "fswebcam -p YUYV -d /dev/video0 -r 1280x720 image.jpg"
+    
+
     f = urllib2.urlopen('http://api.wunderground.com/api/ffb22aac10a07be6/geolookup/conditions/q/OH/Columbus.json')
     json_string = f.read()
     parsed_json = json.loads(json_string)
