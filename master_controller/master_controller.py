@@ -328,7 +328,8 @@ def log_command(job):
 
     timestamp = '"' + str(datetime.datetime.now()) + '"'
     name = '"' + job.job_name + '"'
-    command = "INSERT INTO command_log (rtuid, timestamp, command) VALUES (" + job.rtuid + ", " + timestamp + ", " + name + ")"
+    rtuid = '"' + job.rtuid + '"'
+    command = "INSERT INTO command_log (rtuid, timestamp, command) VALUES (" + rtuid + ", " + timestamp + ", " + name + ")"
     print command
     conn = sqlite3.connect('hapi.db')
     c=conn.cursor()
