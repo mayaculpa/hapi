@@ -58,19 +58,35 @@ def get_weather():
 def get_image():
     command = "fswebcam -p YUYV -d /dev/video0 -r 1280x720 image.jpg"
     
+# ex: to store a image in to db
+# public void insertImg(int id , Bitmap img ) {   
+#     byte[] data = getBitmapAsByteArray(img); // this is a function
+#     insertStatement_logo.bindLong(1, id);       
+#     insertStatement_logo.bindBlob(2, data);
+#     insertStatement_logo.executeInsert();
+#     insertStatement_logo.clearBindings() ;
+# }
 
-    f = urllib2.urlopen('http://api.wunderground.com/api/ffb22aac10a07be6/geolookup/conditions/q/OH/Columbus.json')
-    json_string = f.read()
-    parsed_json = json.loads(json_string)
-    #location = parsed_json['location']['city']
-    #temp_f = parsed_json['current_observation']['temp_f']
-    #temp_c = parsed_json['current_observation']['temp_c']
-    #rel_hmd = parsed_json['current_observation']['relative_humidity']
-    #pressure = parsed_json['current_observation']['pressure_mb']
-    #print "Current weather in %s" % (location)
-    #print "    Temperature is: %sF, %sC" % (temp_f, temp_c)
-    #print "    Relative Humidity is: %s" % (rel_hmd)
-    #print "    Atmospheric Pressure is: %smb" % (pressure)
+#  public static byte[] getBitmapAsByteArray(Bitmap bitmap) {
+#     ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+#     bitmap.compress(CompressFormat.PNG, 0, outputStream);       
+#     return outputStream.toByteArray();
+# }
+
+# to retrieve a image from db
+# public Bitmap getImage(int i){
+#     String qu = "select img  from table where feedid=" + i ;
+#     Cursor cur = db.rawQuery(qu, null);
+#     if (cur.moveToFirst()){
+#         byte[] imgByte = cur.getBlob(0);
+#         cur.close();
+#         return BitmapFactory.decodeByteArray(imgByte, 0, imgByte.length);
+#     }
+#     if (cur != null && !cur.isClosed()) {
+#         cur.close();
+#     }       
+#     return null ;
+# } 
     response = parsed_json['current_observation']
     f.close()
     return response
@@ -192,11 +208,10 @@ def validate_environment(rtus):
                 print "Connecting to", rtu.rtuid, "at", rtu.address
                 tn = telnetlib.Telnet()
                 tn.open(rtu.address, 80, 5)
-                print "Connected."
+                print rtu.rtuid, "is online."
                 tn.write("sta\n")
                 response = tn.read_all()
                 print response
-
                 tn.close()
             except Exception, excpt:
                 print "Error communicating with rtu", rtu.rtuid, excpt
@@ -227,7 +242,7 @@ def validate_environment(rtus):
                     #print "Pin mode mismatch (rtu:db:pos)", pmode_from_rtu[i], ":", pmode_from_db[i], ":", i/2
                 #print pmode_from_rtu[i], pmode_from_db[i]
             if pin_mode_ok == False:
-                print "RTU", rtu.rtuid, "has a non-congruent pin mode."
+                print "RTU", rtu.rtuid, "has an incongruent pin mode."
                 problem_rtus.append(rtu)
             else:
                 print "Pin mode congruence verified between", rtu.rtuid, "and the database."
@@ -294,10 +309,8 @@ def run_job(job):
     response = ""
     job_rtu = None
 
-
     if job.rtuid.lower() == "virtual":
         response = eval(job.command)
-        print response
         log_sensor_data(response, True)
     else:
         try:
@@ -360,7 +373,8 @@ def log_sensor_data(data, virtual):
                 if asset.abbreviation == "weather":
                     value = data[asset.pin]
                     timestamp = '"' + str(datetime.datetime.now()) + '"'
-                    command = "INSERT INTO sensor_data (asset_id, timestamp, value) VALUES (" + str(asset.asset_id) + ", " + timestamp + ", " + str(value) + ")"
+                    unit = '"' + asset.unit + '"'
+                    command = "INSERT INTO sensor_data (asset_id, timestamp, value, unit) VALUES (" + str(asset.asset_id) + ", " + timestamp + ", " + str(value) + ", " + unit + ")"
                     print command
                     conn = sqlite3.connect('hapi.db')
                     c=conn.cursor()
