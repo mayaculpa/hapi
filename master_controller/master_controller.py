@@ -279,29 +279,29 @@ def prepare_jobs(jobs):
         if job.time_unit.lower() == "month":
             if job.interval > -1:
                 schedule.every(job.interval).months.do(run_job, job)
-                print "Found a monthly job:", job.job_name
+                print "Loading monthly job:", job.job_name
         elif job.time_unit.lower() == "week":
             if job.interval > -1:
                 schedule.every(job.interval).weeks.do(run_job, job)
-                print "Found a weekly job:", job.job_name
+                print "Loading weekly job:", job.job_name
         elif job.time_unit.lower() == "day":
             if job.interval > -1:
                 schedule.every(job.interval).days.do(run_job, job)
-                print "Found a daily job:", job.job_name
+                print "Loading daily job:", job.job_name
             else:
                 schedule.every().day.at(job.at_time).do(run_job, job)
-                print "Found a daily job:", job.job_name
+                print "Loading daily job:", job.job_name
         elif job.time_unit.lower() == "hour":
             if job.interval > -1:
                 schedule.every(job.interval).hours.do(run_job, job)
-                print "Found an hourly job:", job.job_name
+                print "Loading hourly job:", job.job_name
         elif job.time_unit.lower() == "minute":
             if job.interval > -1:
                 schedule.every(job.interval).minutes.do(run_job, job)
-                print "Found a minute job:", job.job_name
+                print "Loading minute job:", job.job_name
             else:
                 schedule.every().minute.do(run_job, job)
-                print "Found a minute job:", job.job_name
+                print "Loading minute job:", job.job_name
 
 def run_job(job):
     print 'Running', job.command, "on", job.rtuid
@@ -371,7 +371,7 @@ def log_sensor_data(data, virtual):
         for asset in assets:
             if asset.rtuid == "virtual":
                 if asset.abbreviation == "weather":
-                    value = data[asset.pin]
+                    value = data[asset.pin].replace("%", "")
                     timestamp = '"' + str(datetime.datetime.now()) + '"'
                     unit = '"' + asset.unit + '"'
                     command = "INSERT INTO sensor_data (asset_id, timestamp, value, unit) VALUES (" + str(asset.asset_id) + ", " + timestamp + ", " + str(value) + ", " + unit + ")"
