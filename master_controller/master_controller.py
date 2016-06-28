@@ -51,6 +51,7 @@ def get_weather():
     #print "    Temperature is: %sF, %sC" % (temp_f, temp_c)
     #print "    Relative Humidity is: %s" % (rel_hmd)
     #print "    Atmospheric Pressure is: %smb" % (pressure)
+    print json_string
     response = parsed_json['current_observation']
     f.close()
     return response
