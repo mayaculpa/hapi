@@ -371,7 +371,7 @@ def log_sensor_data(data, virtual):
         for asset in assets:
             if asset.rtuid == "virtual":
                 if asset.abbreviation == "weather":
-                    value = data[asset.pin].replace("%", "")
+                    value = float(str(data[asset.pin]).replace("%", ""))
                     timestamp = '"' + str(datetime.datetime.now()) + '"'
                     unit = '"' + asset.unit + '"'
                     command = "INSERT INTO sensor_data (asset_id, timestamp, value, unit) VALUES (" + str(asset.asset_id) + ", " + timestamp + ", " + str(value) + ", " + unit + ")"
