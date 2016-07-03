@@ -3,7 +3,7 @@
 
 # HAPI Master Controller v1.0
 # Author: Tyler Reed
-# Release: June 24th, 2016
+# Release: June 2016 Alpha
 #*********************************************************************
 #Copyright 2016 Maya Culpa, LLC
 #
@@ -31,66 +31,114 @@ import datetime
 import urllib2
 import json
 
-# wunderground key ffb22aac10a07be6
-
 rtus = []
 reload(sys)
 sys.setdefaultencoding('UTF-8')
+site = Site()
+
+def get_sensor_data():
+    def dict_factory(cursor, row):
+        d = {}
+        for idx, col in enumerate(cursor.description):
+            d[col[0]] = row[idx]
+        return d
+     
+    connection = sqlite3.connect("hapi.db")
+    connection.row_factory = dict_factory
+     
+    cursor = connection.cursor()
+     
+    cursor.execute("select a.rtuid, a.name, s.timestamp, s.value, s.unit from assets a INNER JOIN sensor_data s on a.asset_id = s.asset_id ORDER by s.timestamp")
+     
+    # fetch all or one we'll go for all.
+    results = cursor.fetchall()
+    f = open("sensor_data.json", "wb")
+    f.write(json.dumps(results))
+    f.close()
+     
+    connection.close()
 
 def get_weather():
     response = ""
-    f = urllib2.urlopen('http://api.wunderground.com/api/ffb22aac10a07be6/geolookup/conditions/q/OH/Columbus.json')
+    f = urllib2.urlopen('http://api.wunderground.com/api/' + site.wunder_key + '/geolookup/conditions/q/OH/Columbus.json')
     json_string = f.read()
     parsed_json = json.loads(json_string)
-    #location = parsed_json['location']['city']
-    #temp_f = parsed_json['current_observation']['temp_f']
-    #temp_c = parsed_json['current_observation']['temp_c']
-    #rel_hmd = parsed_json['current_observation']['relative_humidity']
-    #pressure = parsed_json['current_observation']['pressure_mb']
-    #print "Current weather in %s" % (location)
-    #print "    Temperature is: %sF, %sC" % (temp_f, temp_c)
-    #print "    Relative Humidity is: %s" % (rel_hmd)
-    #print "    Atmospheric Pressure is: %smb" % (pressure)
-    print json_string
     response = parsed_json['current_observation']
     f.close()
     return response
 
 def get_image():
     command = "fswebcam -p YUYV -d /dev/video0 -r 1280x720 image.jpg"
-    
-# ex: to store a image in to db
-# public void insertImg(int id , Bitmap img ) {   
-#     byte[] data = getBitmapAsByteArray(img); // this is a function
-#     insertStatement_logo.bindLong(1, id);       
-#     insertStatement_logo.bindBlob(2, data);
-#     insertStatement_logo.executeInsert();
-#     insertStatement_logo.clearBindings() ;
-# }
+    # ex: to store a image in to db
+    # public void insertImg(int id , Bitmap img ) {   
+    #     byte[] data = getBitmapAsByteArray(img); // this is a function
+    #     insertStatement_logo.bindLong(1, id);       
+    #     insertStatement_logo.bindBlob(2, data);
+    #     insertStatement_logo.executeInsert();
+    #     insertStatement_logo.clearBindings() ;
+    # }
 
-#  public static byte[] getBitmapAsByteArray(Bitmap bitmap) {
-#     ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-#     bitmap.compress(CompressFormat.PNG, 0, outputStream);       
-#     return outputStream.toByteArray();
-# }
+    #  public static byte[] getBitmapAsByteArray(Bitmap bitmap) {
+    #     ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+    #     bitmap.compress(CompressFormat.PNG, 0, outputStream);       
+    #     return outputStream.toByteArray();
+    # }
 
-# to retrieve a image from db
-# public Bitmap getImage(int i){
-#     String qu = "select img  from table where feedid=" + i ;
-#     Cursor cur = db.rawQuery(qu, null);
-#     if (cur.moveToFirst()){
-#         byte[] imgByte = cur.getBlob(0);
-#         cur.close();
-#         return BitmapFactory.decodeByteArray(imgByte, 0, imgByte.length);
-#     }
-#     if (cur != null && !cur.isClosed()) {
-#         cur.close();
-#     }       
-#     return null ;
-# } 
+    # to retrieve a image from db
+    # public Bitmap getImage(int i){
+    #     String qu = "select img  from table where feedid=" + i ;
+    #     Cursor cur = db.rawQuery(qu, null);
+    #     if (cur.moveToFirst()){
+    #         byte[] imgByte = cur.getBlob(0);
+    #         cur.close();
+    #         return BitmapFactory.decodeByteArray(imgByte, 0, imgByte.length);
+    #     }
+    #     if (cur != null && !cur.isClosed()) {
+    #         cur.close();
+    #     }       
+    #     return null ;
+    # } 
     response = parsed_json['current_observation']
     f.close()
     return response
+
+class Site(object):
+    """docstring for Site"""
+    def __init__(self, arg):
+        super(Site, self).__init__()
+        self.arg = arg
+        self.site_id = ""
+        self.name = ""
+        self.wunder_key = ""
+        self.operator = ""
+        self.email = ""
+        self.phone = ""
+        self.location = ""
+        self.longitude = ""
+        self.latitude = ""
+
+def load_site_data():
+    the_site = None
+    try:
+        conn = sqlite3.connect('hapi.db')
+        c=conn.cursor()
+        db_elements = c.execute("SELECT site_id, name, wunder_key, operator, email, phone, location, longitude, latitude FROM site LIMIT 1;")
+        for field in db_elements:
+            the_site = Site()
+            the_site.site_id = field[0]
+            the_site.name = field[1]
+            the_site.wunder_key = field[2]
+            the_site.operator = field[3]
+            the_site.email = field[4]
+            the_site.phone = field[5]
+            the_site.location = field[6]
+            the_site.longitude = field[7]
+            the_site.latitude = field[8]
+        conn.close()
+    except Exception, excpt:
+        print "Error loading Site table. %s", excpt
+        return None
+    return the_site
 
 class RemoteTerminalUnit(object):
     def __init__(self):
@@ -135,7 +183,6 @@ def push_log_data(sensor_name):
     for entry in log.log_entries:
         data = json.loads(entry.data)
         print data.rtuid, data.timestamp, sensor_name, data[sensor_name]
-
 
 def get_rtu_list():
     rtu_list = []
@@ -395,29 +442,32 @@ def log_sensor_data(data, virtual):
     #print "    Atmospheric Pressure is: %smb" % (pressure)
     #response = parsed_json['current_observation']
 
-
-
 def main(argv):
     global rtus
-    #push_log_data('trm')
-    rtus = get_rtu_list()
-    problem_rtus = validate_environment(rtus)
-    for rtu in problem_rtus:
-        print "RTU", rtu.rtuid, "could not be found or has incongruent pin modes."
+    global site
+    get_sensor_data()
+    site = load_site_data()
+    if site != None:
+        rtus = get_rtu_list()
+        problem_rtus = validate_environment(rtus)
+        for rtu in problem_rtus:
+            print "RTU", rtu.rtuid, "could not be found or has incongruent pin modes."
 
-    if len(rtus) == 0:
-        print "There are no RTUs online."
-    elif len(rtus) == 1:
-        print "There is 1 RTU online."
+        if len(rtus) == 0:
+            print "There are no RTUs online."
+        elif len(rtus) == 1:
+            print "There is 1 RTU online."
+        else:
+            print "There are", len(rtus), "online."
+        jobs = load_interval_schedule()
+        prepare_jobs(jobs)
+
+        #print len(jobs)
+        while 1:
+            schedule.run_pending()
+            time.sleep(60)
     else:
-        print "There are", len(rtus), "online."
-    jobs = load_interval_schedule()
-    prepare_jobs(jobs)
-
-    #print len(jobs)
-    while 1:
-        schedule.run_pending()
-        time.sleep(60)
+        print "Could not load site data. Exiting controller..."
 
 if __name__ == "__main__":
     main(sys.argv[1:])
