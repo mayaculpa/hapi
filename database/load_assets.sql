@@ -9,4 +9,4 @@ FROM assets a INNER JOIN sensor_data s ON a.asset_id = s.asset_id ORDER by s.tim
 
 SELECT a.rtuid, a.name, s.timestamp, s.value, s.unit FROM assets a INNER JOIN sensor_data s ON a.asset_id = s.asset_id WHERE s.unit = 'Lux' ORDER by s.timestamp;
 
-INSERT INTO Site (site_id, name, wunder_key, operator, email, phone, location, longitude, latitude) VALUES ('HAPI01', 'HAPI R&D Facility', 'ffb22aac10a07be6', 'Maya Culpa, LLC', 'info@hapihq.com', '555-5555', 'Columbus, Ohio', '82.9988° W', '39.9612° N');
+

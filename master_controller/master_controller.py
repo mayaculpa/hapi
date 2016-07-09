@@ -30,11 +30,11 @@ import schedule
 import datetime
 import urllib2
 import json
+import subprocess
 
 rtus = []
 reload(sys)
 sys.setdefaultencoding('UTF-8')
-site = Site()
 
 def get_sensor_data():
     def dict_factory(cursor, row):
@@ -104,9 +104,7 @@ def get_image():
 
 class Site(object):
     """docstring for Site"""
-    def __init__(self, arg):
-        super(Site, self).__init__()
-        self.arg = arg
+    def __init__(self):
         self.site_id = ""
         self.name = ""
         self.wunder_key = ""
@@ -184,6 +182,24 @@ def push_log_data(sensor_name):
         data = json.loads(entry.data)
         print data.rtuid, data.timestamp, sensor_name, data[sensor_name]
 
+def scan_for_rtus():
+    rtu_addresses = []
+    try:
+        print "Scanning local network for RTUs..."
+        netscan = subprocess.check_output(["arp-scan", "--interface=eth1", "--localnet"])
+        netscan = netscan.split('\n')
+        for machine in netscan:
+            if machine.find("de:ad:be:ef") > -1:
+                els = machine.split("\t")
+                ip_address = els[0]
+                print "Found RTU at: ", ip_address
+                rtu_addresses.append(ip_address)
+
+    except Exception, excpt:
+        print "Error scanning local network. %s", excpt
+
+    return rtu_addresses
+
 def get_rtu_list():
     rtu_list = []
     try:
@@ -247,54 +263,60 @@ def get_assets():
 
     return assets
 
-def validate_environment(rtus):
-    print "Validating environment..."
+def discover_rtus():
+    print "Discovering RTUs..."
+    valid_ip_addresses = scan_for_rtus()
+    online_rtus = []
+
+    for ip_address in valid_ip_addresses:
+        print "Connecting to RTU at", ip_address
+        try:
+            tn = telnetlib.Telnet()
+            tn.open(ip_address, 80, 5)
+            tn.write("sta\n")
+            response = tn.read_all().split('\r\n')
+            tn.close()
+            print response[0], "found at", ip_address, "running", response[1]
+            rtu = RemoteTerminalUnit()
+            rtu.rtuid = response[0]
+            rtu.address = ip_address
+            rtu.version = response[1]
+            rtu.online = True
+            get_pin_modes(rtu)
+            online_rtus.append(rtu)
+        except Exception, excpt:
+            print "Error communicating with rtu at", ip_address, excpt
+
+    return online_rtus
+
+def validate_pin_modes(online_rtus):
+    print "Validating pin modes..."
     problem_rtus = []
-    for rtu in rtus:
-        if rtu.online == 1:
-            try:
-                print "Connecting to", rtu.rtuid, "at", rtu.address
-                tn = telnetlib.Telnet()
-                tn.open(rtu.address, 80, 5)
-                print rtu.rtuid, "is online."
-                tn.write("sta\n")
-                response = tn.read_all()
-                print response
-                tn.close()
-            except Exception, excpt:
-                print "Error communicating with rtu", rtu.rtuid, excpt
-                problem_rtus.append(rtu)
 
     # Check pin mode settings
-    for rtu in rtus:
-        if rtu not in problem_rtus:
-            print "Getting pin modes from", rtu.rtuid
-            tn = telnetlib.Telnet()
-            tn.open(rtu.address, 80, 5)
-            tn.write("gpm\n")
-            pmode_from_rtu = tn.read_all()
-            tn.close()
-            #print "Pin mode from rtu:", pmode_from_rtu
+    for rtu in online_rtus:
+        tn = telnetlib.Telnet()
+        tn.open(rtu.address, 80, 5)
+        tn.write("gpm\n")
+        pmode_from_rtu = tn.read_all()
+        tn.close()
 
-            pmode_from_db = ""
-            for db_pin_mode in sorted(rtu.pin_modes.values(), key=operator.attrgetter('pos')):
-                pmode_from_db += db_pin_mode.pin
-                pmode_from_db += str(db_pin_mode.mode)
+        pmode_from_db = ""
+        for db_pin_mode in sorted(rtu.pin_modes.values(), key=operator.attrgetter('pos')):
+            pmode_from_db += db_pin_mode.pin
+            pmode_from_db += str(db_pin_mode.mode)
 
-            #print "Pin mode from ref:", pmode_from_db
-
-            pin_mode_ok = True
-            for i in range(0, len(pmode_from_rtu) - 2):
-                if pmode_from_rtu[i] != pmode_from_db[i]:
-                    pin_mode_ok = False
-                    #print "Pin mode mismatch (rtu:db:pos)", pmode_from_rtu[i], ":", pmode_from_db[i], ":", i/2
-                #print pmode_from_rtu[i], pmode_from_db[i]
-            if pin_mode_ok == False:
-                print "RTU", rtu.rtuid, "has an incongruent pin mode."
-                problem_rtus.append(rtu)
-            else:
-                print "Pin mode congruence verified between", rtu.rtuid, "and the database."
-
+        pin_mode_ok = True
+        for i in range(0, len(pmode_from_rtu) - 2):
+            if pmode_from_rtu[i] != pmode_from_db[i]:
+                pin_mode_ok = False
+        if pin_mode_ok == False:
+            print "RTU", rtu.rtuid, "has an incongruent pin mode."
+            print "RTU pins", pmode_from_rtu
+            print "DB pins", pmode_from_db
+            problem_rtus.append(rtu)
+        else:
+            print "Pin mode congruence verified between", rtu.rtuid, "and the database."
     return problem_rtus
 
 def load_interval_schedule():
@@ -445,20 +467,23 @@ def log_sensor_data(data, virtual):
 def main(argv):
     global rtus
     global site
-    get_sensor_data()
+    #get_sensor_data()
+    #scan_for_rtus()
+    online_rtus = discover_rtus()
+    problem_rtus = validate_pin_modes(online_rtus)
+
     site = load_site_data()
     if site != None:
-        rtus = get_rtu_list()
-        problem_rtus = validate_environment(rtus)
         for rtu in problem_rtus:
-            print "RTU", rtu.rtuid, "could not be found or has incongruent pin modes."
+            print "RTU", rtu.rtuid, "has pin modes incongruent with the database."
 
-        if len(rtus) == 0:
+        if len(online_rtus) == 0:
             print "There are no RTUs online."
-        elif len(rtus) == 1:
+        elif len(online_rtus) == 1:
             print "There is 1 RTU online."
         else:
-            print "There are", len(rtus), "online."
+            print "There are", len(online_rtus), "online."
+
         jobs = load_interval_schedule()
         prepare_jobs(jobs)
 
