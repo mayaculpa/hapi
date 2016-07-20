@@ -63,43 +63,33 @@ class Site(object):
         self.net_iface = ""
 
 
-    @staticmethod
-    def load_site_data():
-        the_site = None
+    def load_site_data(self):
         try:
             conn = sqlite3.connect('hapi.db')
             c=conn.cursor()
             db_elements = c.execute("SELECT site_id, name, wunder_key, operator, email, phone, location, net_iface FROM site LIMIT 1;")
             for field in db_elements:
-                the_site = Site()
-                the_site.site_id = field[0]
-                the_site.name = field[1]
-                the_site.wunder_key = field[2]
-                the_site.operator = field[3]
-                the_site.email = field[4]
-                the_site.phone = field[5]
-                the_site.location = field[6]
-                the_site.net_iface = field[7]
+                self.site_id = field[0]
+                self.name = field[1]
+                self.wunder_key = field[2]
+                self.operator = field[3]
+                self.email = field[4]
+                self.phone = field[5]
+                self.location = field[6]
+                self.net_iface = field[7]
             conn.close()
         except Exception, excpt:
             print "Error loading Site table. %s", excpt
             return None
-        return the_site
 
-    @staticmethod
-    def discover_rtus():
+    def discover_rtus(self):
         print "Discovering RTUs..."
-        valid_ip_addresses = scan_for_rtus()
+        valid_ip_addresses = self.scan_for_rtus()
         online_rtus = []
 
         for ip_address in valid_ip_addresses:
             print "Connecting to RTU at", ip_address
             try:
-                # tn = telnetlib.Telnet()
-                # tn.open(ip_address, 80, 5)
-                # tn.write("sta\n")
-                # response = tn.read_all().split('\r\n')
-                # tn.close()
                 target_rtu = rtu_comm.RTUCommunicator()
                 response = target_rtu.send_to_rtu(ip_address, 80, 5, "sta").split('\r\n')
                 print response[0], "found at", ip_address, "running", response[1]
@@ -114,6 +104,25 @@ class Site(object):
                 print "Error communicating with rtu at", ip_address, excpt
 
         return online_rtus
+
+    def scan_for_rtus(self):
+        rtu_addresses = []
+        try:
+            print "Scanning local network for RTUs..."
+            netscan = subprocess.check_output(["arp-scan", "--interface=" + self.net_iface, "--localnet"])
+            netscan = netscan.split('\n')
+            for machine in netscan:
+                if machine.find("de:ad:be:ef") > -1:
+                    els = machine.split("\t")
+                    ip_address = els[0]
+                    print "Found RTU at: ", ip_address
+                    rtu_addresses.append(ip_address)
+
+        except Exception, excpt:
+            print "Error scanning local network. %s", excpt
+
+        return rtu_addresses
+
 
 class Scheduler(object):
     
@@ -215,16 +224,15 @@ class HAPIListener(TelnetHandler):
     the_rtu = None
     the_rtus = []
 
-    a_site = Site()
-    site = a_site.load_site_data()
+    site = Site()
+    site.load_site_data()
+
     if site != None:
         WELCOME = "\n" + "Welcome to HAPI facility " + site.name + '\n'
         WELCOME = WELCOME + "Operator: " + site.operator + '\n'
         WELCOME = WELCOME + "Phone: " + site.phone + '\n'
         WELCOME = WELCOME + "Email: " + site.email + '\n'
         WELCOME = WELCOME + "Location: " + site.location + '\n'
-        #WELCOME = WELCOME + "You are: " + super.username + " using " + super.TERM + '\n'
-
         WELCOME = WELCOME + "\n" + 'Type "help" for a list of valid commands.' + '\n'
     else:
         WELCOME = "No site data found."
@@ -239,7 +247,9 @@ class HAPIListener(TelnetHandler):
         '''
         global the_rtus
         self.writeresponse("Discovering RTUs...")
-        the_rtus = Site().discover_rtus()
+        site = Site()
+        site.load_site_data()
+        the_rtus = site.discover_rtus()
         for rtu in the_rtus:
             self.writeresponse(rtu.rtuid + " found at " + rtu.address + " is running HAPI " + rtu.version + ".")
     
@@ -434,45 +444,6 @@ def push_log_data(sensor_name):
         data = json.loads(entry.data)
         print data.rtuid, data.timestamp, sensor_name, data[sensor_name]
 
-def scan_for_rtus():
-    rtu_addresses = []
-    try:
-        print "Scanning local network for RTUs..."
-        netscan = subprocess.check_output(["arp-scan", "--interface=eth0", "--localnet"])
-        netscan = netscan.split('\n')
-        for machine in netscan:
-            if machine.find("de:ad:be:ef") > -1:
-                els = machine.split("\t")
-                ip_address = els[0]
-                print "Found RTU at: ", ip_address
-                rtu_addresses.append(ip_address)
-
-    except Exception, excpt:
-        print "Error scanning local network. %s", excpt
-
-    return rtu_addresses
-
-def get_rtu_list():
-    rtu_list = []
-    try:
-        conn = sqlite3.connect('hapi.db')
-        c=conn.cursor()
-        db_elements = c.execute("SELECT rtuid, protocol, address, version, online FROM rtus WHERE online = 1;")
-        for unit in db_elements:
-            rtu = RemoteTerminalUnit()
-            rtu.rtuid = unit[0]
-            rtu.protocol = unit[1]
-            rtu.address = unit[2]
-            rtu.version = unit[3]
-            rtu.online = unit[4]
-            rtu_list.append(rtu)
-            get_pin_modes(rtu)
-        conn.close()
-    except Exception, excpt:
-        print "Error loading rtu table. %s", excpt
-
-    return rtu_list
-
 def get_pin_modes(rtu):
     try:
         conn = sqlite3.connect('hapi.db')
@@ -523,12 +494,6 @@ def validate_pin_modes(online_rtus):
     for rtu in online_rtus:
         target_rtu = rtu_comm.RTUCommunicator()
         pmode_from_rtu = target_rtu.send_to_rtu(rtu.address, 80, 5, "gpm")
-
-        # tn = telnetlib.Telnet()
-        # tn.open(rtu.address, 80, 5)
-        # tn.write("gpm\n")
-        # pmode_from_rtu = tn.read_all()
-        # tn.close()
 
         pmode_from_db = ""
         for db_pin_mode in sorted(rtu.pin_modes.values(), key=operator.attrgetter('pos')):
@@ -618,8 +583,8 @@ def main(argv):
     global rtus
     global site
 
-    a_site = Site()
-    site = a_site.load_site_data()
+    site = Site()
+    site.load_site_data()
     rtus = site.discover_rtus()
     problem_rtus = validate_pin_modes(rtus)
 
