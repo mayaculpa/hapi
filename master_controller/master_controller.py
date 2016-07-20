@@ -207,7 +207,7 @@ class Scheduler(object):
                         response = target_rtu.send_to_rtu(job_rtu.address, 80, 5, command)
 
                         if (job.job_name == "Log Data"):
-                            log_sensor_data(response, False)
+                            log_sensor_data(response, False, self.logger)
                         elif (job.job_name == "Log Status"):
                             pass
                         else:
@@ -535,7 +535,7 @@ def log_command(job):
     conn.commit()
     conn.close()
 
-def log_sensor_data(data, virtual):
+def log_sensor_data(data, virtual, logger):
     assets = get_assets()
     if virtual == False:
         try:
@@ -571,7 +571,11 @@ def log_sensor_data(data, virtual):
                         conn.commit()
                         conn.close()
         except Exception, excpt:
-            print "Error logging sensor data.", excpt
+            error = "Error logging sensor data: " + excpt
+            print error
+            if logger != None:
+                logger.exception(error)
+
 
     #location = parsed_json['location']['city']
     #temp_f = parsed_json['current_observation']['temp_f']
