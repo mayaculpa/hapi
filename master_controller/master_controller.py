@@ -40,6 +40,7 @@ import logging
 rtus = []
 reload(sys)
 sys.setdefaultencoding('UTF-8')
+version = "1.0"
 
 class RemoteTerminalUnit(object):
     def __init__(self):
@@ -260,64 +261,30 @@ class HAPIListener(TelnetHandler):
 
     PROMPT = "HAPI> "
 
-    @command('rtus')
-    def command_rtus(self, params):
-        '''
-        List all RTUs discovered at this site.
+    @command('cmd')
+    def command_cmd(self, params):
+        '''<command to be run on connected RTU>
+        Sends a command to the connected RTU
 
         '''
-        global the_rtus
-        self.writeresponse("Discovering RTUs...")
-        site = Site()
-        site.load_site_data()
-        the_rtus = site.discover_rtus()
-        for rtu in the_rtus:
-            self.writeresponse(rtu.rtuid + " found at " + rtu.address + " is running HAPI " + rtu.version + ".")
-    
-    @command('pause')
-    def command_pause(self, params):
-        '''
-        Pauses the Master Controller's Scheduler
+        if the_rtu == None:
+            self.writeresponse("You are not connected to an RTU.")
+        else:
+            command = params[0]
 
-        '''
-        f = open("ipc.txt", "wb")
-        f.write("pause")
-        f.close()
-
-    @command('continue')
-    def command_continue(self, params):
-        '''
-        Runs the Master Controller's Scheduler
-
-        '''
-        f = open("ipc.txt", "wb")
-        f.write("run")
-        f.close() 
-
-    @command('status')
-    def command_status(self, params):
-        '''
-        Runs the Master Controller's Scheduler
-
-        '''
-        f = open("ipc.txt", "wb")
-        f.write("run")
-        f.close()
-
-    @command('stop')
-    def command_stop(self, params):
-        '''
-        Kills the HAPI listener service
-
-        '''
-        f = open("ipc.txt", "wb")
-        f.write("stop")
-        f.close()
+            self.writeresponse("Executing " + command + " on " + the_rtu.rtuid + "...")
+            target_rtu = rtu_comm.RTUCommunicator()
+            response = target_rtu.send_to_rtu(the_rtu.address, 80, 5, command)
+            self.writeresponse(response)
+            job = IntervalJob()
+            job.job_name = command
+            job.rtuid = the_rtu.rtuid
+            log_command(job)
 
     @command('connect')
     def command_connect(self, params):
         '''<Name of RTU>
-        Connects to a specific RTU
+        Connects to the specified RTU
 
         '''
         global the_rtu
@@ -338,25 +305,69 @@ class HAPIListener(TelnetHandler):
         else:
             self.writeresponse(rtu_name + " is not online at this site.")
 
-    @command('cmd')
-    def command_cmd(self, params):
+    @command('continue')
+    def command_continue(self, params):
         '''
-        Sends a command to the connected RTU
+        Starts the Master Controller's Scheduler
 
         '''
-        if the_rtu == None:
-            self.writeresponse("You are not connected to an RTU.")
-        else:
-            command = params[0]
+        f = open("ipc.txt", "wb")
+        f.write("run")
+        f.close() 
 
-            self.writeresponse("Executing " + command + " on " + the_rtu.rtuid + "...")
-            target_rtu = rtu_comm.RTUCommunicator()
-            response = target_rtu.send_to_rtu(the_rtu.address, 80, 5, command)
-            self.writeresponse(response)
-            job = IntervalJob()
-            job.job_name = command
-            job.rtuid = the_rtu.rtuid
-            log_command(job)
+    @command('pause')
+    def command_pause(self, params):
+        '''
+        Pauses the Master Controller's Scheduler
+
+        '''
+        f = open("ipc.txt", "wb")
+        f.write("pause")
+        f.close()
+
+    @command('rtus')
+    def command_rtus(self, params):
+        '''
+        List all RTUs discovered at this site.
+
+        '''
+        global the_rtus
+        self.writeresponse("Discovering RTUs...")
+        site = Site()
+        site.load_site_data()
+        the_rtus = site.discover_rtus()
+        for rtu in the_rtus:
+            self.writeresponse(rtu.rtuid + " found at " + rtu.address + " is running HAPI " + rtu.version + ".")
+    
+    @command('status')
+    def command_status(self, params):
+        '''
+        Return operational status of the Master Controller
+
+        '''
+        data = '\n### Master Controller Status ###\n'
+        data = data + '  Version v' + version + '\n'
+        data = data + '  Copyright 2016, Maya Culpa, LLC\n'
+        data = data + '  Platform: ' + sys.platform + '\n'
+        data = data + '  Encoding: ' + sys.getdefaultencoding() + '\n'
+        data = data + '  Python Information\n'
+        data = data + '     Executable: ' + sys.executable + '\n'
+        data = data + '     Version: ' + sys.version.replace('\n', " ") + '\n'
+        data = data + '     location: ' + sys.executable + '\n'
+        data = data + '  Timestamp: ' + str(datetime.datetime.now()) + '\n'
+        data = data + '################################\n'
+        self.writeresponse(data)
+
+    @command('stop')
+    def command_stop(self, params):
+        '''
+        Kills the HAPI listener service
+
+        '''
+        f = open("ipc.txt", "wb")
+        f.write("stop")
+        f.close()
+
 
 def get_sensor_data():
     def dict_factory(cursor, row):
@@ -627,11 +638,14 @@ def main(argv):
     logger.addHandler(file_handler)
     logger.addHandler(console_handler)
 
-    site = Site()
-    site.logger = logger
-    site.load_site_data()
-    rtus = site.discover_rtus()
-    problem_rtus = validate_pin_modes(rtus)
+    try:
+        site = Site()
+        site.logger = logger
+        site.load_site_data()
+        rtus = site.discover_rtus()
+        problem_rtus = validate_pin_modes(rtus)
+    except Exception, excpt:
+        logger.exception("Error loading site information. %s", excpt)
 
     if site != None:
         for rtu in problem_rtus:
@@ -645,44 +659,52 @@ def main(argv):
             print "There are", len(site.rtus), "online."
 
 
-    print "Initializing HAPI Listener..."
-    listener_parent_conn, listener_child_conn = Pipe()
-    p = Process(target=run_listener, args=(listener_child_conn,))
-    p.start()
-    print "HAPI Listener is online."
+    try:
+        print "Initializing HAPI Listener..."
+        listener_parent_conn, listener_child_conn = Pipe()
+        p = Process(target=run_listener, args=(listener_child_conn,))
+        p.start()
+        print "HAPI Listener is online."
+    except Exception, excpt:
+        logger.exception("Error loading initializing listener. %s", excpt)
 
     # Loading scheduled jobs
-    print "Initializing scheduler..."
-    scheduler = Scheduler()
-    scheduler.site = site
-    scheduler.logger = logger
-    scheduler.prepare_jobs(scheduler.load_interval_schedule())
-    count = 1
-    print "Scheduler is initialized and running."
+    try:
+        print "Initializing scheduler..."
+        scheduler = Scheduler()
+        scheduler.site = site
+        scheduler.logger = logger
+        scheduler.prepare_jobs(scheduler.load_interval_schedule())
+        count = 1
+        print "Scheduler is initialized and running."
+    except Exception, excpt:
+        logger.exception("Error initializing scheduler. %s", excpt)
 
     while 1:
         #print listener_parent_conn.recv()
-        if count % 60 == 0:
-            print ".",
-        time.sleep(5)
-        count = count + 5
-        schedule.run_pending()
+        try:
+            if count % 60 == 0:
+                print ".",
+            time.sleep(5)
+            count = count + 5
+            schedule.run_pending()
 
-        if os.path.isfile("ipc.txt"):
-            f = open("ipc.txt", "rb")
-            data = f.read()
-            f.close()
-            open("ipc.txt", 'w').close()
-            if data != "":
-                if data == "run":
-                    scheduler.running = True
-                    print "The scheduler is running."
-                elif data == "pause":
-                    print "The scheduler has been paused."
-                    scheduler.running = False
-                else:
-                    print "Received from Listener: " + data
-            
+            if os.path.isfile("ipc.txt"):
+                f = open("ipc.txt", "rb")
+                data = f.read()
+                f.close()
+                open("ipc.txt", 'w').close()
+                if data != "":
+                    if data == "run":
+                        scheduler.running = True
+                        print "The scheduler is running."
+                    elif data == "pause":
+                        print "The scheduler has been paused."
+                        scheduler.running = False
+                    else:
+                        print "Received from Listener: " + data
+        except Exception, excpt:
+            logger.exception("Error in Master Controller main loop. %s", excpt)            
             
 
 if __name__ == "__main__":
