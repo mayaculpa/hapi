@@ -17,11 +17,5 @@
 --You should have received a copy of the GNU General Public License
 --along with this program.  If not, see <http://www.gnu.org/licenses/>.
 --*********************************************************************
-CREATE TABLE rtus (rtuid text, name text, protocol text, address text, version text, online int);
-CREATE TABLE pins (rtuid text, name text, pin text, mode int, def_value int, pos int);
-CREATE TABLE assets (asset_id int, rtuid text, abbreviation text, name text, pin text, unit text);
-CREATE TABLE interval_schedule(job_id int PRIMARY KEY NOT NULL, job_name TEXT, command TEXT, time_unit TEXT, interval INT, at_time TEXT, enabled INT, rtuid text);
-CREATE TABLE log (rtuid text, timestamp text, data text);
-CREATE TABLE sensor_data (asset_id int, timestamp text, unit text, value float);
-CREATE TABLE command_log (rtuid text, timestamp text, command text);
-CREATE TABLE site (site_id int, name text, wunder_key text, operator text, email text, phone text, location text, longitude text, latitude text);
+INSERT INTO site(site_id, name, wunder_key, operator, email, phone, location, longitude, latitude)
+VALUES (1, "HPF-0", " ffb22aac10a07be6", "Maya Culpa, LLC", "tyler@hapihq.com", "(614) 316-4312", "Columbus, OH", "", "");
