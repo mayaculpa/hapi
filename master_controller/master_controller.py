@@ -114,9 +114,9 @@ class Site(object):
         rtu_addresses = []
         try:
             print "Scanning local network for RTUs..."
-            el1 = "arp-scan"
-            el2 = "--interface=" + self.net_iface
-            el3 = "--localnet"
+            el1 = "arp-scan".encode("ascii")
+            el2 = str("--interface=" + self.net_iface).encode("ascii")
+            el3 = "--localnet".encode("ascii")
             #netscan = subprocess.check_output(["arp-scan", "--interface=" + self.net_iface, "--localnet"])
             netscan = subprocess.check_output([el1, el2, el3])
             netscan = netscan.split('\n')
