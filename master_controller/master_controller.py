@@ -254,8 +254,8 @@ class HAPIListener(TelnetHandler):
         f.write("pause")
         f.close()
 
-    @command('run')
-    def command_run(self, params):
+    @command('continue')
+    def command_continue(self, params):
         '''
         Runs the Master Controller's Scheduler
 
