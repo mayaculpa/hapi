@@ -125,7 +125,7 @@ class Site(object):
 
         except Exception, excpt:
             if self.logger != None:
-                logger.exception("Error scanning local network: %s", excpt)
+                self.logger.exception("Error scanning local network: %s", excpt)
 
         return rtu_addresses
 
