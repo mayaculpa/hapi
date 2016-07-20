@@ -60,8 +60,8 @@ class Site(object):
         self.email = ""
         self.phone = ""
         self.location = ""
-        self.longitude = ""
-        self.latitude = ""
+        self.net_iface = ""
+
 
     @staticmethod
     def load_site_data():
@@ -69,7 +69,7 @@ class Site(object):
         try:
             conn = sqlite3.connect('hapi.db')
             c=conn.cursor()
-            db_elements = c.execute("SELECT site_id, name, wunder_key, operator, email, phone, location, longitude, latitude FROM site LIMIT 1;")
+            db_elements = c.execute("SELECT site_id, name, wunder_key, operator, email, phone, location, net_iface FROM site LIMIT 1;")
             for field in db_elements:
                 the_site = Site()
                 the_site.site_id = field[0]
@@ -79,8 +79,7 @@ class Site(object):
                 the_site.email = field[4]
                 the_site.phone = field[5]
                 the_site.location = field[6]
-                the_site.longitude = field[7]
-                the_site.latitude = field[8]
+                the_site.net_iface = field[7]
             conn.close()
         except Exception, excpt:
             print "Error loading Site table. %s", excpt
@@ -265,7 +264,7 @@ class HAPIListener(TelnetHandler):
         f.close() 
 
     @command('status')
-    def command_run(self, params):
+    def command_status(self, params):
         '''
         Runs the Master Controller's Scheduler
 
@@ -439,7 +438,7 @@ def scan_for_rtus():
     rtu_addresses = []
     try:
         print "Scanning local network for RTUs..."
-        netscan = subprocess.check_output(["arp-scan", "--interface=eth1", "--localnet"])
+        netscan = subprocess.check_output(["arp-scan", "--interface=eth0", "--localnet"])
         netscan = netscan.split('\n')
         for machine in netscan:
             if machine.find("de:ad:be:ef") > -1:
