@@ -114,7 +114,11 @@ class Site(object):
         rtu_addresses = []
         try:
             print "Scanning local network for RTUs..."
-            netscan = subprocess.check_output(["arp-scan", "--interface=" + self.net_iface, "--localnet"])
+            el1 = "arp-scan"
+            el2 = "--interface=" + self.net_iface
+            el3 = "--localnet"
+            #netscan = subprocess.check_output(["arp-scan", "--interface=" + self.net_iface, "--localnet"])
+            netscan = subprocess.check_output([el1, el2, el3])
             netscan = netscan.split('\n')
             for machine in netscan:
                 if machine.find("de:ad:be:ef") > -1:
