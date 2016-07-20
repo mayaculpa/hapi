@@ -35,7 +35,7 @@ import os
 from multiprocessing import Process, Pipe
 import gevent, gevent.server
 from telnetsrv.green import TelnetHandler, command
-
+import logging
 
 rtus = []
 reload(sys)
@@ -128,6 +128,7 @@ class Scheduler(object):
     
     def __init__(self):
         self.running = True
+        self.logger = None
 
     def load_interval_schedule(self):
         job_list = []
@@ -212,9 +213,17 @@ class Scheduler(object):
                         else:
                             log_command(job)
                     else:
-                        print "Could not find"
+                        print "Could not find rtu."
+                        if self.logger != None:
+                            self.logger.info("Could not find rtu." + job.rtuid)
+
                 except Exception, excpt:
-                    print "Error running job", job.job_name, "on", job_rtu.rtuid, excpt
+                    error = "Error running job " + job.job_name + " on " + job_rtu.rtuid + ": " + excpt
+                    print error
+                    if self.logger != None:
+                        self.logger.exception(error)
+
+
 
 
 class HAPIListener(TelnetHandler):
@@ -583,6 +592,25 @@ def main(argv):
     global rtus
     global site
 
+    logger_level = logging.DEBUG
+    logger = logging.getLogger('hapi_master_controller')
+    logger.setLevel(logger_level)
+
+    # create logging file handler
+    file_handler = logging.FileHandler('hapi_mc.log', 'w')
+    file_handler.setLevel(logger_level)
+
+    # create logging console handler
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logger_level)
+
+    #Set logging format
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    file_handler.setFormatter(formatter)
+    console_handler.setFormatter(formatter)
+    logger.addHandler(file_handler)
+    logger.addHandler(console_handler)
+
     site = Site()
     site.load_site_data()
     rtus = site.discover_rtus()
@@ -609,6 +637,7 @@ def main(argv):
     # Loading scheduled jobs
     print "Initializing scheduler..."
     scheduler = Scheduler()
+    scheduler.logger = logger
     scheduler.prepare_jobs(scheduler.load_interval_schedule())
     count = 1
     print "Scheduler is initialized and running."
