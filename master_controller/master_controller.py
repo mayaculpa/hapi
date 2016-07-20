@@ -201,8 +201,14 @@ class Scheduler(object):
             job_rtu = None
 
             if job.rtuid.lower() == "virtual":
-                response = eval(job.command)
-                log_sensor_data(response, True)
+                try:
+                    response = eval(job.command)
+                    log_sensor_data(response, True, self.logger)
+                except Exception, excpt:
+                    error = "Error running job " + job.job_name + " on " + job_rtu.rtuid + ": " + excpt
+                    print error
+                    if self.logger != None:
+                        self.logger.exception(error)
             else:
                 try:
                     for rtu_el in self.site.rtus:
@@ -231,9 +237,6 @@ class Scheduler(object):
                     print error
                     if self.logger != None:
                         self.logger.exception(error)
-
-
-
 
 class HAPIListener(TelnetHandler):
     global the_rtu
