@@ -61,6 +61,8 @@ class Site(object):
         self.phone = ""
         self.location = ""
         self.net_iface = ""
+        self.rtus = []
+        self.logger = None
 
 
     def load_site_data(self):
@@ -85,7 +87,7 @@ class Site(object):
     def discover_rtus(self):
         print "Discovering RTUs..."
         valid_ip_addresses = self.scan_for_rtus()
-        online_rtus = []
+        self.rtus = []
 
         for ip_address in valid_ip_addresses:
             print "Connecting to RTU at", ip_address
@@ -99,11 +101,14 @@ class Site(object):
                 rtu.version = response[1]
                 rtu.online = True
                 get_pin_modes(rtu)
-                online_rtus.append(rtu)
+                self.rtus.append(rtu)
             except Exception, excpt:
-                print "Error communicating with rtu at", ip_address, excpt
+                error = "Error communicating with rtu at " + ip_address + ": " + excpt
+                print error
+                if self.logger != None:
+                    self.logger.exception(error)
 
-        return online_rtus
+        return self.rtus
 
     def scan_for_rtus(self):
         rtu_addresses = []
@@ -119,7 +124,10 @@ class Site(object):
                     rtu_addresses.append(ip_address)
 
         except Exception, excpt:
-            print "Error scanning local network. %s", excpt
+            error = "Error scanning local network " + excpt
+            print error
+            if self.logger != None:
+                self.logger.exception(error)
 
         return rtu_addresses
 
@@ -129,6 +137,7 @@ class Scheduler(object):
     def __init__(self):
         self.running = True
         self.logger = None
+        self.site = None
 
     def load_interval_schedule(self):
         job_list = []
@@ -196,7 +205,7 @@ class Scheduler(object):
                 log_sensor_data(response, True)
             else:
                 try:
-                    for rtu_el in rtus:
+                    for rtu_el in self.site.rtus:
                         if rtu_el.rtuid == job.rtuid:
                             if rtu_el.online == 1:
                                 job_rtu = rtu_el
@@ -616,6 +625,7 @@ def main(argv):
     logger.addHandler(console_handler)
 
     site = Site()
+    site.logger = logger
     site.load_site_data()
     rtus = site.discover_rtus()
     problem_rtus = validate_pin_modes(rtus)
@@ -624,12 +634,12 @@ def main(argv):
         for rtu in problem_rtus:
             print "RTU", rtu.rtuid, "has pin modes incongruent with the database."
 
-        if len(rtus) == 0:
+        if len(site.rtus) == 0:
             print "There are no RTUs online."
-        elif len(rtus) == 1:
+        elif len(site.rtus) == 1:
             print "There is 1 RTU online."
         else:
-            print "There are", len(online_rtus), "online."
+            print "There are", len(site.rtus), "online."
 
 
     print "Initializing HAPI Listener..."
@@ -641,6 +651,7 @@ def main(argv):
     # Loading scheduled jobs
     print "Initializing scheduler..."
     scheduler = Scheduler()
+    scheduler.site = site
     scheduler.logger = logger
     scheduler.prepare_jobs(scheduler.load_interval_schedule())
     count = 1
