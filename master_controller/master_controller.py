@@ -82,8 +82,9 @@ class Site(object):
                 self.net_iface = field[7]
             conn.close()
         except Exception, excpt:
-            print "Error loading Site table. %s", excpt
-            return None
+            if self.logger != None:
+                self.logger.exception("Error loading site data: %s", excpt)
+
 
     def discover_rtus(self):
         print "Discovering RTUs..."
@@ -104,10 +105,8 @@ class Site(object):
                 get_pin_modes(rtu)
                 self.rtus.append(rtu)
             except Exception, excpt:
-                error = "Error communicating with rtu at " + ip_address + ": " + excpt
-                print error
                 if self.logger != None:
-                    self.logger.exception(error)
+                    self.logger.exception("Error communicating with rtu at " + ip_address + ": %s", excpt)
 
         return self.rtus
 
@@ -125,10 +124,8 @@ class Site(object):
                     rtu_addresses.append(ip_address)
 
         except Exception, excpt:
-            error = "Error scanning local network " + excpt
-            print error
             if self.logger != None:
-                self.logger.exception(error)
+                logger.exception("Error scanning local network: %s", excpt)
 
         return rtu_addresses
 
