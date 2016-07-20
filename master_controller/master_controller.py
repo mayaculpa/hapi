@@ -262,7 +262,7 @@ class HAPIListener(TelnetHandler):
         '''
         f = open("ipc.txt", "wb")
         f.write("run")
-        f.close()
+        f.close() 
 
     @command('status')
     def command_run(self, params):
