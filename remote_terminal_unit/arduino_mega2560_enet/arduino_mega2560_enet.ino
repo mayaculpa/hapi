@@ -29,7 +29,6 @@
 
 #include <DHT.h>
 #include <SPI.h>
-//#include <Adafruit_CC3000.h>
 #include <Ethernet.h>
 #include <stdlib.h>
 #include <math.h>
