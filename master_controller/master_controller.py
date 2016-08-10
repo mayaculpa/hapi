@@ -111,14 +111,12 @@ class Site(object):
         return self.rtus
 
     def scan_for_rtus(self):
+
+
         rtu_addresses = []
         try:
             print "Scanning local network for RTUs..."
-            el1 = "arp-scan".encode("ascii")
-            el2 = str("--interface=" + self.net_iface).encode("ascii")
-            el3 = "--localnet".encode("ascii")
-            #netscan = subprocess.check_output(["arp-scan", "--interface=" + self.net_iface, "--localnet"])
-            netscan = subprocess.check_output([el1, el2, el3])
+            netscan = subprocess.check_output(["arp-scan", "--interface=eth1", "--localnet"])
             netscan = netscan.split('\n')
             for machine in netscan:
                 if machine.find("de:ad:be:ef") > -1:
@@ -132,7 +130,6 @@ class Site(object):
                 self.logger.exception("Error scanning local network: %s", excpt)
 
         return rtu_addresses
-
 
 class Scheduler(object):
     
@@ -625,7 +622,7 @@ def main(argv):
     logger.setLevel(logger_level)
 
     # create logging file handler
-    file_handler = logging.FileHandler('hapi_mc.log', 'w')
+    file_handler = logging.FileHandler('hapi_mc.log', 'a')
     file_handler.setLevel(logger_level)
 
     # create logging console handler
@@ -658,8 +655,6 @@ def main(argv):
             print "There is 1 RTU online."
         else:
             print "There are", len(site.rtus), "online."
-
-
     try:
         print "Initializing HAPI Listener..."
         listener_parent_conn, listener_child_conn = Pipe()
