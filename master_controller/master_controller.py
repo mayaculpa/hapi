@@ -96,7 +96,7 @@ class Site(object):
             try:
                 target_rtu = rtu_comm.RTUCommunicator()
                 response = target_rtu.send_to_rtu(ip_address, 80, 5, "sta").split('\r\n')
-                print response[0], "found at", ip_address, "running", response[1]
+                self.logger.info(response[0] + " found at " + ip_address + " running " + response[1])
                 rtu = RemoteTerminalUnit()
                 rtu.rtuid = response[0]
                 rtu.address = ip_address
