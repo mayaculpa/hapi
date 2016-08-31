@@ -428,7 +428,7 @@ void setup() {
   Ethernet.begin(mac);
   Serial.println("Starting communications server....");
   rtuServer.begin();
-  Serial.println(getConnectionDetails());
+  Serial.println(getStatus());
   Serial.println("Listening for connections...");
 
   inputString.reserve(200);  // reserve 200 bytes for the inputString:
