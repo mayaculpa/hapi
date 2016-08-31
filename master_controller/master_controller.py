@@ -94,9 +94,13 @@ class Site(object):
         for ip_address in valid_ip_addresses:
             print "Connecting to RTU at", ip_address
             try:
+                print "Attemping to contact rtu at", ip_address
                 target_rtu = rtu_comm.RTUCommunicator()
+                print "Got Communicator."
                 response = target_rtu.send_to_rtu(ip_address, 80, 5, "sta").split('\r\n')
-                self.logger.info(response[0] + " found at " + ip_address + " running " + response[1])
+                print "Sent STA."
+                #self.logger.info(response[0] + " found at " + ip_address + " running " + response[1])
+                print response[0] + " found at " + ip_address + " running " + response[1]
                 rtu = RemoteTerminalUnit()
                 rtu.rtuid = response[0]
                 rtu.address = ip_address
@@ -104,6 +108,7 @@ class Site(object):
                 rtu.online = True
                 get_pin_modes(rtu)
                 self.rtus.append(rtu)
+                print "Added", rtu.address, "to RTU list."
             except Exception, excpt:
                 if self.logger != None:
                     self.logger.exception("Error communicating with rtu at " + ip_address + ": %s", excpt)
@@ -111,8 +116,6 @@ class Site(object):
         return self.rtus
 
     def scan_for_rtus(self):
-
-
         rtu_addresses = []
         try:
             print "Scanning local network for RTUs..."
@@ -194,48 +197,49 @@ class Scheduler(object):
 
     def run_job(self, job):
         if self.running == True:
-            print 'Running', job.command, "on", job.rtuid
             command = ""
             response = ""
             job_rtu = None
 
-            if job.rtuid.lower() == "virtual":
-                try:
-                    response = eval(job.command)
-                    log_sensor_data(response, True, self.logger)
-                except Exception, excpt:
-                    error = "Error running job " + job.job_name + " on " + job_rtu.rtuid + ": " + excpt
-                    print error
-                    if self.logger != None:
-                        self.logger.exception(error)
-            else:
-                try:
-                    for rtu_el in self.site.rtus:
-                        if rtu_el.rtuid == job.rtuid:
-                            if rtu_el.online == 1:
-                                job_rtu = rtu_el
-
-                    if (job_rtu != None):
-                        command = job.command
-                        target_rtu = rtu_comm.RTUCommunicator()
-                        response = target_rtu.send_to_rtu(job_rtu.address, 80, 5, command)
-
-                        if (job.job_name == "Log Data"):
-                            log_sensor_data(response, False, self.logger)
-                        elif (job.job_name == "Log Status"):
-                            pass
-                        else:
-                            log_command(job)
-                    else:
-                        print "Could not find rtu."
+            if job.enabled == 1:
+                print 'Running', job.command, "on", job.rtuid
+                if job.rtuid.lower() == "virtual":
+                    try:
+                        response = eval(job.command)
+                        log_sensor_data(response, True, self.logger)
+                    except Exception, excpt:
+                        error = "Error running job " + job.job_name + " on " + job_rtu.rtuid + ": " + excpt
+                        print error
                         if self.logger != None:
-                            self.logger.info("Could not find rtu." + job.rtuid)
+                            self.logger.exception(error)
+                else:
+                    try:
+                        for rtu_el in self.site.rtus:
+                            if rtu_el.rtuid == job.rtuid:
+                                if rtu_el.online == 1:
+                                    job_rtu = rtu_el
 
-                except Exception, excpt:
-                    error = "Error running job " + job.job_name + " on " + job_rtu.rtuid + ": " + excpt
-                    print error
-                    if self.logger != None:
-                        self.logger.exception(error)
+                        if (job_rtu != None):
+                            command = job.command
+                            target_rtu = rtu_comm.RTUCommunicator()
+                            response = target_rtu.send_to_rtu(job_rtu.address, 80, 5, command)
+
+                            if (job.job_name == "Log Data"):
+                                log_sensor_data(response, False, self.logger)
+                            elif (job.job_name == "Log Status"):
+                                pass
+                            else:
+                                log_command(job)
+                        else:
+                            print "Could not find rtu."
+                            if self.logger != None:
+                                self.logger.info("Could not find rtu." + job.rtuid)
+
+                    except Exception, excpt:
+                        error = "Error running job " + job.job_name + " on " + job_rtu.rtuid + ": " + excpt
+                        print error
+                        if self.logger != None:
+                            self.logger.exception(error)
 
 class HAPIListener(TelnetHandler):
     global the_rtu
@@ -286,6 +290,7 @@ class HAPIListener(TelnetHandler):
 
         '''
         global the_rtu
+        PROMPT = "HAPI> "
         rtu_name = params[0]
         the_rtu = None
 
@@ -298,8 +303,6 @@ class HAPIListener(TelnetHandler):
             target_rtu = rtu_comm.RTUCommunicator()
             response = target_rtu.send_to_rtu(the_rtu.address, 80, 5, "env")            
             self.writeresponse(response)
-            PROMPT = the_rtu.rtuid + "> "
-
         else:
             self.writeresponse(rtu_name + " is not online at this site.")
 
@@ -331,9 +334,11 @@ class HAPIListener(TelnetHandler):
         '''
         global the_rtus
         self.writeresponse("Discovering RTUs...")
+
         site = Site()
         site.load_site_data()
         the_rtus = site.discover_rtus()
+        self.writeresponse(str(len(the_rtus)) + " were found on-site.")
         for rtu in the_rtus:
             self.writeresponse(rtu.rtuid + " found at " + rtu.address + " is running HAPI " + rtu.version + ".")
     
@@ -476,6 +481,7 @@ def push_log_data(sensor_name):
 
 def get_pin_modes(rtu):
     try:
+        print "Retrieving pin modes for", rtu.rtuid
         conn = sqlite3.connect('hapi.db')
         c=conn.cursor()
 
@@ -489,6 +495,7 @@ def get_pin_modes(rtu):
             pin_mode.pos = unit[3]
             rtu.pin_modes.update({pin_mode.pin : pin_mode})
         conn.close()
+        print "Pin modes retrieved."
     except Exception, excpt:
         print "Error loading pin mode table. %s", excpt
 

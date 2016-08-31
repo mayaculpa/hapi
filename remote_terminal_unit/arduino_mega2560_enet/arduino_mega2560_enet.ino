@@ -382,7 +382,7 @@ String buildResponse() {
   return response;
 }
 
-String getConnectionDetails() {
+String getStatus() {
   String retval = "";
   String macstring = (char*)mac;
 
@@ -401,19 +401,13 @@ String getConnectionDetails() {
   retval = retval + String(Ethernet.localIP()[2]) + ".";
   retval = retval + String(Ethernet.localIP()[3]) + "\n";
 
-  //  retval = retval + "Gateway=";
-  //  retval = retval + String(gateway[0]) + ".";
-  //  retval = retval + String(gateway[1]) + ".";
-  //  retval = retval + String(gateway[2]) + ".";
-  //  retval = retval + String(gateway[3]) + "\n";
-  //
-  //  retval = retval + "Subnet=";
-  //  retval = retval + String(subnet[0]) + ".";
-  //  retval = retval + String(subnet[1]) + ".";
-  //  retval = retval + String(subnet[2]) + ".";
-  //  retval = retval + String(subnet[3]) + "\n";
-
   retval = retval + "Free SRAM: " + String(freeRam()) + "k\n";
+
+  if (idle_mode == false){
+    retval = retval + "Idle Mode: False";
+  }else{
+    retval = retval + "Idle Mode: True";
+  }
 
   return retval;
 
@@ -548,8 +542,7 @@ void loop() {
       // Get the RTU Status
       if (inputCommand == "sta") {
         cmdFound = true;
-        writeLine(getConnectionDetails(), true);
-        setDefaultState();
+        writeLine(getStatus(), true);
       }
 
       // wds - Write Default State data to EEPROM
@@ -563,9 +556,6 @@ void loop() {
         writeDefaultData(data);
       }
 
-      if (inputCommand != "gpm") {
-        writeLine(buildResponse(), true); //Send a response back to client
-      }
       client.stop();
     }
   }
