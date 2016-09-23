@@ -21,11 +21,11 @@
 #along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #*********************************************************************
 
-import sqlite3
+import sqlite3                                      # https://www.sqlite.org/index.html
 import sys
 import operator
 import time
-import schedule
+import schedule                                     # sudo pip install schedule
 import datetime
 import urllib2
 import json
@@ -33,14 +33,15 @@ import subprocess
 import rtu_comm
 import os
 from multiprocessing import Process, Pipe
-import gevent, gevent.server
-from telnetsrv.green import TelnetHandler, command
+import gevent, gevent.server                        # sudo pip install gevent
+from telnetsrv.green import TelnetHandler, command  # sudo pip install telnetsrv
 import logging
+import serial                                       # sudo pip install pyserial
 
 rtus = []
 reload(sys)
 sys.setdefaultencoding('UTF-8')
-version = "1.0"
+version = "2.1"
 
 class RemoteTerminalUnit(object):
     def __init__(self):
@@ -81,26 +82,21 @@ class Site(object):
                 self.location = field[6]
                 self.net_iface = field[7]
             conn.close()
+            self.logger.info("Site data loaded.")
         except Exception, excpt:
             if self.logger != None:
                 self.logger.exception("Error loading site data: %s", excpt)
 
-
     def discover_rtus(self):
-        print "Discovering RTUs..."
         valid_ip_addresses = self.scan_for_rtus()
         self.rtus = []
 
         for ip_address in valid_ip_addresses:
-            print "Connecting to RTU at", ip_address
+            self.logger.info("Connecting to RTU at " + ip_address)
             try:
-                print "Attemping to contact rtu at", ip_address
                 target_rtu = rtu_comm.RTUCommunicator()
-                print "Got Communicator."
                 response = target_rtu.send_to_rtu(ip_address, 80, 5, "sta").split('\r\n')
-                print "Sent STA."
-                #self.logger.info(response[0] + " found at " + ip_address + " running " + response[1])
-                print response[0] + " found at " + ip_address + " running " + response[1]
+                self.logger.info(response[0] + " at " + ip_address + " is running " + response[1])
                 rtu = RemoteTerminalUnit()
                 rtu.rtuid = response[0]
                 rtu.address = ip_address
@@ -108,24 +104,44 @@ class Site(object):
                 rtu.online = True
                 get_pin_modes(rtu)
                 self.rtus.append(rtu)
-                print "Added", rtu.address, "to RTU list."
             except Exception, excpt:
                 if self.logger != None:
                     self.logger.exception("Error communicating with rtu at " + ip_address + ": %s", excpt)
+
+        try:
+            self.logger.info("Polling USB for additional RTUs...")
+            ser_response = ""
+            ser = serial.Serial('/dev/ttyACM0', 115200)
+            response = target_rtu.send_to_rtu("usb", 80, 3, "sta").split('\r\n')
+
+            if len(response) > 0:
+                self.logger.info(response[0] + " on USB is running " + response[1])
+                rtu = RemoteTerminalUnit()
+                rtu.rtuid = response[0]
+                rtu.address = "usb"
+                rtu.version = response[1]
+                rtu.online = True
+                get_pin_modes(rtu)
+                self.rtus.append(rtu)
+        except Exception, excpt:
+            if self.logger != None:
+                self.logger.warning("No RTU found on USB: %s", excpt)
 
         return self.rtus
 
     def scan_for_rtus(self):
         rtu_addresses = []
         try:
-            print "Scanning local network for RTUs..."
-            netscan = subprocess.check_output(["arp-scan", "--interface=eth1", "--localnet"])
+            self.logger.info("Scanning local network for RTUs...")
+            iface = "--interface=" + self.net_iface
+            #netscan = subprocess.check_output(["arp-scan", "--interface=eth1", "--localnet"])
+            netscan = subprocess.check_output(["arp-scan", iface, "--localnet"])
             netscan = netscan.split('\n')
             for machine in netscan:
                 if machine.find("de:ad:be:ef") > -1:
                     els = machine.split("\t")
                     ip_address = els[0]
-                    print "Found RTU at: ", ip_address
+                    self.logger.info("Found RTU at: " + ip_address)
                     rtu_addresses.append(ip_address)
 
         except Exception, excpt:
@@ -143,11 +159,12 @@ class Scheduler(object):
 
     def load_interval_schedule(self):
         job_list = []
+        self.logger.info("Scheduler data loading...")
         try:
             conn = sqlite3.connect('hapi.db')
             c=conn.cursor()
 
-            db_jobs = c.execute("SELECT job_id, job_name, rtuid, command, time_unit, interval, at_time, enabled FROM interval_schedule;")
+            db_jobs = c.execute("SELECT job_id, job_name, rtuid, command, time_unit, interval, at_time, enabled, sequence, timeout FROM interval_schedule;")
             for row in db_jobs:
                 job = IntervalJob()
                 job.job_id = row[0]
@@ -158,11 +175,14 @@ class Scheduler(object):
                 job.interval = row[5]
                 job.at_time = row[6]
                 job.enabled = row[7]
+                job.sequence = row[8]
+                job.timeout = row[9]
                 job_list.append(job)
 
             conn.close()
+
         except Exception, excpt:
-            print "Error loading interval_schedule. %s", excpt
+            self.logger.exception("Error loading interval_schedule. %s", excpt)
 
         return job_list
 
@@ -171,29 +191,29 @@ class Scheduler(object):
             if job.time_unit.lower() == "month":
                 if job.interval > -1:
                     schedule.every(job.interval).months.do(self.run_job, job)
-                    print "Loading monthly job:", job.job_name
+                    self.logger.info("  Loading monthly job: " + job.job_name)
             elif job.time_unit.lower() == "week":
                 if job.interval > -1:
                     schedule.every(job.interval).weeks.do(self.run_job, job)
-                    print "Loading weekly job:", job.job_name
+                    self.logger.info("  Loading weekly job: " + job.job_name)
             elif job.time_unit.lower() == "day":
                 if job.interval > -1:
                     schedule.every(job.interval).days.do(self.run_job, job)
-                    print "Loading daily job:", job.job_name
+                    self.logger.info("  Loading daily job: " + job.job_name)
                 else:
                     schedule.every().day.at(job.at_time).do(self.run_job, job)
-                    print "Loading daily job:", job.job_name
+                    self.logger.info("  Loading time-based job: " + job.job_name)
             elif job.time_unit.lower() == "hour":
                 if job.interval > -1:
                     schedule.every(job.interval).hours.do(self.run_job, job)
-                    print "Loading hourly job:", job.job_name
+                    self.logger.info("  Loading hourly job: " + job.job_name)
             elif job.time_unit.lower() == "minute":
                 if job.interval > -1:
                     schedule.every(job.interval).minutes.do(self.run_job, job)
-                    print "Loading minute job:", job.job_name
+                    self.logger.info("  Loading minutes job: " + job.job_name)
                 else:
                     schedule.every().minute.do(self.run_job, job)
-                    print "Loading minute job:", job.job_name
+                    self.logger.info("  Loading minute job: " + job.job_name)
 
     def run_job(self, job):
         if self.running == True:
@@ -202,8 +222,8 @@ class Scheduler(object):
             job_rtu = None
 
             if job.enabled == 1:
-                print 'Running', job.command, "on", job.rtuid
                 if job.rtuid.lower() == "virtual":
+                    print 'Running', job.command, "on", job.rtuid
                     try:
                         response = eval(job.command)
                         log_sensor_data(response, True, self.logger)
@@ -220,20 +240,37 @@ class Scheduler(object):
                                     job_rtu = rtu_el
 
                         if (job_rtu != None):
-                            command = job.command
-                            target_rtu = rtu_comm.RTUCommunicator()
-                            response = target_rtu.send_to_rtu(job_rtu.address, 80, 5, command)
+                            if job.sequence != "":
+                                print 'Running', job.sequence, "on", job.rtuid
 
-                            if (job.job_name == "Log Data"):
-                                log_sensor_data(response, False, self.logger)
-                            elif (job.job_name == "Log Status"):
-                                pass
+                                conn = sqlite3.connect('hapi.db')
+                                c=conn.cursor()
+                                seq_jobs = c.execute('SELECT name, command, step_name, timeout FROM sequence WHERE name = "' + job.sequence + '" ORDER BY step ;')
+
+                                for row in seq_jobs:
+                                    command = row[1].encode("ascii")
+                                    self.logger.info("Running " + row[0] + ":" + row[2] + "(" + command + ")" + " on " + job.rtuid + " at " + job_rtu.address + ".")
+                                    
+                                    
+                                    target_rtu = rtu_comm.RTUCommunicator()
+                                    response = target_rtu.send_to_rtu(job_rtu.address, 80, int(row[3]), command)
+                                conn.close()
                             else:
-                                log_command(job)
+                                print 'Running', job.command, "on", job.rtuid
+                                command = job.command
+                                target_rtu = rtu_comm.RTUCommunicator()
+                                response = target_rtu.send_to_rtu(job_rtu.address, 80, job.timeout, command)
+
+                                if (job.job_name == "Log Data"):
+                                    log_sensor_data(response, False, self.logger)
+                                elif (job.job_name == "Log Status"):
+                                    pass
+                                else:
+                                    log_command(job)
                         else:
                             print "Could not find rtu."
                             if self.logger != None:
-                                self.logger.info("Could not find rtu." + job.rtuid)
+                                self.logger.info("Could not find rtu " + job.rtuid)
 
                     except Exception, excpt:
                         error = "Error running job " + job.job_name + " on " + job_rtu.rtuid + ": " + excpt
@@ -243,13 +280,11 @@ class Scheduler(object):
 
 class HAPIListener(TelnetHandler):
     global the_rtu
-    global the_rtus
-
     the_rtu = None
-    the_rtus = []
-
+    global site
     site = Site()
     site.load_site_data()
+    site.discover_rtus()
 
     if site != None:
         WELCOME = "\n" + "Welcome to HAPI facility " + site.name + '\n'
@@ -262,6 +297,28 @@ class HAPIListener(TelnetHandler):
         WELCOME = "No site data found."
 
     PROMPT = "HAPI> "
+    def session_start(self):
+        self.the_rtus = []
+        self.the_rtus = site.rtus
+
+        logger_level = logging.DEBUG
+        self.logger = logging.getLogger('hapi_listener')
+        self.logger.setLevel(logger_level)
+
+        # create logging file handler
+        file_handler = logging.FileHandler('hapi_listener.log', 'a')
+        file_handler.setLevel(logger_level)
+
+        # create logging console handler
+        console_handler = logging.StreamHandler()
+        console_handler.setLevel(logger_level)
+
+        #Set logging format
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        file_handler.setFormatter(formatter)
+        console_handler.setFormatter(formatter)
+        self.logger.addHandler(file_handler)
+        self.logger.addHandler(console_handler)
 
     @command('cmd')
     def command_cmd(self, params):
@@ -276,7 +333,7 @@ class HAPIListener(TelnetHandler):
 
             self.writeresponse("Executing " + command + " on " + the_rtu.rtuid + "...")
             target_rtu = rtu_comm.RTUCommunicator()
-            response = target_rtu.send_to_rtu(the_rtu.address, 80, 5, command)
+            response = target_rtu.send_to_rtu(the_rtu.address, 80, 1, command)
             self.writeresponse(response)
             job = IntervalJob()
             job.job_name = command
@@ -293,15 +350,13 @@ class HAPIListener(TelnetHandler):
         PROMPT = "HAPI> "
         rtu_name = params[0]
         the_rtu = None
-
-        for rtu in the_rtus:
+        for rtu in site.rtus:
             if rtu.rtuid.lower() == rtu_name.lower():
                 the_rtu = rtu
-
         if the_rtu != None:
             self.writeresponse("Connecting to " + rtu_name + "...")
             target_rtu = rtu_comm.RTUCommunicator()
-            response = target_rtu.send_to_rtu(the_rtu.address, 80, 5, "env")            
+            response = target_rtu.send_to_rtu(the_rtu.address, 80, 3, "env")            
             self.writeresponse(response)
         else:
             self.writeresponse(rtu_name + " is not online at this site.")
@@ -326,21 +381,48 @@ class HAPIListener(TelnetHandler):
         f.write("pause")
         f.close()
 
+    @command('run')
+    def command_run(self, params):
+        '''
+        Starts the Master Controller's Scheduler
+
+        '''
+        if the_rtu == None:
+            self.writeresponse("You are not connected to an RTU.")
+        else:
+            command = params[0]
+
+            scheduler = Scheduler()
+            scheduler.site = site
+            scheduler.logger = self.logger
+
+            job = IntervalJob()
+            job.job_name = "User-defined"
+            job.enabled = 1
+            job.rtuid = the_rtu.rtuid
+
+            if params[0] == "command":
+                job.command = params[1]
+            elif params[0] == "sequence":
+                job.sequence = params[1]
+
+            scheduler.run_job(job)
+
     @command('rtus')
     def command_rtus(self, params):
         '''
         List all RTUs discovered at this site.
 
         '''
-        global the_rtus
-        self.writeresponse("Discovering RTUs...")
+        # global the_rtus
+        # self.writeresponse("Discovering RTUs...")
 
-        site = Site()
-        site.load_site_data()
-        the_rtus = site.discover_rtus()
-        self.writeresponse(str(len(the_rtus)) + " were found on-site.")
-        for rtu in the_rtus:
-            self.writeresponse(rtu.rtuid + " found at " + rtu.address + " is running HAPI " + rtu.version + ".")
+        # site = Site()
+        # site.load_site_data()
+        # the_rtus = site.discover_rtus()
+        self.writeresponse(str(len(self.the_rtus)) + " found on-site.")
+        for rtu in self.the_rtus:
+            self.writeresponse(rtu.rtuid + " at " + rtu.address + " is online and running HAPI " + rtu.version + ".")
     
     @command('status')
     def command_status(self, params):
@@ -348,17 +430,19 @@ class HAPIListener(TelnetHandler):
         Return operational status of the Master Controller
 
         '''
-        data = '\n### Master Controller Status ###\n'
-        data = data + '  Version v' + version + '\n'
-        data = data + '  Copyright 2016, Maya Culpa, LLC\n'
-        data = data + '  Platform: ' + sys.platform + '\n'
+        print "Received Status command."
+        data = '\nMaster Controller Status\n'
+        data = data + '  Software Version v' + version + '\n'
+        data = data + '  Running on: ' + sys.platform + '\n'
         data = data + '  Encoding: ' + sys.getdefaultencoding() + '\n'
         data = data + '  Python Information\n'
-        data = data + '     Executable: ' + sys.executable + '\n'
-        data = data + '     Version: ' + sys.version.replace('\n', " ") + '\n'
-        data = data + '     location: ' + sys.executable + '\n'
-        data = data + '  Timestamp: ' + str(datetime.datetime.now()) + '\n'
-        data = data + '################################\n'
+        data = data + '   - Executable: ' + sys.executable + '\n'
+        data = data + '   - v' + sys.version[0:7] + '\n'
+        data = data + '   - location: ' + sys.executable + '\n'
+        data = data + '  RTUs Online: ' + str(len(self.the_rtus)) + '\n'
+        data = data + '  Timestamp: ' + str(datetime.datetime.now())[0:19] + '\n'
+        #data = data + '  Copyright 2016, Maya Culpa, LLC\n'
+        data = data + '###\n'
         self.writeresponse(data)
 
     @command('stop')
@@ -370,7 +454,6 @@ class HAPIListener(TelnetHandler):
         f = open("ipc.txt", "wb")
         f.write("stop")
         f.close()
-
 
 def get_sensor_data():
     def dict_factory(cursor, row):
@@ -409,40 +492,14 @@ def get_weather():
         print "Error getting weather data.", excpt
     return response
 
-def get_image():
-    command = "fswebcam -p YUYV -d /dev/video0 -r 1280x720 image.jpg"
-    # ex: to store a image in to db
-    # public void insertImg(int id , Bitmap img ) {   
-    #     byte[] data = getBitmapAsByteArray(img); // this is a function
-    #     insertStatement_logo.bindLong(1, id);       
-    #     insertStatement_logo.bindBlob(2, data);
-    #     insertStatement_logo.executeInsert();
-    #     insertStatement_logo.clearBindings() ;
-    # }
+def take_webcam_still(site_name):
+    file_name = "images/" + time.strftime("%Y%m%d-%H%M%S") + ".jpg"
+    subprocess.call(["fswebcam", "-p", "YUYV", "-d", "/dev/video0", "-r", "1024x768", "--top-banner", "Maya Culpa, LLC", "--title", site_name, file_name])
+    #subprocess.Popen(["xdg-open", file_name])
 
-    #  public static byte[] getBitmapAsByteArray(Bitmap bitmap) {
-    #     ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-    #     bitmap.compress(CompressFormat.PNG, 0, outputStream);       
-    #     return outputStream.toByteArray();
-    # }
 
-    # to retrieve a image from db
-    # public Bitmap getImage(int i){
-    #     String qu = "select img  from table where feedid=" + i ;
-    #     Cursor cur = db.rawQuery(qu, null);
-    #     if (cur.moveToFirst()){
-    #         byte[] imgByte = cur.getBlob(0);
-    #         cur.close();
-    #         return BitmapFactory.decodeByteArray(imgByte, 0, imgByte.length);
-    #     }
-    #     if (cur != null && !cur.isClosed()) {
-    #         cur.close();
-    #     }       
-    #     return null ;
-    # } 
-    response = parsed_json['current_observation']
-    f.close()
-    return response
+    #"fswebcam", "-p", "YUYV", "-d", "/dev/video0", "-r", "1024x768", "--top-banner", "Maya Culpa, LLC", "--title", PROJECT_NAME, file_name    
+    return
 
 class IntervalJob(object):
 
@@ -455,6 +512,8 @@ class IntervalJob(object):
         self.interval = -1
         self.at_time = ""
         self.enabled = 0
+        self.sequence = ""
+        self.timeout = 0.0
 
 class PinMode(object):
     def __init__(self):
@@ -481,7 +540,7 @@ def push_log_data(sensor_name):
 
 def get_pin_modes(rtu):
     try:
-        print "Retrieving pin modes for", rtu.rtuid
+        #logger.info("Retrieving pin modes for " + rtu.rtuid)
         conn = sqlite3.connect('hapi.db')
         c=conn.cursor()
 
@@ -495,7 +554,6 @@ def get_pin_modes(rtu):
             pin_mode.pos = unit[3]
             rtu.pin_modes.update({pin_mode.pin : pin_mode})
         conn.close()
-        print "Pin modes retrieved."
     except Exception, excpt:
         print "Error loading pin mode table. %s", excpt
 
@@ -524,13 +582,15 @@ def get_assets():
     return assets
 
 def validate_pin_modes(online_rtus):
-    print "Validating pin modes..."
+    logger.info("Validating pin modes...")
     problem_rtus = []
-
+    #return []
+    
     # Check pin mode settings
     for rtu in online_rtus:
         target_rtu = rtu_comm.RTUCommunicator()
-        pmode_from_rtu = target_rtu.send_to_rtu(rtu.address, 80, 5, "gpm")
+        pmode_from_rtu = target_rtu.send_to_rtu(rtu.address, 80, 1, "gpm")
+        pmode_from_rtu = pmode_from_rtu[0:str.find(pmode_from_rtu, "{")]
 
         pmode_from_db = ""
         for db_pin_mode in sorted(rtu.pin_modes.values(), key=operator.attrgetter('pos')):
@@ -541,13 +601,14 @@ def validate_pin_modes(online_rtus):
         for i in range(0, len(pmode_from_rtu) - 2):
             if pmode_from_rtu[i] != pmode_from_db[i]:
                 pin_mode_ok = False
+                print "Mismatch at", i
         if pin_mode_ok == False:
-            print "RTU", rtu.rtuid, "has an incongruent pin mode."
-            print "RTU pins", pmode_from_rtu
-            print "DB pins", pmode_from_db
+            logger.warning("RTU " + rtu.rtuid + " has an incongruent pin mode.")
+            logger.warning("RTU pins: " + pmode_from_rtu)
+            logger.warning("DB pins: " + pmode_from_db)
             problem_rtus.append(rtu)
         else:
-            print "Pin mode congruence verified between", rtu.rtuid, "and the database."
+            logger.info("Pin mode congruence verified between " + rtu.rtuid + " and the database.")
     return problem_rtus
 
 def log_command(job):
@@ -556,7 +617,7 @@ def log_command(job):
     name = '"' + job.job_name + '"'
     rtuid = '"' + job.rtuid + '"'
     command = "INSERT INTO command_log (rtuid, timestamp, command) VALUES (" + rtuid + ", " + timestamp + ", " + name + ")"
-    print command
+    logger.info("Executed " + job.job_name + " on " + job.rtuid)
     conn = sqlite3.connect('hapi.db')
     c=conn.cursor()
     c.execute(command)
@@ -623,6 +684,7 @@ def run_listener(conn):
 def main(argv):
     global rtus
     global site
+    global logger
 
     logger_level = logging.DEBUG
     logger = logging.getLogger('hapi_master_controller')
@@ -653,33 +715,30 @@ def main(argv):
         logger.exception("Error loading site information. %s", excpt)
 
     if site != None:
-        for rtu in problem_rtus:
-            print "RTU", rtu.rtuid, "has pin modes incongruent with the database."
-
         if len(site.rtus) == 0:
-            print "There are no RTUs online."
+            logger.info("There are no RTUs online.")
         elif len(site.rtus) == 1:
-            print "There is 1 RTU online."
+            logger.info("There is 1 RTU online.")
         else:
-            print "There are", len(site.rtus), "online."
+            logger.info("There are " + str(len(site.rtus)) + " RTUs online.")
     try:
-        print "Initializing HAPI Listener..."
+        logger.info("Initializing Listener...")
         listener_parent_conn, listener_child_conn = Pipe()
         p = Process(target=run_listener, args=(listener_child_conn,))
         p.start()
-        print "HAPI Listener is online."
+        logger.info("Listener is online.")
     except Exception, excpt:
         logger.exception("Error loading initializing listener. %s", excpt)
 
     # Loading scheduled jobs
     try:
-        print "Initializing scheduler..."
+        logger.info("Initializing scheduler...")
         scheduler = Scheduler()
         scheduler.site = site
         scheduler.logger = logger
         scheduler.prepare_jobs(scheduler.load_interval_schedule())
         count = 1
-        print "Scheduler is initialized and running."
+        logger.info("Scheduler is online.")
     except Exception, excpt:
         logger.exception("Error initializing scheduler. %s", excpt)
 
@@ -700,12 +759,12 @@ def main(argv):
                 if data != "":
                     if data == "run":
                         scheduler.running = True
-                        print "The scheduler is running."
+                        logger.info("The scheduler is running.")
                     elif data == "pause":
-                        print "The scheduler has been paused."
+                        logger.info("The scheduler has been paused.")
                         scheduler.running = False
                     else:
-                        print "Received from Listener: " + data
+                        logger.info("Received from Listener: " + data)
         except Exception, excpt:
             logger.exception("Error in Master Controller main loop. %s", excpt)            
             

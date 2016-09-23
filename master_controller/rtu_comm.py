@@ -22,19 +22,40 @@
 #*********************************************************************
 
 import telnetlib
+import time
+import serial
 
 class RTUCommunicator(object):
     def __init__(self):
         self.rtuid = ""
 
     def send_to_rtu(self, address, port, timeout, command):
-        # address is a string with an ip address
-        # port is an integer containing the port number
-        # timeout an integer containing the timeout parameter in seconds
-        tn = telnetlib.Telnet()
-        tn.open(address, port, timeout)
-        tn.write(command + "\n")
-        response = tn.read_all()
-        tn.close()
+        if address.lower() != "usb":
+            # address is a string with an ip address
+            # port is an integer containing the port number
+            # timeout an integer containing the timeout parameter in seconds
+            tn = telnetlib.Telnet()
+            tn.open(address, port, timeout)
+            tn.write(command.strip() + "\n\n")
+            response = tn.read_all()
+            tn.close()
+
+        else:
+
+            response = ""
+            ser = serial.Serial('/dev/ttyACM0', 9600)
+            time.sleep(timeout)
+
+            #print "Running: " + command.strip()
+            num_bytes = ser.write(command + "\n")
+            ser.flush()
+            time.sleep(2)            
+            while ser.in_waiting > 0:
+                response = response + ser.readline()
+                time.sleep(0.1)
+
+            ser.close()
+            #print "USB response:", response
+
         return response
 
