@@ -34,14 +34,18 @@ class RTUCommunicator(object):
             # address is a string with an ip address
             # port is an integer containing the port number
             # timeout an integer containing the timeout parameter in seconds
+            print "RTUComm: running", command, "at", address, ":", port, timeout
             tn = telnetlib.Telnet()
-            tn.open(address, port, timeout)
-            tn.write(command.strip() + "\n\n")
+            #tn.open(address, port, timeout)
+            tn.open(address, port, 5)
+            time.sleep(0.25)
+            command = command.encode('utf-8')
+            tn.write(command.strip() + "\n")
+            time.sleep(0.25)
             response = tn.read_all()
+            time.sleep(0.25)
             tn.close()
-
         else:
-
             response = ""
             ser = serial.Serial('/dev/ttyACM0', 9600)
             time.sleep(timeout)
