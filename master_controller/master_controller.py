@@ -639,9 +639,15 @@ class HAPIListener(TelnetHandler):
         data = data + '  RTUs Online: ' + str(len(self.the_rtus)) + '\n'
         data = data + '  Timestamp: ' + str(datetime.datetime.now())[0:19] + '\n'
         uptime = datetime.datetime.now() - launch_time
+        '''
         days = uptime.days
         hours = divmod(uptime.seconds, 3600)[0]
         minutes = divmod(uptime.seconds, 60)[0]
+        '''
+        seconds = uptime.seconds
+        minutes = divmod(seconds, 60)[0]
+        hours = divmod(minutes, 60)[0]
+        days = divmod(hours, 24)[0]
         uptime_str = "This listener has been online for " + str(days) + " days, " + str(hours) + " hours and " + str(minutes) + " minutes."
         data = data + '  Uptime: ' + uptime_str + '\n'
         #data = data + '  Copyright 2016, Maya Culpa, LLC\n'
