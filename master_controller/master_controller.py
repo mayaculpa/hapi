@@ -539,15 +539,15 @@ class Site(object):
     def send_alert_condition(self, site, asset, alert, alert_param, logger):
         try:
             if alert_param.response_type.lower() == "sms":
-                ACCOUNT_SID = "AC173e452f2507746ef179ed08c1e50f18"
-                AUTH_TOKEN = "43ae435939dc8041a1adbd0df07326e5"
+                #ACCOUNT_SID = ""
+                #AUTH_TOKEN = ""
                 timestamp = '"' + str(datetime.datetime.now()) + '"'
                 message = "Alert from " + site.name + ": " + asset.name + '\r\n'
                 message = message + alert_param.message + '\r\n'
                 message = message + "  Value: " + str(alert.value) + '\r\n'
                 message = message + "  Timestamp: " + timestamp + '\r\n'
-                client = TwilioRestClient(ACCOUNT_SID, AUTH_TOKEN)      
-                client.messages.create(to="+16143164312", from_="+16145694144", body=message, )
+                #client = TwilioRestClient(ACCOUNT_SID, AUTH_TOKEN)      
+                #client.messages.create(to="+receiving number", from_="+sending number", body=message, )
                 print "Alert condition sent."
 
         except Exception, excpt:
