@@ -46,6 +46,7 @@ class RTUCommunicator(object):
             time.sleep(0.25)
             tn.close()
         else:
+            return ""
             response = ""
             ser = serial.Serial('/dev/ttyACM0', 9600)
             time.sleep(timeout)
