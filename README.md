@@ -9,7 +9,6 @@ Don't forget to check our Wiki Page
 
 ## Under heavily development
 We're currently under heavily development.
-Be aware of the 
 
 ## Our purpose
 is to develop a suite of tools that will allow people to grow a variety of food in diverse environments. Our primary focus is on building intelligent automation for hydroponics and aquaponics. Imagine systems in your garage, basement or local community center that can churn out strawberries and kale, year-round with minimal expertise, expense and effort. That’s what we’re shooting for.
