@@ -12,4 +12,5 @@ However, people live in diverse locations and are faced with different resource 
 HAPI is an open project, meaning anyone and everyone can participate to the best of their ability. While many aspects of the project are highly technical, there are also areas where non-technical expertise is needed. If you would like to see what’s going on currently and what cool stuff we’ll be working on next, visit our project management board.
 
 ![System Overview of the HAPI Project](/readme/system-overview.png?raw=true "HAPI Project System Overview")
-Please note: we're currently working on the system design.
+
+Please note: we're currently working on the system design. Some changes on this image should be necessary in the near future.
