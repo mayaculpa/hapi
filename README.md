@@ -5,7 +5,7 @@ http://hapihq.com/
 
 ## Wiki Page
 Don't forget to check our Wiki Page
-![HAPI Wiki Page](/wiki "Wiki Page")
+![HAPI Wiki Page](/../../wiki "Wiki Page")
 
 ## Under heavily development
 We're currently under heavily development.
