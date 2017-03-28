@@ -1,26 +1,29 @@
-![sticker1.png](https://github.com/mayaculpa/hapi/blob/master/images/sticker1.png "Logo")
+![HAPI Project](/readme/hapi.png?raw=true "HAPI Project")
 
-Welcome to the Hydro­ponic Automa­tion Plat­form Ini­tia­tive (HAPI) Repository.  
-To learn more about the HAPI project, please visit [HAPI HQ](http://hapihq.com)
-# Contributing 
+# HAPI
+http://hapihq.com/
 
-If you would like to help us with our code, follow these steps.
+## Wiki Page
+Don't forget to check our Wiki Page
+![HAPI Wiki Page](/../../wiki "Wiki Page")
 
-1. Fork the repo  
-![Fork.png](https://github.com/mayaculpa/hapi/blob/master/images/Fork.png "Fork")
-2. Create the changes on the file in your new forked repository  
-![Edit.png](https://github.com/mayaculpa/hapi/blob/master/images/Edits.png "Editing")
-3. Commit the changes (Commits to your forked branch)
-  1. Title the commit
-  2. Explain it
-  3. Commit
-  ![Commit.png](https://github.com/mayaculpa/hapi/blob/master/images/Commits.png "Commits")
-4. Click "New Pull Request"  
-![NewPullRequest.png](https://github.com/mayaculpa/hapi/blob/master/images/NewPullRequest.png "NewPullRequest")
-5. Click "Create Pull Request"
-![CreatePullRequest.png](https://github.com/mayaculpa/hapi/blob/master/images/CreatePullRequest.png "CreatePullRequest")
-6. Create the finished pull request
-  1. Title the pull request
-  2. Explain it
-  3. Create Pull Request
-  ![CreatePullRequestContinued.png](https://github.com/mayaculpa/hapi/blob/master/images/CreatePullRequestContinued.png "CreatePullRequestContinued")
+## Under heavily development
+We're currently under heavily development.
+
+## Our purpose
+is to develop a suite of tools that will allow people to grow a variety of food in diverse environments. Our primary focus is on building intelligent automation for hydroponics and aquaponics. Imagine systems in your garage, basement or local community center that can churn out strawberries and kale, year-round with minimal expertise, expense and effort. That’s what we’re shooting for.
+
+However, people live in diverse locations and are faced with different resource constraints. For instance, access to clean water could be a challenge in Ghana whereas access to energy could be a challenge in Greenland. So alongside the automation platform, we’re also developing equipment to help people overcome those challenges. The multi-stage water filter and the solar thermal air heater are results of this effort.
+
+## Open Source
+HAPI is an open project, meaning anyone and everyone can participate to the best of their ability. While many aspects of the project are highly technical, there are also areas where non-technical expertise is needed. If you would like to see what’s going on currently and what cool stuff we’ll be working on next, visit our project management board.
+
+![System Overview of the HAPI Project](/readme/system-overview.png?raw=true "HAPI Project System Overview")
+
+Please note: we're currently working on the system design. Some changes on this image should be necessary in the near future.
+
+## Contact
+If you have any question or sugestion, you can contact us through the link below.
+http://hapihq.com/contact-us-2/
+
+Although if you have found any problem or just want to make a suggestion, please check the Issue page.
