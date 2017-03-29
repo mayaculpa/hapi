@@ -25,9 +25,7 @@ set -eu
 
 # Global Variables
 # HAPI_HOSTNAME will hold the MQTT Broker we want to connect.
-# WAITING will hold the seconds waiting for network to restart
 HAPI_HOSTNAME="mqttbroker"
-WAITING=7
 
 # Information control functions.
 # They can be updated to write to a log file, such as:
@@ -66,9 +64,6 @@ main() {
 		if hostname ${HAPI_HOSTNAME} ; then
 			info "Restarting avahi-daemon.service."
 			systemctl restart avahi-daemon.service
-			info "Restarting networking."
-			service networking restart
-			sleep "${WAITING}"
 			info "Exiting..."
 			exit 0
 		else
