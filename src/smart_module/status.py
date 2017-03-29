@@ -1,4 +1,4 @@
-#!/bin/python3 
+#!/bin/python 
 # or #!/bin/env python3 
 
 # HAPI Project
@@ -37,7 +37,15 @@
 # 5. CPU:
 # 	5.1. CPU Process time
 
-import psutil
-import json
+import psutil, json, datetime
 
 if __name__ == '__main__':
+	""" Getting familiar with psutil """
+
+	cpu_stats = psutil.cpu_percent(interval=0.8)
+	mem_stats = psutil.virtual_memory()
+	disk_stats = psutil.disk_usage('/')
+	boot_stats = psutil.boot_time() # Format string
+	netw_stats = psutil.net_io_counters(pernic=False)
+	
+	print(cpu_stats, mem_stats, disk_stats, boot_stats, netw_stats)
