@@ -39,13 +39,19 @@
 
 import psutil, json, datetime
 
+class SystemStats:
+	""" Small class to handle all systeme information """
+
+	def __init__(self):
+		self.cpustats = { "CPU use": psutil.cpu_percent(interval=0.7) }
+		self.memstats = json.dumps(psutil.virtual_memory()._asdict())
+		self.netstats = json.dumps(psutil.net_io_counters(pernic=False))
+		self.bootstats = { "Boot time": psutil.boot_time() }
+
 if __name__ == '__main__':
 	""" Getting familiar with psutil """
 
-	cpu_stats = psutil.cpu_percent(interval=0.8)
-	mem_stats = psutil.virtual_memory()
-	disk_stats = psutil.disk_usage('/')
-	boot_stats = psutil.boot_time() # Format string
-	netw_stats = psutil.net_io_counters(pernic=False)
-	
-	print(cpu_stats, mem_stats, disk_stats, boot_stats, netw_stats)
+	print("Testing...")
+	mysysstats = SystemStats()
+	print(mysysstats.cpustats)
+	print(mysysstats.memstats)
