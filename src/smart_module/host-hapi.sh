@@ -2,7 +2,7 @@
 
 # HAPI Project
 # Author: Pedro Freitas
-# Release: March 2017 Alpha
+# Release: 0.1-alpha (2017)
 # Copyright 2017 Maya Culpa, LLC
 # 
 # This program is free software: you can redistribute it and/or modify
