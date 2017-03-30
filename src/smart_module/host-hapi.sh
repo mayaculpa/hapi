@@ -43,7 +43,7 @@ info() {
 # It depends on avahi/bonjour
 check_mqttbroker() {
 	info "Checking if ${HAPI_HOSTNAME} already exists."
-	if ping -W 1 -c 2 -s 1 ${HAPI_HOSTNAME} > /dev/null 2>&1 ; then
+	if ping -W 1 -c 2 -s 1 ${HAPI_HOSTNAME}.local > /dev/null 2>&1 ; then
 		info "${HAPI_HOSTNAME} does exist."
 		return 0
 	else
