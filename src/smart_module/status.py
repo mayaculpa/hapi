@@ -1,5 +1,5 @@
-#!/bin/python 
-# or #!/bin/env python3 
+#!/bin/python
+# or #!/bin/env python3
 
 # HAPI Project
 # Smart Module Status is responsible to fetch information from the system
@@ -11,12 +11,12 @@
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
@@ -37,21 +37,28 @@
 # 5. CPU:
 # 	5.1. CPU Process time
 
-import psutil, json, datetime
+import psutil
+import json
 
-class SystemStats:
-	""" Small class to handle all systeme information """
+class SystemStatus:
+	""" Small class to handle system information """
 
 	def __init__(self):
-		self.cpustats = { "CPU use": psutil.cpu_percent(interval=0.7) }
-		self.memstats = json.dumps(psutil.virtual_memory()._asdict())
-		self.netstats = json.dumps(psutil.net_io_counters(pernic=False))
-		self.bootstats = { "Boot time": psutil.boot_time() }
+		self.memory = { "used": 0, "free": 0 }
+		self.cpu = { "percentage": 0 }
+		self.boot = { "time": 0 }
+		self.network = { "Packet sent": 0, "Packet recvd": 0 }
+		self.update()
 
-if __name__ == '__main__':
-	""" Getting familiar with psutil """
+	def __str__(self):
+		json_string = '{"memory": {}, "cpu": {}, "boot": {}, \
+						"network": {}}'.format(self.memory, self.cpu, self.boot, self.network)
+		return json_string
 
-	print("Testing...")
-	mysysstats = SystemStats()
-	print(mysysstats.cpustats)
-	print(mysysstats.memstats)
+	def update(self):
+		self.cpu["percentage"] = psutil.cpu_percent(interval=0.7)
+		self.memory["used"] = psutil.virtual_memory()
+
+if __name__ == "__main__":
+	testingclass = SystemStatus()
+	print (testingclass)
