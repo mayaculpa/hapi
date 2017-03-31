@@ -39,6 +39,10 @@ info() {
 	echo "[INFO] [$(date)] $*"
 }
 
+error() {
+	echo "[ERROR] [$(date)] $*"
+}
+
 # Check if we already have a device with the hostname mqttbroker{.local}
 # It depends on avahi/bonjour
 check_mqttbroker() {
@@ -67,7 +71,7 @@ main() {
 			info "Exiting..."
 			exit 0
 		else
-			fatal "Changing hostname not possible."
+			error "Changing hostname not possible."
 			exit 1
 		fi
 	fi
