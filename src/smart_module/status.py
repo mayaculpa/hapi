@@ -38,27 +38,30 @@
 # 	5.1. CPU Process time
 
 import psutil
-import json
 
 class SystemStatus:
 	""" Small class to handle system information """
 
 	def __init__(self):
-		self.memory = { "used": 0, "free": 0 }
 		self.cpu = { "percentage": 0 }
 		self.boot = { "time": 0 }
-		self.network = { "Packet sent": 0, "Packet recvd": 0 }
-		self.update()
+		self.memory = { "used": 0, "free": 0 }
+		self.network = { "packet_sent": 0, "packet_recv": 0 }
 
 	def __str__(self):
-		json_string = '{"memory": {}, "cpu": {}, "boot": {}, \
-						"network": {}}'.format(self.memory, self.cpu, self.boot, self.network)
-		return json_string
+		json_string = str('"memory": {}, "cpu": {}, "boot": {}, "network": {}')
+		json_info = '{' + json_string.format(self.memory, self.cpu, self.boot, self.network) + '}'
+		return json_info
 
 	def update(self):
 		self.cpu["percentage"] = psutil.cpu_percent(interval=0.7)
-		self.memory["used"] = psutil.virtual_memory()
+		self.boot["time"] = psutil.boot_time()
+		self.memory["used"] = psutil.virtual_memory()[3]
+		self.memory["free"] = psutil.virtual_memory()[4]
+		self.network["packet_sent"] = psutil.net_io_counters()[2]
+		self.network["packet_recv"] = psutil.net_io_counters()[3]
 
 if __name__ == "__main__":
-	testingclass = SystemStatus()
-	print (testingclass)
+	ss = SystemStatus()
+	ss.update()
+	print(ss)
