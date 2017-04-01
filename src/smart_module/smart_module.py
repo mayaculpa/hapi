@@ -26,6 +26,7 @@ import sys
 import time
 import schedule                                     # sudo pip install schedule
 import datetime
+import dateutil.parser
 import urllib2
 import json
 import subprocess
@@ -92,6 +93,7 @@ class SmartModule(object):
     def __init__(self):
         logging.getLogger(sm_logger).info("Smart Module Initializing.")
         self.comm = communicator.Communicator()
+        self.data_sync = DataSync()
         self.comm.site = self
         self.site_id = ""
         self.name = ""
@@ -112,20 +114,31 @@ class SmartModule(object):
 
     def discover(self):
         logging.getLogger(sm_logger).info("Performing Discovery...")
-        while self.comm.is_connected == False:
-            self.comm.connect()
+        subprocess.call("sudo ./host-hapi.sh", shell=True)
+        self.comm.smart_module = self
+        self.comm.client.loop_start()
+        self.comm.connect()
+        t_end = time.time() + 10
+        while (time.time() < t_end) and (self.comm.is_connected is False):
             time.sleep(1)
 
-            if self.comm.is_connected is False:
-                logging.getLogger(sm_logger).info("No MQTT Broker found. Becoming the broker.")
-                subprocess.call("sudo ./host-hapi.sh", shell=True)
+        # while self.comm.is_connected == False:
+        #     self.comm.connect()
 
-        logging.getLogger(sm_logger).info("Connected to mqttbroker.local")
+        #     if self.comm.is_connected is False:
+        #         logging.getLogger(sm_logger).info("No MQTT Broker found. Becoming the broker.")
+        #         subprocess.call("sudo ./host-hapi.sh", shell=True)
+
+        #logging.getLogger(sm_logger).info("Connected to mqttbroker.local")
         self.hostname = socket.gethostname()
         self.comm.send("ANNOUNCE", socket.gethostname() + " is online.")
+        
 
+        self.comm.subscribe("SCHEDULER/IDENT")
         self.comm.send("SCHEDULER/LOCATE", "Where are you?")
-        time.sleep(1)
+        t_end = time.time() + 2
+        while (time.time() < t_end) and (self.comm.is_connected is False):
+            time.sleep(1)
 
         if self.comm.scheduler_found == False:
             # Loading scheduled jobs
@@ -136,6 +149,8 @@ class SmartModule(object):
                 self.scheduler.running = True
                 self.scheduler.prepare_jobs(self.scheduler.load_interval_schedule())
                 self.comm.scheduler_found = True
+                self.comm.subscribe("SCHEDULER/LOCATE")
+                self.comm.unsubscribe("SCHEDULER/IDENT")
                 self.comm.send("SCHEDULER/IDENT", socket.gethostname() + ".local")
                 self.comm.send("ANNOUNCE", socket.gethostname() + ".local" + " is running the Scheduler.")
                 logging.getLogger(sm_logger).info("Scheduler program loaded.")
@@ -144,7 +159,7 @@ class SmartModule(object):
 
     def get_assets(self):
         try:
-            conn = sqlite3.connect('hapi.db')
+            conn = sqlite3.connect('hapi_core.db')
             c=conn.cursor()
             sql = "SELECT asset_id, abbreviation, name, unit, context, system, enabled FROM assets;"
             rows = c.execute(sql)
@@ -162,13 +177,13 @@ class SmartModule(object):
                 self.assets.append(asset)
             conn.close()
         except Exception, excpt:
-            logging.getLogger(sm_logger).exception("Error loading site data: %s", excpt)
+            logging.getLogger(sm_logger).exception("Error loading assets: %s", excpt)
 
         return assets
 
     def load_site_data(self):
         try:
-            conn = sqlite3.connect('hapi.db')
+            conn = sqlite3.connect('hapi_core.db')
             c = conn.cursor()
             sql = "SELECT site_id, name, wunder_key, operator, email, phone, location, longitude, latitude, twilio_acct_sid, twilio_auth_token FROM site LIMIT 1;"
             db_elements = c.execute(sql)
@@ -278,7 +293,7 @@ class SmartModule(object):
                             unit = '"' + asset.unit + '"'
                             command = "INSERT INTO sensor_data (asset_id, timestamp, value, unit) VALUES (" + str(asset.asset_id) + ", " + timestamp + ", " + value + ", " + unit + ")"
                             print command
-                            conn = sqlite3.connect('hapi.db')
+                            conn = sqlite3.connect('hapi_history.db')
                             c=conn.cursor()
                             c.execute(command)
                             conn.commit()
@@ -303,7 +318,7 @@ class SmartModule(object):
                                 unit = '"' + asset.unit + '"'
                                 command = "INSERT INTO sensor_data (asset_id, timestamp, value, unit) VALUES (" + str(asset.asset_id) + ", " + timestamp + ", " + str(value) + ", " + unit + ")"
                                 print command
-                                conn = sqlite3.connect('hapi.db')
+                                conn = sqlite3.connect('hapi_history.db')
                                 c=conn.cursor()
                                 c.execute(command)
                                 conn.commit()
@@ -379,7 +394,7 @@ class SmartModule(object):
         rtuid = '"' + job.rtuid + '"'
         command = "INSERT INTO command_log (rtuid, timestamp, command) VALUES (" + rtuid + ", " + timestamp + ", " + name + ")"
         logging.getLogger(sm_logger).info("Executed " + job.job_name + " on " + job.rtuid)
-        conn = sqlite3.connect('hapi.db')
+        conn = sqlite3.connect('hapi_history.db')
         c=conn.cursor()
         c.execute(command)
         conn.commit()
@@ -390,7 +405,7 @@ class SmartModule(object):
             timestamp = '"' + str(datetime.datetime.now()) + '"'
             command = "INSERT INTO alert_log (asset_id, value, timestamp) VALUES (" + str(alert.asset_id) + ", " + timestamp + ", " + str(alert.value) + ")"
             print command
-            conn = sqlite3.connect('hapi.db')
+            conn = sqlite3.connect('hapi_history.db')
             c=conn.cursor()
             c.execute(command)
             conn.commit()
@@ -418,7 +433,7 @@ class SmartModule(object):
     def get_alert_params(self):
         alert_params = []
         try:
-            conn = sqlite3.connect('hapi.db')
+            conn = sqlite3.connect('hapi_core.db')
             c=conn.cursor()
             sql = "SELECT asset_id, lower_threshold, upper_threshold, message, response_type FROM alert_params;"
             rows = c.execute(sql)
@@ -488,7 +503,7 @@ class Scheduler(object):
         job_list = []
         logging.getLogger(sm_logger).info("Loading Schedule Data...")
         try:
-            conn = sqlite3.connect('hapi.db')
+            conn = sqlite3.connect('hapi_core.db')
             c=conn.cursor()
 
             db_jobs = c.execute("SELECT job_id, job_name, rtuid, command, time_unit, interval, at_time, enabled, sequence, timeout FROM interval_schedule;")
@@ -580,7 +595,7 @@ class Scheduler(object):
                             if str.strip(job.sequence) != "":
                                 if (job_rtu != None):
                                     print 'Running sequence', job.sequence, "on", job.rtuid
-                                    conn = sqlite3.connect('hapi.db')
+                                    conn = sqlite3.connect('hapi_core.db')
                                     c=conn.cursor()
                                     seq_jobs = c.execute('SELECT name, command, step_name, timeout FROM sequence WHERE name = "' + job.sequence + '" ORDER BY step ;')
                                     print "len(seq_jobs) = "  + str(len(seq_jobs))
@@ -605,6 +620,58 @@ class Scheduler(object):
 
                     except Exception, excpt:
                         logging.getLogger(sm_logger).exception('Error running job: %s', excpt)
+
+class DataSync(object):
+    def read_db_version(self):
+        version = ""
+        try:
+            conn = sqlite3.connect('hapi_core.db')
+            c=conn.cursor()
+            sql = "SELECT version FROM db_info;"
+            data = c.execute(sql)
+            for element in data:
+                version = dateutil.parser.parse(element[0])
+            conn.close()
+            logging.getLogger(sm_logger).info("Read database version: " + str(version))
+            return str(version)
+        except Exception, excpt:
+            logging.getLogger(sm_logger).info("Error reading database version: %s", excpt)
+
+    def write_db_version(self):
+        try:
+            version = str(datetime.datetime.now().isoformat)
+            command = 'UPDATE db_info SET version = "' + version + '";'
+            conn = sqlite3.connect('hapi_core.db')
+            c=conn.cursor()
+            c.execute(command)
+            conn.commit()
+            conn.close()
+            logging.getLogger(sm_logger).info("Wrote database version: " + version)
+        except Exception, excpt:
+            logging.getLogger(sm_logger).info("Error writing database version: %s", excpt)
+
+    def publish_core_db(self, comm):
+        try:
+            f = open("hapi_core.db")
+            data = f.read()
+            byteArray = bytes(data)
+            comm.unsubscribe("SYNCHRONIZE/DATA")
+            comm.send("SYNCHRONIZE/DATA", byteArray)
+            time.sleep(1)
+            comm.subscribe("SYNCHRONIZE/DATA")
+            logging.getLogger(sm_logger).info("Published database.")
+        except Exception, excpt:
+            logging.getLogger(sm_logger).info("Error publishing database: %s", excpt)
+
+    def synchronize_core_db(self, data):
+        try:
+            with open('hapi_core.db', 'wb') as fd:
+                fd.write(data)
+
+            logging.getLogger(sm_logger).info("Synchronized database.")
+        except Exception, excpt:
+            logging.getLogger(sm_logger).info("Error synchronizing database: %s", excpt)
+
 
 # class HAPIListener(TelnetHandler):
 #     global launch_time
@@ -823,12 +890,13 @@ def main():
     #     logger.info("Listener is online.")
     # except Exception, excpt:
     #     logger.exception("Error loading initializing listener. %s", excpt)
-
+    #smart_module.comm.client.loop(timeout=1.0, max_packets=1)
+    #smart_module.comm.client.loop_start()
     while 1:
         #print listener_parent_conn.recv()
         try:
-            smart_module.comm.client.loop(timeout=1.0, max_packets=1)
-
+            
+            time.sleep(0.5)
             # if count % 60 == 0:
             #     print ".",
             # time.sleep(5)
