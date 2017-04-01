@@ -88,8 +88,8 @@ class SmartModule(object):
         email: Email address of the primary site operator
         phone: Phone number of the primary site operator
         location: Location or Address of the site
-    """ 
-    
+    """
+
     def __init__(self):
         logging.getLogger(sm_logger).info("Smart Module Initializing.")
         self.comm = communicator.Communicator()
@@ -206,6 +206,11 @@ class SmartModule(object):
             logging.getLogger(sm_logger).exception("Error loading site data: %s", excpt)
 
     def get_status(self):
+        # We can update it to:
+        # from status import SystemStatus
+        # ss = SystemStatus()
+        # ss.update()
+        # return str(ss)
         print "Building status"
         data = {}
         data['cpu_percent'] = psutil.cpu_percent(interval=1)
@@ -213,7 +218,7 @@ class SmartModule(object):
         data['packets_recv'] = psutil.net_io_counters()._asdict()['packets_recv']
         json_data = json.dumps(data)
         return str(json_data)
-    
+
     def get_asset_value(self, asset_name):
         value = ""
         assets = self.get_assets()
@@ -346,7 +351,7 @@ class SmartModule(object):
             for item in dbs:
                 if asset_context in item:
                     found = True
-            
+
             if found is False:
                 client.query("CREATE DATABASE {0}".format('"' + asset_context + '"'))
 
@@ -423,7 +428,7 @@ class SmartModule(object):
                 message = message + alert_param.message + '\r\n'
                 message = message + "  Value: " + str(alert.value) + '\r\n'
                 message = message + "  Timestamp: " + timestamp + '\r\n'
-                #client = TwilioRestClient(ACCOUNT_SID, AUTH_TOKEN)      
+                #client = TwilioRestClient(ACCOUNT_SID, AUTH_TOKEN)
                 #client.messages.create(to="+receiving number", from_="+sending number", body=message, )
                 print "Alert condition sent."
 
@@ -678,7 +683,7 @@ class DataSync(object):
 #     launch_time = datetime.datetime.now()
 
 #     PROMPT = site.name + "> "
-    
+
 #     # def __init__(self, *args):
 #     #     print "Listener Init"
 #     #     print args
@@ -707,7 +712,7 @@ class DataSync(object):
 #         Gets the current value for the named asset.
 #         '''
 #         asset = ""
-        
+
 #         for param in params:
 #             asset = asset + " " + param.encode('utf-8').strip()
 
@@ -754,7 +759,7 @@ class DataSync(object):
 #         '''
 #         f = open("ipc.txt", "wb")
 #         f.write("run")
-#         f.close() 
+#         f.close()
 
 #     @command('pause')
 #     def command_pause(self, params):
@@ -811,7 +816,7 @@ class DataSync(object):
 #         Turn off the named asset.
 #         '''
 #         asset = ""
-        
+
 #         for param in params:
 #             asset = asset + " " + param.encode('utf-8').strip()
 
@@ -828,7 +833,7 @@ class DataSync(object):
 #         Turn on the named asset.
 #         '''
 #         asset = ""
-        
+
 #         for param in params:
 #             asset = asset + " " + param.encode('utf-8').strip()
 
@@ -869,7 +874,7 @@ def main():
 
         #ACCOUNT_SID = <your twilio account SID here>
         #AUTH_TOKEN = <your twilio account token here>
-        #client = TwilioRestClient(ACCOUNT_SID, AUTH_TOKEN)      
+        #client = TwilioRestClient(ACCOUNT_SID, AUTH_TOKEN)
         #client.messages.create(to=<+receiving number>, from_=<+sending number>, body="HAPI Master Controller is online.", )
 
         # problem_rtus = validate_pin_modes(rtus)
@@ -919,7 +924,7 @@ def main():
             #         else:
             #             logger.info("Received from Listener: " + data)
         except Exception, excpt:
-            logger.exception("Error in Smart Module main loop. %s", excpt)            
+            logger.exception("Error in Smart Module main loop. %s", excpt)
             break
 
 if __name__ == "__main__":
