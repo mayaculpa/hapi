@@ -72,14 +72,14 @@ class Communicator(object):
 
         # Commented subscribes are the topics that the RTUs will be listening to
         client.subscribe("COMMAND" + "/#")
-        
+
         # Time synchronization topic
         client.subscribe("SYNCHRONIZE/TIME" + "/#", qos=0)
 
         # Database synchronization topic
         client.subscribe("SYNCHRONIZE/DATA" + "/#", qos=0)
 
-        client.subscribe("QUERY" + "/#")        
+        client.subscribe("QUERY" + "/#")
         #client.subscribe("RESPONSE/#")
 
         #client.subscribe("REPORT/#")
@@ -98,19 +98,16 @@ class Communicator(object):
         if "QUERY/ASSET/" in msg.topic:
             asset_name = msg.topic.split("/")[2]
             if asset_name in self.site.assets:
-                self.comm.send("QUERY/ASSET/" + asset_name.lower().strip(), "QUERY")                
+                self.comm.send("QUERY/ASSET/" + asset_name.lower().strip(), "QUERY")
             print "Asset = ", asset, msg.payload
             self.site.asset_data.update({asset:msg.payload})
-
-        if "STATUS" in msg.topic:
+        elif "STATUS" in msg.topic:
             print "Got", msg.topic, msg.payload
             self.send("REPORT", self.site.get_status())
-
-        if "SCHEDULE/IDENT" in msg.topic:
+        elif "SCHEDULE/IDENT" in msg.topic:
             self.scheduler_found = True
             self.site.scheduler_id = msg.payload
-
-        if "SCHEDULER/LOCATE" in msg.topic:
+        elif "SCHEDULER/LOCATE" in msg.topic:
             if self.site.scheduler is not None:
                 self.send("SCHEDULER/IDENT", self.site.hostname)
                 self.logger.info("Sent SCHEDULER/IDENT")
