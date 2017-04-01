@@ -64,7 +64,7 @@ class SystemStatus:
         self.boot["time"] = psutil.boot_time()
         # Fetch all information about Memory in a temp variable
         # then assign each value to a specific key (psutil usually returns
-        # a named tuple
+        # a named tuple)
         tempmemoryinfo = psutil.virtual_memory()
         self.memory["used"] = tempmemoryinfo[3]
         self.memory["free"] = tempmemoryinfo[4]
