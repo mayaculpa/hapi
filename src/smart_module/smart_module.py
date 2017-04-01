@@ -191,11 +191,11 @@ class SmartModule(object):
             logging.getLogger(sm_logger).exception("Error loading site data: %s", excpt)
 
     def get_status(self):
-		# We can update it to:
-		# from status import SystemStatus
-		# ss = SystemStatus()
-		# ss.update()
-		# return str(ss)
+        # We can update it to:
+        # from status import SystemStatus
+        # ss = SystemStatus()
+        # ss.update()
+        # return str(ss)
         print "Building status"
         data = {}
         data['cpu_percent'] = psutil.cpu_percent(interval=1)
