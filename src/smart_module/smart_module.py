@@ -37,6 +37,7 @@ from multiprocessing import Process
 import logging
 #from twilio.rest import TwilioRestClient            # sudo pip install twilio
 from influxdb import InfluxDBClient
+from status import SystemStatus
 
 # the suid the program: sudo chmod u+s /usr/bin/arp-scan  (this is on Linux Mint)
 
@@ -206,18 +207,8 @@ class SmartModule(object):
             logging.getLogger(sm_logger).exception("Error loading site data: %s", excpt)
 
     def get_status(self):
-        # We can update it to:
-        # from status import SystemStatus
-        # ss = SystemStatus()
-        # ss.update()
-        # return str(ss)
-        print "Building status"
-        data = {}
-        data['cpu_percent'] = psutil.cpu_percent(interval=1)
-        data['packets_sent'] = psutil.net_io_counters()._asdict()['packets_sent']
-        data['packets_recv'] = psutil.net_io_counters()._asdict()['packets_recv']
-        json_data = json.dumps(data)
-        return str(json_data)
+        SYSINFO = SystemStatus(update=True)
+        return str(SYSINFO)
 
     def get_asset_value(self, asset_name):
         value = ""
