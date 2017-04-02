@@ -46,12 +46,15 @@ in a simple JSON way. If run stand-alone, print all information.
 class SystemStatus:
     """ Small class to handle system information """
 
-    def __init__(self):
+    def __init__(self, update=False):
+        """ If update == True, create the object and fetch all data """ 
         self.cpu = { "percentage": 0 }
         self.boot = { "time": 0 }
         self.memory = { "used": 0, "free": 0 }
         self.network = { "packet_sent": 0, "packet_recv": 0 }
         self.disk = { "total": 0, "used": 0, "free": 0 }
+        if update == True:
+            self.update()
 
     def __str__(self):
         json_string = str('"memory": {}, "cpu": {}, "boot": {}, "network": {}, "disk": {}')
@@ -78,6 +81,5 @@ class SystemStatus:
 
 if __name__ == "__main__":
     """ If run as main, print in JSON system information """
-    ss = SystemStatus()
-    ss.update()
+    ss = SystemStatus(update=True)
     print(ss)
