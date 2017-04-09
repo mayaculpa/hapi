@@ -63,8 +63,14 @@ class Communicator(object):
         # Subscribing in on_connect() means if we lose connection and reconnect, subscriptions will be renewed.
         self.is_connected = True
         self.client.subscribe("COMMAND" + "/#")
+        #self.client.subscribe("SCHEDULER/LOCATE")
+        self.client.subscribe("SCHEDULER/IDENT")
+
         self.client.subscribe("SYNCHRONIZE/DATA" + "/#", qos=0)
         self.client.subscribe("SYNCHRONIZE/VERSION", qos=0)
+        self.client.subscribe("SYNCHRONIZE/CORE", qos=0)
+        self.client.subscribe("SYNCHRONIZE/GET", qos=0)
+
         self.client.subscribe("QUERY" + "/#")
         self.client.subscribe("STATUS/#")
 
@@ -89,22 +95,38 @@ class Communicator(object):
             self.smart_module.asset_data.update({asset:msg.payload})
         elif "STATUS" in msg.topic:
             self.send("REPORT", self.smart_module.get_status())
+
+        # Scheduler messages
         elif "SCHEDULER/IDENT" in msg.topic:
-            # Scheduler messages
             self.scheduler_found = True
-            # self.smart_module.scheduler_id = msg.payload
+            self.logger.info(msg.payload + " has identified itself as the Scheduler.")
+
         elif "SCHEDULER/LOCATE" in msg.topic:
             if self.smart_module.scheduler is not None:
                 self.send("SCHEDULER/IDENT", self.smart_module.hostname)
                 self.logger.info("Sent SCHEDULER/IDENT")
                 #self.site.asset_data.update({asset:msg.payload})
+
+        # Database synchronization messages
         elif "SYNCHRONIZE/VERSION" in msg.topic:
-            # Database synchronization messages
             self.send("SYNCHRONIZE/RESPONSE", self.smart_module.data_sync.read_db_version())
+
+        elif "SYNCHRONIZE/GET" in msg.topic:
+            if msg.payload == self.smart_module.hostname:
+                self.smart_module.data_sync.publish_core_db(self)
+
+        elif "SYNCHRONIZE/DATA" in msg.topic:
+            self.smart_module.data_sync.synchronize_core_db(msg.payload)
+
+        # elif "SYNCHRONIZE/TEST" in msg.topic:
+        #     self.send("SYNCHRONIZE/RESPONSE", self.smart_module.data_sync.read_db_version())
 
     def subscribe(self, topic):
         self.client.subscribe(topic)
 
     def send(self, topic, message):
-        if self.client is not None:
-            self.client.publish(topic, message)
+        try:
+            if self.client is not None:
+                self.client.publish(topic, message)
+        except Exception, excpt:
+            self.logger.info("Error publishing message: %s", excpt)
