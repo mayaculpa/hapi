@@ -1,4 +1,5 @@
-#!/bin/python
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 # HAPI Project
 # Smart Module Status is responsible for fetching information from the system
