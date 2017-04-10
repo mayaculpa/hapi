@@ -43,6 +43,7 @@ class Communicator(object):
         self.scheduler_found = False
         self.logger = logging.getLogger("smart_module")
         self.logger.info("Communicator initialized")
+        self.broker_connections = -1
 
     def connect(self):
         try:
@@ -65,12 +66,11 @@ class Communicator(object):
         self.client.subscribe("COMMAND" + "/#")
         #self.client.subscribe("SCHEDULER/LOCATE")
         self.client.subscribe("SCHEDULER/IDENT")
-
+        self.client.subscribe("$SYS/broker/clients/total")
         self.client.subscribe("SYNCHRONIZE/DATA" + "/#", qos=0)
         self.client.subscribe("SYNCHRONIZE/VERSION", qos=0)
         self.client.subscribe("SYNCHRONIZE/CORE", qos=0)
         self.client.subscribe("SYNCHRONIZE/GET", qos=0)
-
         self.client.subscribe("QUERY" + "/#")
         self.client.subscribe("STATUS/#")
 
@@ -94,7 +94,7 @@ class Communicator(object):
             print "Asset = ", asset, msg.payload
             self.smart_module.asset_data.update({asset:msg.payload})
         elif "STATUS" in msg.topic:
-            self.send("REPORT", self.smart_module.get_status())
+            self.send("REPORT", self.smart_module.get_status(self.broker_connections))
 
         # Scheduler messages
         elif "SCHEDULER/IDENT" in msg.topic:
@@ -117,6 +117,9 @@ class Communicator(object):
 
         elif "SYNCHRONIZE/DATA" in msg.topic:
             self.smart_module.data_sync.synchronize_core_db(msg.payload)
+
+        elif "$SYS/broker/clients/total" in msg.topic:
+            self.broker_connections = int(msg.payload)
 
         # elif "SYNCHRONIZE/TEST" in msg.topic:
         #     self.send("SYNCHRONIZE/RESPONSE", self.smart_module.data_sync.read_db_version())

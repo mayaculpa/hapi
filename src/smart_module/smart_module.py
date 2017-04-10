@@ -125,7 +125,7 @@ class SmartModule(object):
         self.comm.send("SCHEDULER/LOCATE", "Where are you?")
 
         self.hostname = socket.gethostname()
-        self.comm.send("ANNOUNCE", self.hostname + " is online.")        
+        self.comm.send("ANNOUNCE", self.hostname + " is online.")
 
         t_end = time.time() + 2
         while (time.time() < t_end) and (self.comm.is_connected is False):
@@ -197,9 +197,13 @@ class SmartModule(object):
         except Exception, excpt:
             logging.getLogger(sm_logger).exception("Error loading site data: %s", excpt)
 
-    def get_status(self):
-        SYSINFO = SystemStatus(update=True)
-        return str(SYSINFO)
+    def get_status(self, brokerconnections):
+        try:
+            sysinfo = SystemStatus(update=True)
+            sysinfo.clients = brokerconnections
+            return str(sysinfo)
+        except Exception, excpt:
+            logging.getLogger(sm_logger).exception("Error getting System Status: %s", excpt)
 
     def get_asset_value(self, asset_name):
         value = ""
@@ -629,7 +633,7 @@ class DataSync(object):
                 fd.write(data)
 
             subprocess.call('sqlite3 -init incoming.sql hapi_new.db ""', shell=True)
-            
+
             logging.getLogger(sm_logger).info("Synchronized database.")
         except Exception, excpt:
             logging.getLogger(sm_logger).info("Error synchronizing database: %s", excpt)

@@ -42,12 +42,14 @@ class SystemStatus:
         self.network = {"packet_sent": 0, "packet_recv": 0}
         self.disk = {"total": 0, "used": 0, "free": 0}
         self.timestamp = 0
+        self.clients = -1
         if update is True:
             self.update()
 
     def __str__(self):
         return str([{"time": self.timestamp, "memory": self.memory, "cpu": self.cpu,
-                     "boot": self.boot, "network": self.network, "disk": self.disk}])
+                     "boot": self.boot, "network": self.network, "disk": self.disk,
+                     "clients": self.clients}])
 
     def update(self):
         """ Function to update the entire class information """
@@ -69,5 +71,5 @@ class SystemStatus:
         self.timestamp = time.time()
 
 if __name__ == "__main__":
-    SYSINFO = SystemStatus(update=True)
-    print(SYSINFO)
+    sysinfo = SystemStatus(update=True)
+    print(sysinfo)
