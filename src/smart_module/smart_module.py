@@ -281,7 +281,7 @@ class SmartModule(object):
                             c.execute(command)
                             conn.commit()
                             conn.close()
-                            self.push_data(asset.rtuid, asset.name, asset.context, value, asset.unit)
+                            self.push_data(asset.id, asset.name, asset.context, value, asset.unit)
             except Exception, excpt:
                 logging.getLogger(sm_logger).exception("Error logging sensor data: %s", excpt)
 
@@ -343,7 +343,7 @@ class SmartModule(object):
         response = ""
         try:
             response = ""
-            command = 'http://api.wunderground.com/api/' + self.wunder_key + '/geolookup/conditions/q/OH/Columbus.json'
+            command = 'http://api.wunderground.com/api/' + self.wunder_key + '/conditions/q/' + self.latitude + ',' + self.longitude + '.json'
             print command
             f = urllib2.urlopen(command)
             json_string = f.read()
