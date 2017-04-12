@@ -1,3 +1,5 @@
 *.sublime-workspace
 *.swp
 *.db
+*.log
+*.pyc
