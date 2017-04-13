@@ -124,9 +124,6 @@ class Communicator(object):
         # elif "SYNCHRONIZE/TEST" in msg.topic:
         #     self.send("SYNCHRONIZE/RESPONSE", self.smart_module.data_sync.read_db_version())
 
-    def subscribe(self, topic):
-        self.client.subscribe(topic)
-
     def send(self, topic, message):
         try:
             if self.client is not None:
