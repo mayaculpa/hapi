@@ -118,7 +118,7 @@ class SmartModule(object):
         self.comm.client.loop_start()
         self.comm.connect()
         t_end = time.time() + 10
-        while (time.time() < t_end) and (self.comm.is_connected is False):
+        while (time.time() < t_end) and not self.comm.is_connected:
             time.sleep(1)
 
         self.get_assets()
@@ -129,10 +129,10 @@ class SmartModule(object):
         self.comm.send("ANNOUNCE", self.hostname + " is online.")
 
         t_end = time.time() + 2
-        while (time.time() < t_end) and (self.comm.is_connected is False):
+        while (time.time() < t_end) and not self.comm.is_connected:
             time.sleep(1)
 
-        if self.comm.scheduler_found == False:
+        if not self.comm.scheduler_found:
             # Loading scheduled jobs
             try:
                 logging.getLogger(sm_logger).info("No Scheduler found. Becoming the Scheduler.")
@@ -270,10 +270,10 @@ class SmartModule(object):
             logging.getLogger(sm_logger).exception("Error getting asset data: %s", excpt)
 
     def log_sensor_data(self, data, virtual):
-        if virtual == False:
+        if not virtual:
             try:
                 for asset in self.assets:
-                    if asset.enabled is True:
+                    if asset.enabled:
                         parsed_json = json.loads(data)
                         if asset.rtuid == parsed_json['name']:
                             value = parsed_json[asset.data_field]
@@ -294,7 +294,7 @@ class SmartModule(object):
             # For virtual assets, assume that the data is already parsed JSON
             try:
                 for asset in self.assets:
-                    if asset.enabled is True:
+                    if asset.enabled:
                         if asset.virtual == 1:
                             value = str(data[asset.data_field]).replace("%", "")
                             print "value", value
@@ -319,7 +319,7 @@ class SmartModule(object):
                 if asset_context in item:
                     found = True
 
-            if found is False:
+            if not found:
                 client.query("CREATE DATABASE {0}".format('"' + asset_context + '"'))
 
             client = InfluxDBClient('138.197.74.74', 8086, 'early', 'adopter', asset_context)
@@ -537,7 +537,7 @@ class Scheduler(object):
                     logging.getLogger(sm_logger).info("  Loading second job: " + job.name)
 
     def run_job(self, job):
-        if self.running == True:
+        if self.running:
             response = ""
             job_rtu = None
 

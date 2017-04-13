@@ -398,10 +398,10 @@ class Site(object):
 
     def log_sensor_data(self, data, virtual, logger):
         assets = self.get_assets()
-        if virtual == False:
+        if not virtual:
             try:
                 for asset in assets:
-                    if asset.enabled is True:
+                    if asset.enabled:
                         parsed_json = json.loads(data)
                         if asset.rtuid == parsed_json['name']:
                             value = parsed_json[asset.pin]
@@ -422,7 +422,7 @@ class Site(object):
             # For virtual assets, assume that the data is already parsed JSON
             try:
                 for asset in assets:
-                    if asset.enabled is True:
+                    if asset.enabled:
                         if asset.rtuid == "virtual":
                             if asset.abbreviation == "weather":
                                 print "asset.pin", asset.pin
@@ -469,7 +469,7 @@ class Site(object):
                 if asset_context in item:
                     found = True
             
-            if found is False:
+            if not found:
                 client.query("CREATE DATABASE {0}".format('"' + asset_context + '"'))
 
             client = InfluxDBClient('138.197.74.74', 8086, 'early', 'adopter', asset_context)
@@ -671,7 +671,7 @@ class Scheduler(object):
                     self.logger.info("  Loading second job: " + job.job_name)
 
     def run_job(self, job):
-        if self.running == True:
+        if self.running:
             command = ""
             response = ""
             job_rtu = None

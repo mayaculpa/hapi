@@ -37,7 +37,7 @@ class SystemStatus:
     """ Small class to handle system information """
 
     def __init__(self, update=False):
-        """ If update == True, create the object and fetch all data """
+        """ If update, create the object and fetch all data """
         self.cpu = {"percentage": 0}
         self.bootdate = 0
         self.memory = {"used": 0, "free": 0}
@@ -45,7 +45,7 @@ class SystemStatus:
         self.disk = {"total": 0, "used": 0, "free": 0}
         self.timestamp = 0
         self.clients = -1
-        if update is True:
+        if update:
             self.update()
 
     def __str__(self):
