@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-'''
+"""
 HAPI Master Controller v2.1.2
 Authors: Tyler Reed, Pedro Freitas
 Release: December 2016 Beta
+
 Copyright 2016 Maya Culpa, LLC
 
 This program is free software: you can redistribute it and/or modify
@@ -19,7 +20,7 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
-'''
+"""
 
 import sqlite3                                      # https://www.sqlite.org/index.html
 import sys
