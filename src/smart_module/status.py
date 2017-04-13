@@ -19,14 +19,11 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 """
 This is a wrapper on psutil to provide system information
 in a simple JSON way. If run stand-alone, print all information.
 """
-
-# Todo:
-#   3.1. Network active connections;
-#   1.3. Memory Process time.
 
 import time
 import psutil

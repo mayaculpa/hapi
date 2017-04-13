@@ -27,20 +27,23 @@ set -eu
 # HAPI_HOSTNAME will hold the MQTT Broker we want to connect.
 HAPI_HOSTNAME="mqttbroker"
 
+# CONSTANT variable to hold date/hour format
+DFORMAT="+%m/%d/%y %H:%M:%S"
+
 # Information control functions.
 # They can be updated to write to a log file, such as:
 #  | tee -a "$LOG_FILE" >&2
 fatal() {
-    echo "[FATAL] [$(date)] $*"
+    echo "[FATAL] [$(date "$DFORMAT")] $*"
     exit 1
 }
 
 info() {
-    echo "[INFO] [$(date)] $*"
+    echo "[INFO] [$(date "$DFORMAT")] $*"
 }
 
 error() {
-    echo "[ERROR] [$(date)] $*"
+    echo "[ERROR] [$(date "$DFORMAT")] $*"
 }
 
 # Check if we already have a device with the hostname mqttbroker{.local}
@@ -77,5 +80,5 @@ main() {
     fi
 }
 
-# Call the main function (considering to remove it)
+# Call the main function
 main
