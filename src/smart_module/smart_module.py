@@ -489,7 +489,7 @@ class Scheduler(object):
             time.sleep(timeout)
 
     def load_schedule(self):
-        job_list = []
+        jobs = []
         logging.getLogger(sm_logger).info("Loading Schedule Data...")
         field_names = '''
             id
@@ -514,13 +514,13 @@ class Scheduler(object):
                 job = Scheduler.Job()
                 for field_name, field_value in zip(field_names, row):
                     setattr(job, field_name, field_value)
-                job_list.append(job)
+                jobs.append(job)
             conn.close()
             logging.getLogger(sm_logger).info("Schedule Data Loaded.")
         except Exception, excpt:
             logging.getLogger(sm_logger).exception("Error loading schedule. %s", excpt)
 
-        return job_list
+        return jobs
 
     def prepare_jobs(self, jobs):
         for job in jobs:
