@@ -676,7 +676,7 @@ class Scheduler(object):
             response = ""
             job_rtu = None
 
-            if job.enabled == 1:
+            if job.enabled:
                 print "Job enabled"
                 print "Job rtuid", job.rtuid
                 print "Job command", job.command
@@ -912,7 +912,7 @@ class HAPIListener(TelnetHandler):
             print "Running", params[0], params[1], "on", the_rtu.rtuid
             job = IntervalJob()
             job.job_name = "User-defined"
-            job.enabled = 1
+            job.enabled = True
             job.rtuid = the_rtu.rtuid
 
             if params[0] == "command":
