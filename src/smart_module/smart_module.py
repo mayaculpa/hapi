@@ -150,22 +150,27 @@ class SmartModule(object):
                 logging.getLogger(sm_logger).exception("Error initializing scheduler. %s", excpt)
 
     def get_assets(self):
+        field_names = '''
+            id
+            name
+            unit
+            virtual
+            context
+            system
+            enabled
+            data_field
+        '''.split()
         try:
             conn = sqlite3.connect('hapi_core.db')
             c=conn.cursor()
-            sql = "SELECT id, name, unit, virtual, context, system, enabled, data_field FROM assets;"
+            sql = 'SELECT {field_names} FROM assets;'.format(
+                field_names=', '.join(field_names))
             rows = c.execute(sql)
-            for field in rows:
+            for row in rows:
                 asset = Asset()
-                asset.id = field[0]
-                asset.name = field[1]
-                asset.unit = field[2]
-                asset.virtual = field[3]
-                asset.context = field[4]
-                asset.system = field[5]
-                if field[6] == 1:
-                    asset.enabled = True
-                asset.data_field = field[7]
+                for field_name, field_value in zip(field_names, row):
+                    setattr(asset, field_name, field_value)
+                asset.enabled = bool(asset.enabled)  # Probably not needed.
 
                 self.assets.append(asset)
             conn.close()
@@ -188,7 +193,6 @@ class SmartModule(object):
             twilio_acct_sid
             twilio_auth_token
         '''.split()
-
         try:
             conn = sqlite3.connect('hapi_core.db')
             c = conn.cursor()
