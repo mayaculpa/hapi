@@ -413,18 +413,25 @@ class SmartModule(object):
 
     def get_alert_params(self):
         alert_params = []
+        field_names = '''
+            asset_id
+            lower_threshold
+            upper_threshold
+            message
+            response_type
+        '''.split()
         try:
             conn = sqlite3.connect('hapi_core.db')
             c=conn.cursor()
-            sql = "SELECT asset_id, lower_threshold, upper_threshold, message, response_type FROM alert_params;"
+            sql = 'SELECT {field_names} FROM alert_params;'.format(
+                field_names=', '.join(field_names))
             rows = c.execute(sql)
-            for field in rows:
+            for row in rows:
                 alert_param = AlertParam()
-                alert_param.asset_id = field[0]
-                alert_param.lower_threshold = float(field[1])
-                alert_param.upper_threshold = float(field[2])
-                alert_param.message = field[3]
-                alert_param.response_type = field[4]
+                for field_name, field_value in zip(field_names, row):
+                    setattr(alert_param, field_name, field_value)
+                alert_param.lower_threshold = float(alert_param.lower_threshold)
+                alert_param.upper_threshold = float(alert_param.upper_threshold)
                 alert_params.append(alert_param)
             conn.close()
         except Exception, excpt:
@@ -484,23 +491,29 @@ class Scheduler(object):
     def load_schedule(self):
         job_list = []
         logging.getLogger(sm_logger).info("Loading Schedule Data...")
+        field_names = '''
+            id
+            job_name
+            asset_id
+            command
+            time_unit
+            interval
+            at_time
+            enabled
+            sequence
+            virtual
+        '''.split()
         try:
             conn = sqlite3.connect('hapi_core.db')
             c=conn.cursor()
 
-            db_jobs = c.execute("SELECT id, job_name, asset_id, command, time_unit, interval, at_time, enabled, sequence, virtual FROM schedule;")
+            sql = 'SELECT {field_names} FROM schedule;'.format(
+                field_names=', '.join(field_names))
+            db_jobs = c.execute(sql)
             for row in db_jobs:
                 job = Scheduler.Job()
-                job.id = row[0]
-                job.name = row[1]
-                job.asset_id = row[2]
-                job.command = row[3]
-                job.time_unit = row[4]
-                job.interval = row[5]
-                job.at_time = row[6]
-                job.enabled = row[7]
-                job.sequence = row[8]
-                job.virtual = row[9]
+                for field_name, field_value in zip(field_names, row):
+                    setattr(job, field_name, field_value)
                 job_list.append(job)
             conn.close()
             logging.getLogger(sm_logger).info("Schedule Data Loaded.")
