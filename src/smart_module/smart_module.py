@@ -175,26 +175,29 @@ class SmartModule(object):
         return self.assets
 
     def load_site_data(self):
+        field_names = '''
+            id
+            name
+            wunder_key
+            operator
+            email
+            phone
+            location
+            longitude
+            latitude
+            twilio_acct_sid
+            twilio_auth_token
+        '''.split()
+
         try:
             conn = sqlite3.connect('hapi_core.db')
             c = conn.cursor()
-            sql = "SELECT id, name, wunder_key, operator, email, phone, location, longitude, latitude, twilio_acct_sid, twilio_auth_token FROM site LIMIT 1;"
+            sql = 'SELECT {field_names} FROM site LIMIT 1;'.format(
+                field_names=', '.join(field_names))
             db_elements = c.execute(sql)
             for row in db_elements:
-                (
-                    self.id,
-                    self.name,
-                    self.wunder_key,
-                    self.operator,
-                    self.email,
-                    self.phone,
-                    self.location,
-                    self.longitude,
-                    self.latitude,
-                    self.twilio_acct_sid,
-                    self.twilio_auth_token,
-                ) = row
-
+                for field_name, field_value in zip(field_names, row):
+                    setattr(self, field_name, field_value)
             conn.close()
             logging.getLogger(sm_logger).info("Site data loaded.")
         except Exception, excpt:
