@@ -180,18 +180,20 @@ class SmartModule(object):
             c = conn.cursor()
             sql = "SELECT id, name, wunder_key, operator, email, phone, location, longitude, latitude, twilio_acct_sid, twilio_auth_token FROM site LIMIT 1;"
             db_elements = c.execute(sql)
-            for field in db_elements:
-                self.id = field[0]
-                self.name = field[1]
-                self.wunder_key = field[2]
-                self.operator = field[3]
-                self.email = field[4]
-                self.phone = field[5]
-                self.location = field[6]
-                self.longitude = field[7]
-                self.latitude = field[8]
-                self.twilio_acct_sid = field[9]
-                self.twilio_auth_token = field[10]
+            for row in db_elements:
+                (
+                    self.id,
+                    self.name,
+                    self.wunder_key,
+                    self.operator,
+                    self.email,
+                    self.phone,
+                    self.location,
+                    self.longitude,
+                    self.latitude,
+                    self.twilio_acct_sid,
+                    self.twilio_auth_token,
+                ) = row
 
             conn.close()
             logging.getLogger(sm_logger).info("Site data loaded.")
