@@ -262,7 +262,7 @@ class SmartModule(object):
                     "time": timestamp,
                     "fields": {
                         "unit": "timestamp",
-                        "time": information.boot
+                        "boot": information.boot
                     }
                   }]
         diskinf = [{"measurement": "disk",
@@ -273,7 +273,7 @@ class SmartModule(object):
                     "time": timestamp,
                     "fields": {
                         "unit": "bytes",
-                        "free": information.disk["total"],
+                        "total": information.disk["total"],
                         "free": information.disk["free"],
                         "used": information.disk["used"]
                     }
