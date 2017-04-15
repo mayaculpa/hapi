@@ -153,23 +153,28 @@ class Site(object):
 
     def get_assets(self):
         assets = []
+        field_names = '''
+            asset_id
+            rtuid
+            abbreviation
+            name
+            pin
+            unit
+            context
+            system
+            enabled
+        '''.split()
         try:
             conn = sqlite3.connect('hapi.db')
             c=conn.cursor()
-            sql = "SELECT asset_id, rtuid, abbreviation, name, pin, unit, context, system, enabled FROM assets;"
+            sql = 'SELECT {field_names} FROM assets;'.format(
+                field_names=', '.join(field_names))
             rows = c.execute(sql)
-            for field in rows:
+            for row in rows:
                 asset = Asset()
-                asset.asset_id = field[0]
-                asset.rtuid = field[1]
-                asset.abbreviation = field[2]
-                asset.name = field[3]
-                asset.pin = field[4]
-                asset.unit = field[5]
-                asset.context = field[6]
-                asset.system = field[7]
-                if field[8] == 1:
-                    asset.enabled = True
+                for field_name, field_value in zip(field_names, row):
+                    setattr(asset, field_name, field_value)
+                asset.enabled = bool(asset.enabled)  # Probably superfluous.
 
                 assets.append(asset)
             conn.close()
@@ -179,25 +184,30 @@ class Site(object):
         return assets
 
     def load_site_data(self):
+        field_names = '''
+            site_id
+            name
+            wunder_key
+            operator
+            email
+            phone
+            location
+            longitude
+            latitude
+            net_iface
+            serial_port
+            twilio_acct_sid
+            twilio_auth_token
+        '''.split()
         try:
             conn = sqlite3.connect('hapi.db')
             c = conn.cursor()
-            sql = "SELECT site_id, name, wunder_key, operator, email, phone, location, longitude, latitude, net_iface, serial_port, twilio_acct_sid, twilio_auth_token FROM site LIMIT 1;"
+            sql = 'SELECT {field_names} FROM site LIMIT 1;'.format(
+                field_names=', '.join(field_names))
             db_elements = c.execute(sql)
-            for field in db_elements:
-                self.site_id = field[0]
-                self.name = field[1]
-                self.wunder_key = field[2]
-                self.operator = field[3]
-                self.email = field[4]
-                self.phone = field[5]
-                self.location = field[6]
-                self.longitude = field[7]
-                self.latitude = field[8]
-                self.net_iface = field[9]
-                self.serial_port = field[10]
-                self.twilio_acct_sid = field[11]
-                self.twilio_auth_token = field[12]
+            for row in db_elements:
+                for field_name, field_value in zip(field_names, row):
+                    setattr(self, field_name, field_value)
 
             conn.close()
             self.logger.info("Site data loaded.")
@@ -556,18 +566,25 @@ class Site(object):
 
     def get_alert_params(self):
         alert_params = []
+        field_names = '''
+            asset_id
+            lower_threshold
+            upper_threshold
+            message
+            response_type
+        '''.split()
         try:
             conn = sqlite3.connect('hapi.db')
             c=conn.cursor()
-            sql = "SELECT asset_id, lower_threshold, upper_threshold, message, response_type FROM alert_params;"
+            sql = 'SELECT {field_names} FROM alert_params;'.format(
+                field_names=', '.join(field_names))
             rows = c.execute(sql)
-            for field in rows:
+            for row in rows:
                 alert_param = Asset()
-                alert_param.asset_id = field[0]
-                alert_param.lower_threshold = float(field[1])
-                alert_param.upper_threshold = float(field[2])
-                alert_param.message = field[3]
-                alert_param.response_type = field[4]
+                for field_name, field_value in zip(field_names, row):
+                    setattr(alert_param, field_name, field_value)
+                alert_param.lower_threshold = float(alert_param.lower_threshold)
+                alert_param.upper_threshold = float(alert_param.upper_threshold)
                 alert_params.append(alert_param)
             conn.close()
         except Exception, excpt:
@@ -608,23 +625,30 @@ class Scheduler(object):
     def load_interval_schedule(self):
         job_list = []
         self.logger.info("Scheduler data loading...")
+        field_names = '''
+            job_id
+            job_name
+            rtuid
+            command
+            time_unit
+            interval
+            at_time
+            enabled
+            sequence
+            timeout
+        '''.split()
         try:
             conn = sqlite3.connect('hapi.db')
             c=conn.cursor()
 
-            db_jobs = c.execute("SELECT job_id, job_name, rtuid, command, time_unit, interval, at_time, enabled, sequence, timeout FROM interval_schedule;")
+            sql = 'SELECT {field_names} FROM interval_schedule;'.format(
+                field_names=', '.join(field_names))
+            db_jobs = c.execute(sql)
             for row in db_jobs:
                 job = Scheduler.IntervalJob()
-                job.job_id = row[0]
-                job.job_name = row[1]
-                job.rtuid = row[2]
-                job.command = row[3].encode("ascii")
-                job.time_unit = row[4]
-                job.interval = row[5]
-                job.at_time = row[6]
-                job.enabled = row[7]
-                job.sequence = row[8]
-                job.timeout = row[9]
+                for field_name, field_value in zip(field_names, row):
+                    setattr(job, field_name, field_value)
+                job.command = job.command.encode('ascii')
                 job_list.append(job)
 
             conn.close()
