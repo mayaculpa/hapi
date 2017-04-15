@@ -304,7 +304,7 @@ class SmartModule(object):
             try:
                 for asset in self.assets:
                     if asset.enabled:
-                        if asset.virtual == 1:
+                        if asset.virtual:
                             value = str(data[asset.data_field]).replace("%", "")
                             print "value", value
                             timestamp = '"' + str(datetime.datetime.now()) + '"'
@@ -475,10 +475,10 @@ class Scheduler(object):
             self.time_unit = ""
             self.interval = -1
             self.at_time = ""
-            self.enabled = 0
+            self.enabled = False
             self.sequence = ""
             self.timeout = 0.0
-            self.virtual = 0
+            self.virtual = False
 
     def process_sequence(self, seq_jobs, job, job_rtu, seq_result):
         for row in seq_jobs:
@@ -567,7 +567,7 @@ class Scheduler(object):
                 if job.sequence is None:
                     job.sequence = ""
 
-                if job.virtual == 1:
+                if job.virtual:
                     print 'Running virtual job:', job.name, job.command
                     try:
                         response = eval(job.command)
