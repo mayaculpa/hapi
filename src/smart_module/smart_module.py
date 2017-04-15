@@ -197,10 +197,107 @@ class SmartModule(object):
         except Exception, excpt:
             logging.getLogger(sm_logger).exception("Error loading site data: %s", excpt)
 
+    def connect_influx(self, host, port, user, password, asset_context):
+        client = InfluxDBClient(host, port, user, password)
+        dbs = client.get_list_database()
+        found = False
+        for item in dbs:
+            if asset_context in item:
+                found = True
+
+        if found is False:
+            client.query("CREATE DATABASE {0}".format('"' + asset_context + '"'))
+
+        client = InfluxDBClient(host, port, user, password, asset_context)
+        return client
+
+    def push_sysinfo(self, asset_name, asset_context, information):
+        """ Push System Status information to InfluxDB server
+            'information' will hold the JSON output of SystemStatus
+        """
+        # This is the same as push_data()
+        # I've tried to use a not OO apprach above -> connect_influx()
+        timestamp = datetime.datetime.now() # Get timestamp
+        conn = self.connect_influx('138.197.74.74', 8086, 'early', 'adopter', asset_context)
+        cpuinfo = [{"measurement": "cpu",
+                    "tags": {
+                        "site": self.name,
+                        "asset": asset_name,
+                    },
+                    "time": timestamp,
+                    "fields": {
+                        "unit": "percentage",
+                        "load": information.cpu["percentage"]
+                    }
+                  }]
+        meminfo = [{"measurement": "memory",
+                    "tags": {
+                        "site": self.name,
+                        "asset": asset_name,
+                    },
+                    "time": timestamp,
+                    "fields": {
+                        "unit": "bytes",
+                        "free": information.memory["free"],
+                        "used": information.memory["used"]
+                    }
+                  }]
+        netinfo = [{"measurement": "network",
+                    "tags": {
+                        "site": self.name,
+                        "asset": asset_name,
+                    },
+                    "time": timestamp,
+                    "fields": {
+                        "unit": "packets",
+                        "packet_recv": information.network["packet_recv"],
+                        "packet_sent": information.network["packet_sent"]
+                    }
+                  }]
+        botinfo = [{"measurement": "boot",
+                    "tags": {
+                        "site": self.name,
+                        "asset": asset_name,
+                    },
+                    "time": timestamp,
+                    "fields": {
+                        "unit": "timestamp",
+                        "time": information.boot
+                    }
+                  }]
+        diskinf = [{"measurement": "disk",
+                    "tags": {
+                        "site": self.name,
+                        "asset": asset_name,
+                    },
+                    "time": timestamp,
+                    "fields": {
+                        "unit": "bytes",
+                        "free": information.disk["total"],
+                        "free": information.disk["free"],
+                        "used": information.disk["used"]
+                    }
+                  }]
+        ctsinfo = [{"measurement": "clients",
+                    "tags": {
+                        "site": self.name,
+                        "asset": asset_name,
+                    },
+                    "time": timestamp,
+                    "fields": {
+                        "unit": "integer",
+                        "clients": information.clients
+                    }
+                  }]
+        json = cpuinfo + meminfo + netinfo + botinfo + diskinf + ctsinfo
+        conn.write_points(json)
+
     def get_status(self, brokerconnections):
         try:
             sysinfo = SystemStatus(update=True)
             sysinfo.clients = brokerconnections
+            # Check those information!
+            self.push_sysinfo(asset.name, "system", sysinfo)
             return str(sysinfo)
         except Exception, excpt:
             logging.getLogger(sm_logger).exception("Error getting System Status: %s", excpt)
@@ -311,18 +408,8 @@ class SmartModule(object):
 
     def push_data(self, asset_name, asset_context, value, unit):
         try:
-            client = InfluxDBClient('138.197.74.74', 8086, 'early', 'adopter')
-            dbs = client.get_list_database()
-            found = False
-            for item in dbs:
-                if asset_context in item:
-                    found = True
-
-            if found is False:
-                client.query("CREATE DATABASE {0}".format('"' + asset_context + '"'))
-
-            client = InfluxDBClient('138.197.74.74', 8086, 'early', 'adopter', asset_context)
-
+            #client = InfluxDBClient('138.197.74.74', 8086, 'early', 'adopter', asset_context)
+            conn = self.connect_influx("138.197.74.74", 8086, "early", "adopter", asset_context)
             json_body = [
                 {
                     "measurement": asset_context,
@@ -338,7 +425,7 @@ class SmartModule(object):
                 }
             ]
             print str(json_body)
-            client.write_points(json_body)
+            conn.write_points(json_body)
             logging.getLogger(sm_logger).info("Wrote to analytic database: " + str(json_body))
         except Exception, excpt:
             logging.getLogger(sm_logger).exception('Error writing to analytic database: %s', excpt)
