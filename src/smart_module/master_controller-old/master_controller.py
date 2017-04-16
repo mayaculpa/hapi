@@ -95,7 +95,7 @@ class RemoteTerminalUnit(object):
         self.protocol = ""
         self.address = ""
         self.version = ""
-        self.online = 0
+        self.online = False
         self.pin_modes = {}
 
 class Site(object):
@@ -723,7 +723,7 @@ class Scheduler(object):
                     try:
                         for rtu_el in self.site.rtus:
                             if rtu_el.rtuid == job.rtuid:
-                                if rtu_el.online == 1:
+                                if rtu_el.online:
                                     job_rtu = rtu_el
 
                         if (job_rtu != None):
@@ -1128,5 +1128,3 @@ def main(argv):
 
 if __name__ == "__main__":
     main(sys.argv[1:])
-
-
