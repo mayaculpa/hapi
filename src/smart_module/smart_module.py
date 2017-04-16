@@ -577,7 +577,7 @@ class Scheduler(object):
                 else:
                     try:
                         if str.strip(job.sequence) != "":
-                            if (job_rtu != None):
+                            if job_rtu is not None:  # This is always false. Bug?
                                 print 'Running sequence', job.sequence, "on", job.rtuid
                                 conn = sqlite3.connect('hapi_core.db')
                                 c=conn.cursor()
@@ -597,7 +597,7 @@ class Scheduler(object):
                                 self.site.comm.send("REPORT/#", "report")
 
                             else:
-                                if (job_rtu != None):
+                                if job_rtu is not None:  # This is always false. Bug?
                                     self.site.comm.send("COMMAND/" + job.rtuid, job.command)
 
                             log_command(job)
@@ -765,7 +765,7 @@ if __name__ == "__main__":
 #         Sends a command to the connected RTU
 
 #         '''
-#         if the_rtu == None:
+#         if the_rtu is None:
 #             self.writeresponse("You are not connected to an RTU.")
 #         else:
 #             command = params[0]
@@ -805,7 +805,7 @@ if __name__ == "__main__":
 #         Starts the Master Controller's Scheduler
 
 #         '''
-#         if the_rtu == None:
+#         if the_rtu is None:
 #             self.writeresponse("You are not connected to an RTU.")
 #         else:
 #             command = params[0]

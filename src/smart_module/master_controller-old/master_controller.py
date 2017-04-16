@@ -250,7 +250,7 @@ class Site(object):
         #         #get_pin_modes(rtu)
         #         self.rtus.append(rtu)
         # except Exception, excpt:
-        #     if self.logger != None:
+        #     if self.logger is not None:
         #         self.logger.warning("No RTU found on USB: %s", excpt)
 
         return self.rtus
@@ -402,7 +402,7 @@ class Site(object):
                     except Exception, excpt:
                         error = "Error getting virtual asset data: " + excpt
                         print error
-                        if logger != None:
+                        if logger is not None:
                             logger.exception(error)
         return result_assets
 
@@ -455,7 +455,7 @@ class Site(object):
                 print "Error logging sensor data.", excpt
                 # error = "Error logging sensor data: " + excpt
                 # print error
-                # if logger != None:
+                # if logger is not None:
                 #     logger.exception(error)
 
 
@@ -717,7 +717,7 @@ class Scheduler(object):
                     except Exception, excpt:
                         error = "Error running job " + job.job_name + " on " + job_rtu.rtuid + ": " + excpt
                         print error
-                        if self.logger != None:
+                        if self.logger is not None:
                             self.logger.exception(error)
                 else:
                     try:
@@ -726,7 +726,7 @@ class Scheduler(object):
                                 if rtu_el.online:
                                     job_rtu = rtu_el
 
-                        if (job_rtu != None):
+                        if job_rtu is not None:
                             if str.strip(job.sequence) != "":
                                 print 'Running sequence', job.sequence, "on", job.rtuid
                                 conn = sqlite3.connect('hapi.db')
@@ -750,7 +750,7 @@ class Scheduler(object):
                                     log_command(job)
                         else:
                             print "Could not find rtu."
-                            if self.logger != None:
+                            if self.logger is not None:
                                 self.logger.info("Could not find rtu " + job.rtuid)
 
                     except Exception, excpt:
@@ -773,7 +773,7 @@ class HAPIListener(TelnetHandler):
     global launch_time
     launch_time = datetime.datetime.now()
 
-    if site != None:
+    if site is not None:
         WELCOME = "\n" + "Welcome to HAPI facility " + site.name + '\n'
         WELCOME = WELCOME + "Operator: " + site.operator + '\n'
         WELCOME = WELCOME + "Phone: " + site.phone + '\n'
@@ -862,7 +862,7 @@ class HAPIListener(TelnetHandler):
         Sends a command to the connected RTU
 
         '''
-        if the_rtu == None:
+        if the_rtu is None:
             self.writeresponse("You are not connected to an RTU.")
         else:
             command = params[0]
@@ -890,7 +890,7 @@ class HAPIListener(TelnetHandler):
         for rtu in site.rtus:
             if rtu.rtuid.lower() == rtu_name.lower():
                 the_rtu = rtu
-        if the_rtu != None:
+        if the_rtu is not None:
             self.writeresponse("Connecting to " + rtu_name + "...")
             target_rtu = rtu_comm.RTUCommunicator()
             response = target_rtu.send_to_rtu(the_rtu.address, 80, 3, "env")            
@@ -924,7 +924,7 @@ class HAPIListener(TelnetHandler):
         Starts the Master Controller's Scheduler
 
         '''
-        if the_rtu == None:
+        if the_rtu is None:
             self.writeresponse("You are not connected to an RTU.")
         else:
             command = params[0]
@@ -1072,7 +1072,7 @@ def main(argv):
     except Exception, excpt:
         logger.exception("Error loading site information. %s", excpt)
 
-    if site != None:
+    if site is not None:
         if len(site.rtus) == 0:
             logger.info("There are no RTUs online.")
         elif len(site.rtus) == 1:
