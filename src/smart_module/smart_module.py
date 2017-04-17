@@ -21,21 +21,20 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 '''
 
+import datetime
 import sqlite3                                      # https://www.sqlite.org/index.html
 import sys
 import time
-import schedule                                     # sudo pip install schedule
-import datetime
 #import dateutil.parser
 import urllib2
 import json
 import subprocess
-import communicator
 import socket
-import psutil
 import codecs
 from multiprocessing import Process
 import logging
+import communicator
+import schedule                                     # sudo pip install schedule
 #from twilio.rest import TwilioRestClient            # sudo pip install twilio
 from influxdb import InfluxDBClient
 from status import SystemStatus
@@ -198,20 +197,24 @@ class SmartModule(object):
             logging.getLogger(sm_logger).exception("Error loading site data: %s", excpt)
 
     def connect_influx(self, host, port, user, password, asset_context):
-        client = InfluxDBClient(host, port, user, password)
-        dbs = client.get_list_database()
+        """ Connect to InfluxDB server and searches for the database
+            in 'asset_context'.
+            Return the connection to the database.
+        """
+        influxcon = InfluxDBClient(host, port, user, password)
+        databases = influxcon.get_list_database()
         found = False
-        for item in dbs:
-            if asset_context in item:
+        for db in databases:
+            if asset_context in db:
                 found = True
 
         if found is False:
-            client.query("CREATE DATABASE {0}".format('"' + asset_context + '"'))
+            influxcon.query("CREATE DATABASE {0}".format('"' + asset_context + '"'))
 
-        client = InfluxDBClient(host, port, user, password, asset_context)
-        return client
+        influxcon = InfluxDBClient(host, port, user, password, asset_context)
+        return influxcon
 
-    def push_sysinfo(self, asset_name, asset_context, information):
+    def push_sysinfo(self, asset_context, information):
         """ Push System Status information to InfluxDB server
             'information' will hold the JSON output of SystemStatus
         """
@@ -221,8 +224,7 @@ class SmartModule(object):
         conn = self.connect_influx('138.197.74.74', 8086, 'early', 'adopter', asset_context)
         cpuinfo = [{"measurement": "cpu",
                     "tags": {
-                        "site": self.name,
-                        "asset": asset_name,
+                        "asset": self.name
                     },
                     "time": timestamp,
                     "fields": {
@@ -232,20 +234,19 @@ class SmartModule(object):
                   }]
         meminfo = [{"measurement": "memory",
                     "tags": {
-                        "site": self.name,
-                        "asset": asset_name,
+                        "asset": self.name
                     },
                     "time": timestamp,
                     "fields": {
                         "unit": "bytes",
                         "free": information.memory["free"],
-                        "used": information.memory["used"]
+                        "used": information.memory["used"],
+                        "cached": information.memory["cached"]
                     }
                   }]
         netinfo = [{"measurement": "network",
                     "tags": {
-                        "site": self.name,
-                        "asset": asset_name,
+                        "asset": self.name
                     },
                     "time": timestamp,
                     "fields": {
@@ -256,19 +257,17 @@ class SmartModule(object):
                   }]
         botinfo = [{"measurement": "boot",
                     "tags": {
-                        "site": self.name,
-                        "asset": asset_name,
+                        "asset": self.name
                     },
                     "time": timestamp,
                     "fields": {
                         "unit": "timestamp",
-                        "boot": information.boot
+                        "date": information.boot
                     }
                   }]
         diskinf = [{"measurement": "disk",
                     "tags": {
-                        "site": self.name,
-                        "asset": asset_name,
+                        "asset": self.name
                     },
                     "time": timestamp,
                     "fields": {
@@ -280,8 +279,7 @@ class SmartModule(object):
                   }]
         ctsinfo = [{"measurement": "clients",
                     "tags": {
-                        "site": self.name,
-                        "asset": asset_name,
+                        "asset": self.name
                     },
                     "time": timestamp,
                     "fields": {
@@ -297,7 +295,7 @@ class SmartModule(object):
             sysinfo = SystemStatus(update=True)
             sysinfo.clients = brokerconnections
             # Check those information!
-            self.push_sysinfo(asset.name, "system", sysinfo)
+            self.push_sysinfo("system", sysinfo)
             return str(sysinfo)
         except Exception, excpt:
             logging.getLogger(sm_logger).exception("Error getting System Status: %s", excpt)
