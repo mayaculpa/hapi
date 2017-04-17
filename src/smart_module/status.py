@@ -1,10 +1,10 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2.7
 # -*- coding: utf-8 -*-
 
 # HAPI Project
 # Smart Module Status is responsible for fetching information from the system
 # Author: Pedro Freitas
-# Release: 0.1-alpha
+# Release: 0.2-alpha
 # Copyright 2017 Maya Culpa, LLC
 #
 # This program is free software: you can redistribute it and/or modify
@@ -26,16 +26,17 @@ in a simple JSON way. If run stand-alone, print all information.
 """
 
 import time
+import datetime
 import psutil
 
-class SystemStatus:
+class SystemStatus(object):
     """ Small class to handle system information """
 
     def __init__(self, update=False):
         """ If update == True, create the object and fetch all data """
         self.cpu = {"percentage": 0}
         self.bootdate = 0
-        self.memory = {"used": 0, "free": 0}
+        self.memory = {"used": 0, "free": 0, "cached": 0}
         self.network = {"packet_sent": 0, "packet_recv": 0}
         self.disk = {"total": 0, "used": 0, "free": 0}
         self.timestamp = 0
@@ -51,13 +52,15 @@ class SystemStatus:
     def update(self):
         """ Function to update the entire class information """
         self.cpu["percentage"] = psutil.cpu_percent(interval=0.7)
-        self.boot = psutil.boot_time()
+        self.boot = datetime.datetime.fromtimestamp(psutil.boot_time())\
+                    .strftime("%Y-%m-%d %H:%M:%S")
         # Fetch all information about Memory in a temp variable
         # then assign each value to a specific key (psutil usually returns
         # a named tuple)
         tempmemoryinfo = psutil.virtual_memory()
         self.memory["used"] = tempmemoryinfo[3]
         self.memory["free"] = tempmemoryinfo[4]
+        self.memory["cached"] = tempmemoryinfo[8]
         tempnetworkinfo = psutil.net_io_counters()
         self.network["packet_sent"] = tempnetworkinfo[2]
         self.network["packet_recv"] = tempnetworkinfo[3]
@@ -68,5 +71,6 @@ class SystemStatus:
         self.timestamp = time.time()
 
 if __name__ == "__main__":
-    sysinfo = SystemStatus(update=True)
-    print(sysinfo)
+    # Trying to please pylint on SYSINFO
+    SYSINFO = SystemStatus(update=True)
+    print SYSINFO
