@@ -45,6 +45,35 @@ reload(sys)
 version = "3.0 Alpha"
 sm_logger = "smart_module"
 
+SECONDS_PER_MINUTE = 60
+MINUTES_PER_HOUR = 60
+
+# from PEP 257:
+def trim(docstring):
+    if not docstring:
+        return ''
+    # Convert tabs to spaces (following the normal Python rules)
+    # and split into a list of lines:
+    lines = docstring.expandtabs().splitlines()
+    # Determine minimum indentation (first line doesn't count):
+    indent = sys.maxint
+    for line in lines[1:]:
+        stripped = line.lstrip()
+        if stripped:
+            indent = min(indent, len(line) - len(stripped))
+    # Remove indentation (first line is special):
+    trimmed = [lines[0].strip()]
+    if indent < sys.maxint:
+        for line in lines[1:]:
+            trimmed.append(line[indent:].rstrip())
+    # Strip off trailing and leading blank lines:
+    while trimmed and not trimmed[-1]:
+        trimmed.pop()
+    while trimmed and not trimmed[0]:
+        trimmed.pop(0)
+    # Return a single string:
+    return '\n'.join(trimmed)
+
 class Asset(object):
     def __init__(self):
         self.id = -1
@@ -442,23 +471,35 @@ class SmartModule(object):
     def execute_command(self, command):
         print "Executing command:", command
         if command.lower() == "status":
-            data = '\nMaster Controller Status\n'
-            data = data + '  Software Version v' + version + '\n'
-            data = data + '  Running on: ' + sys.platform + '\n'
-            data = data + '  Encoding: ' + sys.getdefaultencoding() + '\n'
-            data = data + '  Python Information\n'
-            data = data + '   - Executable: ' + sys.executable + '\n'
-            data = data + '   - v' + sys.version[0:7] + '\n'
-            data = data + '   - location: ' + sys.executable + '\n'
-            data = data + '  Timestamp: ' + str(datetime.datetime.now())[0:19] + '\n'
-            uptime = datetime.datetime.now() - self.launch_time
+            now = datetime.datetime.now()
+            uptime = now - self.launch_time
             days = uptime.days
-            hours = int(divmod(uptime.seconds, 86400)[1] / 3600)
-            minutes = int(divmod(uptime.seconds, 3600)[1] / 60)
-            uptime_str = "This Smart Module has been online for " + str(days) + " days, " + str(hours) + " hours and " + str(minutes) + " minutes."
-            data = data + '  Uptime: ' + uptime_str + '\n'
-            data = data + '###\n'
-            self.comm.send("STATUS", data)
+            minutes, seconds = divmod(uptime.seconds, SECONDS_PER_MINUTE)
+            hours, minutes = divmod(minutes, MINUTES_PER_HOUR)
+            s = '''
+                Master Controller Status
+                  Software Version v{version}
+                  Running on: {platform}
+                  Encoding: {encoding}
+                  Python Information
+                   - Executable: {executable}
+                   - v{sys_version}
+                   - location: {executable}
+                  Timestamp: {timestamp}
+                  Uptime: This Smart Module has been online for {days} days, {hours} hours and {minutes} minutes.'
+                ###
+            '''.format(
+                version=version,
+                platform=sys.platform,
+                encoding=sys.getdefaultencoding(),
+                executable=sys.executable,
+                sys_version=sys.version[0:7],
+                timestamp=now.strftime('%Y-%m-%d %H:%M:%S'),
+                days=days,
+                hours=hours,
+                minutes=minutes,
+            )
+            self.comm.send("STATUS", trim(s) + '\n')
 
 class Scheduler(object):
     def __init__(self):
