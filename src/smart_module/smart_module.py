@@ -493,7 +493,7 @@ class SmartModule(object):
                 platform=sys.platform,
                 encoding=sys.getdefaultencoding(),
                 executable=sys.executable,
-                sys_version=sys.version[0:7],
+                sys_version=sys.version.split()[0],
                 timestamp=now.strftime('%Y-%m-%d %H:%M:%S'),
                 days=days,
                 hours=hours,
