@@ -295,7 +295,7 @@ class SmartModule(object):
                             print asset.name, "is", asset.value
                             print "Lower Threshold is", alert_param.lower_threshold
                             print "Upper Threshold is", alert_param.upper_threshold
-                            if (float(asset.value) < alert_param.lower_threshold) or (float(asset.value) > alert_param.upper_threshold):
+                            if not (alert_param.lower_threshold < float(asset.value) < alert_param.upper_threshold):
                                 alert = Alert()
                                 alert.asset_id = asset.id
                                 alert.value = asset.value
@@ -630,11 +630,11 @@ class Scheduler(object):
                         else:
                             print 'Running command', job.command
                             # Check pre-defined jobs
-                            if (job.name == "Log Data"):
+                            if job.name == "Log Data":
                                 self.site.comm.send("QUERY/#", "query")
                                 # self.site.log_sensor_data(response, False, self.logger)
 
-                            elif (job.name == "Log Status"):
+                            elif job.name == "Log Status":
                                 self.site.comm.send("REPORT/#", "report")
 
                             else:

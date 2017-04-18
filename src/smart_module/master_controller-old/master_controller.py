@@ -348,7 +348,7 @@ class Site(object):
                                     print asset.name, "is", asset.value
                                     print "Lower Threshold is", alert_param.lower_threshold
                                     print "Upper Threshold is", alert_param.upper_threshold
-                                    if (float(asset.value) < alert_param.lower_threshold) or (float(asset.value) > alert_param.upper_threshold):
+                                    if not (alert_param.lower_threshold < float(asset.value) < alert_param.upper_threshold):
                                         alert = Alert()
                                         alert.asset_id = asset.asset_id
                                         alert.value = asset.value
@@ -742,9 +742,9 @@ class Scheduler(object):
                                 target_rtu = rtu_comm.RTUCommunicator()
                                 print "Sending", command, "to ", job_rtu.address
                                 response = target_rtu.send_to_rtu(job_rtu.address, 80, job.timeout, command)
-                                if (job.job_name == "Log Data"):
+                                if job.job_name == "Log Data":
                                     self.site.log_sensor_data(response, False, self.logger)
-                                elif (job.job_name == "Log Status"):
+                                elif job.job_name == "Log Status":
                                     pass
                                 else:
                                     log_command(job)
