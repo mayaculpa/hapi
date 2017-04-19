@@ -22,6 +22,8 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
+from __future__ import print_function
+
 import time
 import logging
 import paho.mqtt.client as mqtt
@@ -55,7 +57,7 @@ class Communicator(object):
             self.logger.exception("Error connecting to broker. %s", excpt)
 
     def on_disconnect(self, client, userdata, rc):
-        print mqtt.error_string(rc)
+        print(mqtt.error_string(rc))
         self.logger.info("Disconnected")
 
     # The callback for when the client receives a CONNACK response from the server.
@@ -84,7 +86,7 @@ class Communicator(object):
     # The callback when a message is received
     def on_message(self, client, userdata, msg):
         #if self.ctl_routine is not None:
-        print(msg.topic+" "+str(msg.payload))
+        print(msg.topic, msg.payload)
         if msg.topic == "COMMAND":
             self.smart_module.execute_command(msg.payload)
 
@@ -92,7 +94,7 @@ class Communicator(object):
             asset_name = msg.topic.split("/")[2]
             if asset_name in self.smart_module.assets:
                 self.comm.send("RESPONSE/ASSET/" + asset_name.lower().strip(), "QUERY")
-            print "Asset = ", asset, msg.payload
+            print('Asset = ', asset, msg.payload)
             self.smart_module.asset_data.update({asset:msg.payload})
         elif "STATUS" in msg.topic:
             self.send("REPORT", self.smart_module.get_status(self.broker_connections))

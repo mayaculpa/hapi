@@ -30,6 +30,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #   3.1. Network active connections;
 #   1.3. Memory Process time.
 
+from __future__ import print_function
+
 import time
 import psutil
 

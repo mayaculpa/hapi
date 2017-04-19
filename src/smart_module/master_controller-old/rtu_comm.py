@@ -22,6 +22,8 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
+from __future__ import print_function
+
 import telnetlib
 import time
 import serial
@@ -35,7 +37,7 @@ class RTUCommunicator(object):
             # address is a string with an ip address
             # port is an integer containing the port number
             # timeout an integer containing the timeout parameter in seconds
-            print "RTUComm: running", command, "at", address, ":", port, timeout
+            print('RTUComm: running', command, 'at', address, ':', port, timeout)
             tn = telnetlib.Telnet()
             #tn.open(address, port, timeout)
             tn.open(address, port, 5)
@@ -52,7 +54,7 @@ class RTUCommunicator(object):
             ser = serial.Serial('/dev/ttyACM0', 9600)
             time.sleep(timeout)
 
-            #print "Running: " + command.strip()
+            #print('Running:', command.strip())
             num_bytes = ser.write(command + "\n")
             ser.flush()
             time.sleep(2)            
@@ -61,7 +63,6 @@ class RTUCommunicator(object):
                 time.sleep(0.1)
 
             ser.close()
-            #print "USB response:", response
+            #print('USB response:', response)
 
         return response
-
