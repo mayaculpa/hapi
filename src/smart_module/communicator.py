@@ -71,7 +71,7 @@ class Communicator(object):
         self.client.subscribe("SYNCHRONIZE/VERSION", qos=0)
         self.client.subscribe("SYNCHRONIZE/CORE", qos=0)
         self.client.subscribe("SYNCHRONIZE/GET", qos=0)
-        self.client.subscribe("QUERY" + "/#")
+        self.client.subscribe("ASSET/QUERY" + "/#")
         self.client.subscribe("STATUS/#")
 
     def subscribe(self, topic):
@@ -84,27 +84,35 @@ class Communicator(object):
     def on_message(self, client, userdata, msg):
         #if self.ctl_routine is not None:
         print(msg.topic+" "+str(msg.payload))
-        if msg.topic == "COMMAND":
-            self.smart_module.execute_command(msg.payload)
+        if "ENV/QUERY" in msg.topic:
+            self.smart_module.get_env(msg.payload)
 
-        if "QUERY/ASSET" in msg.topic:
+        elif "ASSET/QUERY" in msg.topic:
             asset_name = msg.topic.split("/")[2]
-            if asset_name in self.smart_module.assets:
-                self.comm.send("RESPONSE/ASSET/" + asset_name.lower().strip(), "QUERY")
+            if self.smart_module.asset.name.lower() == asset_name.lower():
+                self.comm.send("ASSET/RESPONSE" + asset_name.lower().strip(), "QUERY")
             print "Asset = ", asset, msg.payload
             self.smart_module.asset_data.update({asset:msg.payload})
-        elif "STATUS" in msg.topic:
-            self.send("REPORT", self.smart_module.get_status(self.broker_connections))
+
+        elif "ASSET/RESPONSE" in msg.topic:
+            if self.smart_module.scheduler is not None:
+                asset_id = msg.topic.split("/")[2]
+                self.smart_module.check_alert(asset_id, float(msg.payload))
+                self.smart_module.check_alert(asset_id, float(msg.payload))
+                print "Asset = ", asset_id, msg.payload
+
+        elif "STATUS/QUERY" in msg.topic:
+            self.send("STATUS/RESPONSE", self.smart_module.get_status(self.broker_connections))
 
         # Scheduler messages
-        elif "SCHEDULER/IDENT" in msg.topic:
+        elif "SCHEDULER/RESPONSE" in msg.topic:
             self.scheduler_found = True
             self.logger.info(msg.payload + " has identified itself as the Scheduler.")
 
-        elif "SCHEDULER/LOCATE" in msg.topic:
+        elif "SCHEDULER/QUERY" in msg.topic:
             if self.smart_module.scheduler is not None:
-                self.send("SCHEDULER/IDENT", self.smart_module.hostname)
-                self.logger.info("Sent SCHEDULER/IDENT")
+                self.send("SCHEDULER/RESPONSE", self.smart_module.hostname)
+                self.logger.info("Sent SCHEDULER/RESPONSE")
                 #self.site.asset_data.update({asset:msg.payload})
 
         # Database synchronization messages
@@ -123,9 +131,6 @@ class Communicator(object):
 
         # elif "SYNCHRONIZE/TEST" in msg.topic:
         #     self.send("SYNCHRONIZE/RESPONSE", self.smart_module.data_sync.read_db_version())
-
-    def subscribe(self, topic):
-        self.client.subscribe(topic)
 
     def send(self, topic, message):
         try:
