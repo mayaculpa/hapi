@@ -1,25 +1,28 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# HAPI Master Controller v1.0
-# Author: Tyler Reed
-# Release: March 2017 Alpha
-#*********************************************************************
-#Copyright 2016 Maya Culpa, LLC
-#
-#This program is free software: you can redistribute it and/or modify
-#it under the terms of the GNU General Public License as published by
-#the Free Software Foundation, either version 3 of the License, or
-#(at your option) any later version.
-#
-#This program is distributed in the hope that it will be useful,
-#but WITHOUT ANY WARRANTY; without even the implied warranty of
-#MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#GNU General Public License for more details.
-#
-#You should have received a copy of the GNU General Public License
-#along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#*********************************************************************
+"""
+HAPI Master Controller v1.0
+Author: Tyler Reed
+Release: March 2017 Alpha
+
+Copyright 2016 Maya Culpa, LLC
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""
+
+from __future__ import print_function
 
 import time
 import logging
@@ -54,7 +57,7 @@ class Communicator(object):
             self.logger.exception("Error connecting to broker. %s", excpt)
 
     def on_disconnect(self, client, userdata, rc):
-        print mqtt.error_string(rc)
+        print(mqtt.error_string(rc))
         self.logger.info("Disconnected")
 
     # The callback for when the client receives a CONNACK response from the server.
@@ -83,7 +86,7 @@ class Communicator(object):
     # The callback when a message is received
     def on_message(self, client, userdata, msg):
         #if self.ctl_routine is not None:
-        print(msg.topic+" "+str(msg.payload))
+        print(msg.topic, msg.payload)
         if "ENV/QUERY" in msg.topic:
             self.smart_module.get_env(msg.payload)
 
@@ -91,7 +94,7 @@ class Communicator(object):
             asset_name = msg.topic.split("/")[2]
             if self.smart_module.asset.name.lower() == asset_name.lower():
                 self.comm.send("ASSET/RESPONSE" + asset_name.lower().strip(), "QUERY")
-            print "Asset = ", asset, msg.payload
+            print('Asset = ', asset, msg.payload)
             self.smart_module.asset_data.update({asset:msg.payload})
 
         elif "ASSET/RESPONSE" in msg.topic:
@@ -99,7 +102,7 @@ class Communicator(object):
                 asset_id = msg.topic.split("/")[2]
                 self.smart_module.check_alert(asset_id, float(msg.payload))
                 self.smart_module.check_alert(asset_id, float(msg.payload))
-                print "Asset = ", asset_id, msg.payload
+                print('Asset = ', asset_id, msg.payload)
 
         elif "STATUS/QUERY" in msg.topic:
             self.send("STATUS/RESPONSE", self.smart_module.get_status(self.broker_connections))
