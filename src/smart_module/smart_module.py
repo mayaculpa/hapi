@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-'''
-HAPI Master Controller v2.1.2
+"""
+HAPI Smart Module v2.1.2
 Authors: Tyler Reed, Pedro Freitas
 Release: December 2016 Beta
+
 Copyright 2016 Maya Culpa, LLC
 
 This program is free software: you can redistribute it and/or modify
@@ -19,52 +20,88 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
-'''
+"""
 
-import datetime
+from __future__ import print_function
+
 import sqlite3                                      # https://www.sqlite.org/index.html
 import sys
 import time
+import schedule                                     # sudo pip install schedule
+import datetime
 #import dateutil.parser
 import urllib2
 import json
 import subprocess
+import communicator
 import socket
+import psutil
+import importlib
 import codecs
 from multiprocessing import Process
 import logging
-import communicator
-import schedule                                     # sudo pip install schedule
 #from twilio.rest import TwilioRestClient            # sudo pip install twilio
 from influxdb import InfluxDBClient
 from status import SystemStatus
+import asset_interface
 
 reload(sys)
 version = "3.0 Alpha"
 sm_logger = "smart_module"
 
+SECONDS_PER_MINUTE = 60
+MINUTES_PER_HOUR = 60
+
+# from PEP 257:
+def trim(docstring):
+    if not docstring:
+        return ''
+    # Convert tabs to spaces (following the normal Python rules)
+    # and split into a list of lines:
+    lines = docstring.expandtabs().splitlines()
+    # Determine minimum indentation (first line doesn't count):
+    indent = sys.maxint
+    for line in lines[1:]:
+        stripped = line.lstrip()
+        if stripped:
+            indent = min(indent, len(line) - len(stripped))
+    # Remove indentation (first line is special):
+    trimmed = [lines[0].strip()]
+    if indent < sys.maxint:
+        for line in lines[1:]:
+            trimmed.append(line[indent:].rstrip())
+    # Strip off trailing and leading blank lines:
+    while trimmed and not trimmed[-1]:
+        trimmed.pop()
+    while trimmed and not trimmed[0]:
+        trimmed.pop(0)
+    # Return a single string:
+    return '\n'.join(trimmed)
+
 class Asset(object):
     def __init__(self):
-        self.id = -1
-        self.name = ""
-        self.unit = ""
-        self.virtual = ""
-        self.context = ""
-        self.system = ""
-        self.data_field = ""
-        self.enabled = False
+        self.id = "1"
+        self.name = "Indoor Temperature"
+        self.unit = "C"
+        self.type = "wt"
+        self.virtual = 0
+        self.context = "Environment"
+        self.system = "Test"
+        self.enabled = True
         self.value = None
-
-    class AssetValue(object):
-        def __init__(self):
-            self.id = -1
-            self.timestamp = None
-            self.value = None
 
 class Alert(object):
     def __init__(self):
         self.id = -1
         self.value = 0.0
+
+class AssetInterface(object):
+    def __init__(self, asset_type):
+        # determine the correct asset library and import it
+        self.asset_lib = importlib.import_module("asset_" + str(asset_type))
+
+    def read_value():
+        return AssetImpl().read_value()
 
 class AlertParam(object):
     def __init__(self):
@@ -104,7 +141,7 @@ class SmartModule(object):
         self.twilio_acct_sid = ""
         self.twilio_auth_token = ""
         self.launch_time = datetime.datetime.now()
-        self.assets = []
+        self.asset = Asset()
         self.scheduler = None
         self.hostname = ""
         logging.getLogger(sm_logger).info("Smart Module initialization complete.")
@@ -116,21 +153,20 @@ class SmartModule(object):
         self.comm.client.loop_start()
         self.comm.connect()
         t_end = time.time() + 10
-        while (time.time() < t_end) and (self.comm.is_connected is False):
+        while (time.time() < t_end) and not self.comm.is_connected:
             time.sleep(1)
 
-        self.get_assets()
-        self.comm.subscribe("SCHEDULER/IDENT")
-        self.comm.send("SCHEDULER/LOCATE", "Where are you?")
+        self.comm.subscribe("SCHEDULER/RESPONSE")
+        self.comm.send("SCHEDULER/QUERY", "Where are you?")
 
         self.hostname = socket.gethostname()
         self.comm.send("ANNOUNCE", self.hostname + " is online.")
 
         t_end = time.time() + 2
-        while (time.time() < t_end) and (self.comm.is_connected is False):
+        while (time.time() < t_end) and not self.comm.is_connected:
             time.sleep(1)
 
-        if self.comm.scheduler_found == False:
+        if not self.comm.scheduler_found:
             # Loading scheduled jobs
             try:
                 logging.getLogger(sm_logger).info("No Scheduler found. Becoming the Scheduler.")
@@ -139,58 +175,37 @@ class SmartModule(object):
                 self.scheduler.running = True
                 self.scheduler.prepare_jobs(self.scheduler.load_schedule())
                 self.comm.scheduler_found = True
-                self.comm.subscribe("SCHEDULER/LOCATE")
-                self.comm.unsubscribe("SCHEDULER/IDENT")
-                self.comm.send("SCHEDULER/IDENT", socket.gethostname() + ".local")
+                self.comm.subscribe("SCHEDULER/QUERY")
+                self.comm.unsubscribe("SCHEDULER/RESPONSE")
+                self.comm.send("SCHEDULER/RESPONSE", socket.gethostname() + ".local")
                 self.comm.send("ANNOUNCE", socket.gethostname() + ".local" + " is running the Scheduler.")
                 logging.getLogger(sm_logger).info("Scheduler program loaded.")
             except Exception, excpt:
                 logging.getLogger(sm_logger).exception("Error initializing scheduler. %s", excpt)
 
-    def get_assets(self):
-        try:
-            conn = sqlite3.connect('hapi_core.db')
-            c=conn.cursor()
-            sql = "SELECT id, name, unit, virtual, context, system, enabled, data_field FROM assets;"
-            rows = c.execute(sql)
-            for field in rows:
-                asset = Asset()
-                asset.id = field[0]
-                asset.name = field[1]
-                asset.unit = field[2]
-                asset.virtual = field[3]
-                asset.context = field[4]
-                asset.system = field[5]
-                if field[6] == 1:
-                    asset.enabled = True
-                asset.data_field = field[7]
-
-                self.assets.append(asset)
-            conn.close()
-        except Exception, excpt:
-            logging.getLogger(sm_logger).exception("Error loading assets: %s", excpt)
-
-        return self.assets
-
     def load_site_data(self):
+        field_names = '''
+            id
+            name
+            wunder_key
+            operator
+            email
+            phone
+            location
+            longitude
+            latitude
+            twilio_acct_sid
+            twilio_auth_token
+        '''.split()
         try:
             conn = sqlite3.connect('hapi_core.db')
             c = conn.cursor()
-            sql = "SELECT id, name, wunder_key, operator, email, phone, location, longitude, latitude, twilio_acct_sid, twilio_auth_token FROM site LIMIT 1;"
+            sql = 'SELECT {field_names} FROM site LIMIT 1;'.format(
+                field_names=', '.join(field_names))
             db_elements = c.execute(sql)
-            for field in db_elements:
-                self.id = field[0]
-                self.name = field[1]
-                self.wunder_key = field[2]
-                self.operator = field[3]
-                self.email = field[4]
-                self.phone = field[5]
-                self.location = field[6]
-                self.longitude = field[7]
-                self.latitude = field[8]
-                self.twilio_acct_sid = field[9]
-                self.twilio_auth_token = field[10]
-
+            for row in db_elements:
+                for field_name, field_value in zip(field_names, row):
+                    setattr(self, field_name, field_value)
             conn.close()
             logging.getLogger(sm_logger).info("Site data loaded.")
         except Exception, excpt:
@@ -294,120 +309,78 @@ class SmartModule(object):
         try:
             sysinfo = SystemStatus(update=True)
             sysinfo.clients = brokerconnections
-            # Check those information!
-            self.push_sysinfo("system", sysinfo)
             return str(sysinfo)
         except Exception, excpt:
             logging.getLogger(sm_logger).exception("Error getting System Status: %s", excpt)
 
-    def get_asset_value(self, asset_name):
+    def get_asset_data(self):
         value = ""
         try:
-            for asset in self.assets:
-                if asset_name.lower().strip() == asset.name.lower().strip():
-                    try:
-                        print 'Getting asset value', asset.name, "from", asset.rtuid
-                        self.comm.send("RESPONSE/ASSET/" + asset_name.lower().strip())
+            #ai = asset_interface.AssetInterface(self.asset.type)
+            ai = asset_interface.AssetInterface()
+            value = str(ai.read_value())
+            self.push_data(self.asset.name, self.asset.context, value, self.asset.unit)
+            self.comm.send("RESPONSE/ASSET/" + self.asset.name, value)
+        except Exception, excpt:
+            logging.getLogger(sm_logger).exception("Error getting asset data: %s", excpt)
 
+        return value
+
+    def check_alert(self, asset_id, asset_value):
+        alert_params = self.get_alert_params()
+        logging.getLogger(sm_logger).info(
+            "Checking asset for alert conditions: %s :: %s",
+            asset_id, asset_value)
+        try:
+            for alert_param in alert_params:
+                if alert_param.asset_id == asset_id:
+                    try:
+                        timestamp = datetime.datetime.now()
+                        print(asset.name, 'is', asset.value)
+                        print('Lower Threshold is', alert_param.lower_threshold)
+                        print('Upper Threshold is', alert_param.upper_threshold)
+                        if not (alert_param.lower_threshold < asset_value < alert_param.upper_threshold):
+                            logging.getLogger(sm_logger).info(
+                                "Alert condition detected: %s :: %s",
+                                asset_id, asset_value)
+                            alert = Alert()
+                            alert.asset_id = asset_id
+                            alert.value = asset_value
+                            self.log_alert_condition(alert)
+                            self.send_alert_condition(self, alert, alert_param)
                     except Exception, excpt:
                         logging.getLogger(sm_logger).exception("Error getting asset data: %s", excpt)
 
         except Exception, excpt:
             logging.getLogger(sm_logger).exception("Error getting asset data: %s", excpt)
 
-        return value
-
-    def set_asset_value(self, asset_name, value):
-        data = ""
-        try:
-            for asset in self.assets:
-                if asset_name == asset.name.lower().strip():
-                    self.comm.subscribe("RESPONSE/ASSET/" + asset_name.lower().strip())
-                    self.comm.send("COMMAND/ASSET/" + asset_name.lower().strip(), value)
-                    try:
-                        print 'Setting asset value', asset.name, "from", asset.rtuid
-                    except Exception, excpt:
-                        logging.getLogger(sm_logger).exception("Error setting asset value: %s", excpt)
-        except Exception, excpt:
-            logging.getLogger(sm_logger).exception("Error setting asset value: %s", excpt)
-
-        return data
-
-    def check_alerts(self):
-        alert_params = self.get_alert_params()
-        logging.getLogger(sm_logger).info("Checking site for alert conditions.")
-        print "Found", len(alert_params), "alert parameters."
-        try:
-            for alert_param in alert_params:
-                for asset in self.assets:
-                    if alert_param.asset_id == asset.id:
-                        try:
-                            print 'Getting asset status', asset.name, "from", asset.rtuid
-                            data = "" # go get data
-                            print data
-                            parsed_json = json.loads(data)
-                            asset.value = parsed_json[asset.data_field]
-                            asset.timestamp = datetime.datetime.now()
-                            print asset.name, "is", asset.value
-                            print "Lower Threshold is", alert_param.lower_threshold
-                            print "Upper Threshold is", alert_param.upper_threshold
-                            if (float(asset.value) < alert_param.lower_threshold) or (float(asset.value) > alert_param.upper_threshold):
-                                alert = Alert()
-                                alert.asset_id = asset.id
-                                alert.value = asset.value
-                                log_alert_condition(alert)
-                                send_alert_condition(self, asset, alert, alert_param)
-                        except Exception, excpt:
-                            logging.getLogger(sm_logger).exception("Error getting asset data: %s", excpt)
-
-        except Exception, excpt:
-            logging.getLogger(sm_logger).exception("Error getting asset data: %s", excpt)
-
     def log_sensor_data(self, data, virtual):
-        if virtual == False:
+        if not virtual:
             try:
-                for asset in self.assets:
-                    if asset.enabled is True:
-                        parsed_json = json.loads(data)
-                        if asset.rtuid == parsed_json['name']:
-                            value = parsed_json[asset.data_field]
-                            timestamp = '"' + str(datetime.datetime.now()) + '"'
-                            unit = '"' + asset.unit + '"'
-                            command = "INSERT INTO sensor_data (asset_id, timestamp, value, unit) VALUES (" + str(asset.id) + ", " + timestamp + ", " + value + ", " + unit + ")"
-                            print command
-                            conn = sqlite3.connect('hapi_history.db')
-                            c=conn.cursor()
-                            c.execute(command)
-                            conn.commit()
-                            conn.close()
-                            self.push_data(asset.id, asset.name, asset.context, value, asset.unit)
+                self.push_data(self.asset.name, self.asset.context, value, asset.unit)
             except Exception, excpt:
                 logging.getLogger(sm_logger).exception("Error logging sensor data: %s", excpt)
-
         else:
             # For virtual assets, assume that the data is already parsed JSON
             try:
-                for asset in self.assets:
-                    if asset.enabled is True:
-                        if asset.virtual == 1:
-                            value = str(data[asset.data_field]).replace("%", "")
-                            print "value", value
-                            timestamp = '"' + str(datetime.datetime.now()) + '"'
-                            unit = '"' + asset.unit + '"'
-                            command = "INSERT INTO sensor_data (asset_id, timestamp, value, unit) VALUES (" + str(asset.id) + ", " + timestamp + ", " + str(value) + ", " + unit + ")"
-                            conn = sqlite3.connect('hapi_history.db')
-                            c=conn.cursor()
-                            c.execute(command)
-                            conn.commit()
-                            self.push_data(asset.name, asset.context, value, asset.unit)
-                            conn.close()
+                for factor in ['temp_c', 'relative_humidity', 'pressure_mb']:
+                    value = str(data[factor]).replace("%", "")
+                    timestamp = '"' + str(datetime.datetime.now()) + '"'
+                    if factor == "temp_c":
+                        unit = 'C'
+                    elif factor == "relative_humidity":
+                        unit = '%'
+                    else:
+                        unit = 'mb'
+                    self.push_data(factor, "Environment", value, unit)
+
             except Exception, excpt:
                 logging.getLogger(sm_logger).exception("Error logging sensor data: %s", excpt)
 
     def push_data(self, asset_name, asset_context, value, unit):
         try:
-            #client = InfluxDBClient('138.197.74.74', 8086, 'early', 'adopter', asset_context)
             conn = self.connect_influx("138.197.74.74", 8086, "early", "adopter", asset_context)
+
             json_body = [
                 {
                     "measurement": asset_context,
@@ -422,8 +395,8 @@ class SmartModule(object):
                     }
                 }
             ]
-            print str(json_body)
             conn.write_points(json_body)
+            print(json_body)
             logging.getLogger(sm_logger).info("Wrote to analytic database: " + str(json_body))
         except Exception, excpt:
             logging.getLogger(sm_logger).exception('Error writing to analytic database: %s', excpt)
@@ -433,100 +406,121 @@ class SmartModule(object):
         try:
             response = ""
             command = 'http://api.wunderground.com/api/' + self.wunder_key + '/conditions/q/' + self.latitude + ',' + self.longitude + '.json'
-            print command
+            print(command)
             f = urllib2.urlopen(command)
             json_string = f.read()
             parsed_json = json.loads(json_string)
             response = parsed_json['current_observation']
-            print str(response).replace("u'", "")
+            print(str(response).replace("u'", ''))  # Is there a trailing "'"?
             f.close()
         except Exception, excpt:
-            print "Error getting weather data.", excpt
+            print('Error getting weather data.', excpt)
         return response
 
-    def log_command(self, job):
-        timestamp = '"' + str(datetime.datetime.now()) + '"'
-        name = '"' + job.name + '"'
-        rtuid = '"' + job.rtuid + '"'
-        command = "INSERT INTO command_log (rtuid, timestamp, command) VALUES (" + rtuid + ", " + timestamp + ", " + name + ")"
-        logging.getLogger(sm_logger).info("Executed " + job.name + " on " + job.rtuid)
-        conn = sqlite3.connect('hapi_history.db')
-        c=conn.cursor()
-        c.execute(command)
-        conn.commit()
-        conn.close()
-
-    def log_alert_condition(self, alert):
+    def log_command(self, job, result):
         try:
             timestamp = '"' + str(datetime.datetime.now()) + '"'
-            command = "INSERT INTO alert_log (asset_id, value, timestamp) VALUES (" + str(alert.id) + ", " + timestamp + ", " + str(alert.value) + ")"
-            print command
+            name = '"' + job.name + '"'
+            command = "INSERT INTO command_log (timestamp, command, result) VALUES (" + timestamp + ", " + name + ", " + result + ")"
+            logging.getLogger(sm_logger).info("Executed " + job.name)
             conn = sqlite3.connect('hapi_history.db')
             c=conn.cursor()
             c.execute(command)
             conn.commit()
             conn.close()
         except Exception, excpt:
-            print "Error logging alert condition.", excpt
+            logging.getLogger(sm_logger).exception("Error logging command: %s", excpt)
 
-    def send_alert_condition(self, site, asset, alert, alert_param):
+    def log_alert_condition(self, alert):
+        try:
+            timestamp = '"' + str(datetime.datetime.now()) + '"'
+            command = "INSERT INTO alert_log (asset_id, value, timestamp) VALUES (" + str(alert.id) + ", " + timestamp + ", " + str(alert.value) + ")"
+            conn = sqlite3.connect('hapi_history.db')
+            c=conn.cursor()
+            c.execute(command)
+            conn.commit()
+            conn.close()
+        except Exception, excpt:
+            logging.getLogger(sm_logger).exception("Error logging alert condition: %s", excpt)
+
+    def send_alert_condition(self, alert, alert_param):
         try:
             if alert_param.response_type.lower() == "sms":
-                #ACCOUNT_SID = ""
-                #AUTH_TOKEN = ""
                 timestamp = '"' + str(datetime.datetime.now()) + '"'
-                message = "Alert from " + site.name + ": " + asset.name + '\r\n'
+                message = "Alert from " + self.name + ": " + alert.asset_id + '\r\n'
                 message = message + alert_param.message + '\r\n'
                 message = message + "  Value: " + str(alert.value) + '\r\n'
                 message = message + "  Timestamp: " + timestamp + '\r\n'
-                #client = TwilioRestClient(ACCOUNT_SID, AUTH_TOKEN)
+                self.twilio_acct_sid = field[9]  #??? Where is field defined?
+                self.twilio_auth_token = field[10]  #??? Where is field defined?
+                client = TwilioRestClient(self.twilio_acct_sid, self.twilio_auth_token)
                 #client.messages.create(to="+receiving number", from_="+sending number", body=message, )
-                print "Alert condition sent."
+                logging.getLogger(sm_logger).info("Alert condition sent.")
 
         except Exception, excpt:
-            print "Error sending alert condition.", excpt
+            print('Error sending alert condition.', excpt)
 
     def get_alert_params(self):
         alert_params = []
+        field_names = '''
+            asset_id
+            lower_threshold
+            upper_threshold
+            message
+            response_type
+        '''.split()
         try:
             conn = sqlite3.connect('hapi_core.db')
             c=conn.cursor()
-            sql = "SELECT asset_id, lower_threshold, upper_threshold, message, response_type FROM alert_params;"
+            sql = 'SELECT {field_names} FROM alert_params;'.format(
+                field_names=', '.join(field_names))
             rows = c.execute(sql)
-            for field in rows:
+            for row in rows:
                 alert_param = AlertParam()
-                alert_param.asset_id = field[0]
-                alert_param.lower_threshold = float(field[1])
-                alert_param.upper_threshold = float(field[2])
-                alert_param.message = field[3]
-                alert_param.response_type = field[4]
+                for field_name, field_value in zip(field_names, row):
+                    setattr(alert_param, field_name, field_value)
+                alert_param.lower_threshold = float(alert_param.lower_threshold)
+                alert_param.upper_threshold = float(alert_param.upper_threshold)
                 alert_params.append(alert_param)
             conn.close()
         except Exception, excpt:
-            print "Error loading alert parameters. %s", excpt
+            logging.getLogger(sm_logger).exception("Error getting alert parameters: %s", excpt)
 
         return alert_params
 
-    def execute_command(self, command):
-        print "Executing command:", command
-        if command.lower() == "status":
-            data = '\nMaster Controller Status\n'
-            data = data + '  Software Version v' + version + '\n'
-            data = data + '  Running on: ' + sys.platform + '\n'
-            data = data + '  Encoding: ' + sys.getdefaultencoding() + '\n'
-            data = data + '  Python Information\n'
-            data = data + '   - Executable: ' + sys.executable + '\n'
-            data = data + '   - v' + sys.version[0:7] + '\n'
-            data = data + '   - location: ' + sys.executable + '\n'
-            data = data + '  Timestamp: ' + str(datetime.datetime.now())[0:19] + '\n'
-            uptime = datetime.datetime.now() - self.launch_time
-            days = uptime.days
-            hours = int(divmod(uptime.seconds, 86400)[1] / 3600)
-            minutes = int(divmod(uptime.seconds, 3600)[1] / 60)
-            uptime_str = "This Smart Module has been online for " + str(days) + " days, " + str(hours) + " hours and " + str(minutes) + " minutes."
-            data = data + '  Uptime: ' + uptime_str + '\n'
-            data = data + '###\n'
-            self.comm.send("STATUS", data)
+    def get_env(self):
+        now = datetime.datetime.now()
+        uptime = now - self.launch_time
+        days = uptime.days
+        minutes, seconds = divmod(uptime.seconds, SECONDS_PER_MINUTE)
+        hours, minutes = divmod(minutes, MINUTES_PER_HOUR)
+        s = '''
+            Master Controller Status
+              Software Version v{version}
+              Running on: {platform}
+              Encoding: {encoding}
+              Python Information
+               - Executable: {executable}
+               - v{sys_version}
+               - location: {executable}
+              Timestamp: {timestamp}
+              Uptime: This Smart Module has been online for {days} days, {hours} hours and {minutes} minutes.'
+            ###
+        '''.format(
+            version=version,
+            platform=sys.platform,
+            encoding=sys.getdefaultencoding(),
+            executable=sys.executable,
+            sys_version=sys.version.split()[0],
+            timestamp=now.strftime('%Y-%m-%d %H:%M:%S'),
+            days=days,
+            hours=hours,
+            minutes=minutes,
+        )
+        try:
+            self.comm.send("ENV/RESPONSE", trim(s) + '\n')
+        except Exception, excpt:
+            logging.getLogger(sm_logger).exception("Error getting environment data: %s", excpt)
 
 class Scheduler(object):
     def __init__(self):
@@ -543,10 +537,10 @@ class Scheduler(object):
             self.time_unit = ""
             self.interval = -1
             self.at_time = ""
-            self.enabled = 0
+            self.enabled = False
             self.sequence = ""
             self.timeout = 0.0
-            self.virtual = 0
+            self.virtual = False
 
     def process_sequence(self, seq_jobs, job, job_rtu, seq_result):
         for row in seq_jobs:
@@ -557,32 +551,38 @@ class Scheduler(object):
             time.sleep(timeout)
 
     def load_schedule(self):
-        job_list = []
+        jobs = []
         logging.getLogger(sm_logger).info("Loading Schedule Data...")
+        field_names = '''
+            id
+            name
+            asset_id
+            command
+            time_unit
+            interval
+            at_time
+            enabled
+            sequence
+            virtual
+        '''.split()
         try:
             conn = sqlite3.connect('hapi_core.db')
             c=conn.cursor()
 
-            db_jobs = c.execute("SELECT id, job_name, asset_id, command, time_unit, interval, at_time, enabled, sequence, virtual FROM schedule;")
+            sql = 'SELECT {field_names} FROM schedule;'.format(
+                field_names=', '.join(field_names))
+            db_jobs = c.execute(sql)
             for row in db_jobs:
                 job = Scheduler.Job()
-                job.id = row[0]
-                job.name = row[1]
-                job.asset_id = row[2]
-                job.command = row[3]
-                job.time_unit = row[4]
-                job.interval = row[5]
-                job.at_time = row[6]
-                job.enabled = row[7]
-                job.sequence = row[8]
-                job.virtual = row[9]
-                job_list.append(job)
+                for field_name, field_value in zip(field_names, row):
+                    setattr(job, field_name, field_value)
+                jobs.append(job)
             conn.close()
             logging.getLogger(sm_logger).info("Schedule Data Loaded.")
         except Exception, excpt:
             logging.getLogger(sm_logger).exception("Error loading schedule. %s", excpt)
 
-        return job_list
+        return jobs
 
     def prepare_jobs(self, jobs):
         for job in jobs:
@@ -621,16 +621,16 @@ class Scheduler(object):
                     logging.getLogger(sm_logger).info("  Loading second job: " + job.name)
 
     def run_job(self, job):
-        if self.running == True:
+        if self.running:
             response = ""
             job_rtu = None
 
-            if job.enabled == 1:
+            if job.enabled:
                 if job.sequence is None:
                     job.sequence = ""
 
-                if job.virtual == 1:
-                    print 'Running virtual job:', job.name, job.command
+                if job.virtual:
+                    print('Running virtual job:', job.name, job.command)
                     try:
                         response = eval(job.command)
                         self.smart_module.log_sensor_data(response, True)
@@ -638,34 +638,44 @@ class Scheduler(object):
                         logging.getLogger(sm_logger).exception("Error running job. %s", excpt)
                 else:
                     try:
-                        if str.strip(job.sequence) != "":
-                            if (job_rtu != None):
-                                print 'Running sequence', job.sequence, "on", job.rtuid
+                        if job.sequence != "":
+                            if job_rtu is not None:  #??? job_rtu is always None. Bug?
+                                print('Running sequence', job.sequence, 'on', job.rtuid)
                                 conn = sqlite3.connect('hapi_core.db')
                                 c=conn.cursor()
                                 seq_jobs = c.execute('SELECT name, command, step_name, timeout FROM sequence WHERE name = "' + job.sequence + '" ORDER BY step ;')
-                                print "len(seq_jobs) = "  + str(len(seq_jobs))
+                                print('len(seq_jobs) =', len(seq_jobs))
                                 p = Process(target=self.process_sequence, args=(seq_jobs, job, job_rtu, seq_result,))
                                 p.start()
                                 conn.close()
                         else:
-                            print 'Running command', job.command
+                            print('Running command', job.command)
                             # Check pre-defined jobs
-                            if (job.name == "Log Data"):
+                            if job.name == "Log Data":
                                 self.site.comm.send("QUERY/#", "query")
                                 # self.site.log_sensor_data(response, False, self.logger)
 
-                            elif (job.name == "Log Status"):
+                            elif job.name == "Log Status":
                                 self.site.comm.send("REPORT/#", "report")
 
                             else:
-                                if (job_rtu != None):
-                                    self.site.comm.send("COMMAND/" + job.rtuid, job.command)
+                                eval(job.command)
+                                # if job_rtu is not None:  #??? job_rtu is always None. Bug?
+                                #     self.site.comm.send("COMMAND/" + job.rtuid, job.command)
 
-                            log_command(job)
+                            #self.log_command(job, "")
 
                     except Exception, excpt:
                         logging.getLogger(sm_logger).exception('Error running job: %s', excpt)
+
+    # class ErrorLogger(Handler):
+    #     def __init__(self, client):
+    #         Handler.__init__()
+    #         self.client = client
+
+    #     def emit(self, record):
+    #         log_entry = self.format(record)
+    #         return client.send("ERROR", log_entry)
 
 class DataSync(object):
     @staticmethod
@@ -751,13 +761,8 @@ def main():
         smart_module.discover()
         smart_module.load_site_data()
 
-        #ACCOUNT_SID = <your twilio account SID here>
-        #AUTH_TOKEN = <your twilio account token here>
-        #client = TwilioRestClient(ACCOUNT_SID, AUTH_TOKEN)
-        #client.messages.create(to=<+receiving number>, from_=<+sending number>, body="HAPI Master Controller is online.", )
-
     except Exception, excpt:
-        logger.exception("Error loading site information. %s", excpt)
+        logger.exception("Error initializing Smart Module. %s", excpt)
 
     while 1:
         try:
@@ -775,8 +780,8 @@ if __name__ == "__main__":
 #     PROMPT = site.name + "> "
 
 #     # def __init__(self, *args):
-#     #     print "Listener Init"
-#     #     print args
+#     #     print('Listener Init')
+#     #     print(args)
 
 #     @command('abc')
 #     def command_abc(self, params):
@@ -796,38 +801,13 @@ if __name__ == "__main__":
 #         else:
 #             self.writeresponse('No context provided.')
 
-#     @command('asset')
-#     def command_asset(self, params):
-#         '''<get value for named asset>
-#         Gets the current value for the named asset.
-#         '''
-#         asset = ""
-
-#         for param in params:
-#             asset = asset + " " + param.encode('utf-8').strip()
-
-#         asset = asset.lower().strip()
-#         print "MC:Listener:asset:", asset
-#         value = site.get_asset_value(asset)
-
-#         print "Sending asset", params[0], value
-#         self.writeline(value)
-
-#     @command('assets')
-#     def command_assets(self, params):
-#         '''<get all asset names>
-#         Gets all Asset names.
-
-#         '''
-#         self.writeline(str(site.assets()))
-
 #     @command('cmd')
 #     def command_cmd(self, params):
 #         '''<command to be run on connected RTU>
 #         Sends a command to the connected RTU
 
 #         '''
-#         if the_rtu == None:
+#         if the_rtu is None:
 #             self.writeresponse("You are not connected to an RTU.")
 #         else:
 #             command = params[0]
@@ -867,7 +847,7 @@ if __name__ == "__main__":
 #         Starts the Master Controller's Scheduler
 
 #         '''
-#         if the_rtu == None:
+#         if the_rtu is None:
 #             self.writeresponse("You are not connected to an RTU.")
 #         else:
 #             command = params[0]
@@ -876,10 +856,10 @@ if __name__ == "__main__":
 #             scheduler.site = site
 #             scheduler.logger = self.logger
 
-#             print "Running", params[0], params[1], "on", the_rtu.rtuid
+#             print('Running', params[0], params[1], 'on', the_rtu.rtuid)
 #             job = IntervalJob()
 #             job.name = "User-defined"
-#             job.enabled = 1
+#             job.enabled = True
 #             job.rtuid = the_rtu.rtuid
 
 #             if params[0] == "command":
@@ -887,7 +867,7 @@ if __name__ == "__main__":
 #             elif params[0] == "sequence":
 #                 job.sequence = params[1]
 
-#             print "Passing job to the scheduler."
+#             print('Passing job to the scheduler.')
 #             scheduler.run_job(job)
 
 #     @command('stop')
@@ -911,10 +891,10 @@ if __name__ == "__main__":
 #             asset = asset + " " + param.encode('utf-8').strip()
 
 #         asset = asset.lower().strip()
-#         print "MC:Listener:asset:", asset
+#         print('MC:Listener:asset:', asset)
 #         value = site.set_asset_value(asset, "1")
 
-#         print "Sending asset", params[0], value
+#         print('Sending asset', params[0], value)
 #         self.writeline(value)
 
 #     @command('turnon')
@@ -928,9 +908,9 @@ if __name__ == "__main__":
 #             asset = asset + " " + param.encode('utf-8').strip()
 
 #         asset = asset.lower().strip()
-#         print "MC:Listener:asset:", asset
+#         print('MC:Listener:asset:', asset)
 #         value = site.set_asset_value(asset, "0")
 
-#         print "Sending asset", params[0], value
+#         print('Sending asset', params[0], value)
 #         self.writeline(value)
 
