@@ -1,10 +1,11 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
-'''
+"""
 HAPI Master Controller v2.1.1
 Author: Tyler Reed
 Release: December 2016 Beta
+
 Copyright 2016 Maya Culpa, LLC
 
 This program is free software: you can redistribute it and/or modify
@@ -19,7 +20,9 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
-'''
+"""
+
+from __future__ import print_function
 
 import sqlite3                                      # https://www.sqlite.org/index.html
 import sys
@@ -94,7 +97,7 @@ class RemoteTerminalUnit(object):
         self.protocol = ""
         self.address = ""
         self.version = ""
-        self.online = 0
+        self.online = False
         self.pin_modes = {}
 
 class Site(object):
@@ -152,23 +155,28 @@ class Site(object):
 
     def get_assets(self):
         assets = []
+        field_names = '''
+            asset_id
+            rtuid
+            abbreviation
+            name
+            pin
+            unit
+            context
+            system
+            enabled
+        '''.split()
         try:
             conn = sqlite3.connect('hapi.db')
             c=conn.cursor()
-            sql = "SELECT asset_id, rtuid, abbreviation, name, pin, unit, context, system, enabled FROM assets;"
+            sql = 'SELECT {field_names} FROM assets;'.format(
+                field_names=', '.join(field_names))
             rows = c.execute(sql)
-            for field in rows:
+            for row in rows:
                 asset = Asset()
-                asset.asset_id = field[0]
-                asset.rtuid = field[1]
-                asset.abbreviation = field[2]
-                asset.name = field[3]
-                asset.pin = field[4]
-                asset.unit = field[5]
-                asset.context = field[6]
-                asset.system = field[7]
-                if field[8] == 1:
-                    asset.enabled = True
+                for field_name, field_value in zip(field_names, row):
+                    setattr(asset, field_name, field_value)
+                asset.enabled = bool(asset.enabled)  # Probably superfluous.
 
                 assets.append(asset)
             conn.close()
@@ -178,25 +186,30 @@ class Site(object):
         return assets
 
     def load_site_data(self):
+        field_names = '''
+            site_id
+            name
+            wunder_key
+            operator
+            email
+            phone
+            location
+            longitude
+            latitude
+            net_iface
+            serial_port
+            twilio_acct_sid
+            twilio_auth_token
+        '''.split()
         try:
             conn = sqlite3.connect('hapi.db')
             c = conn.cursor()
-            sql = "SELECT site_id, name, wunder_key, operator, email, phone, location, longitude, latitude, net_iface, serial_port, twilio_acct_sid, twilio_auth_token FROM site LIMIT 1;"
+            sql = 'SELECT {field_names} FROM site LIMIT 1;'.format(
+                field_names=', '.join(field_names))
             db_elements = c.execute(sql)
-            for field in db_elements:
-                self.site_id = field[0]
-                self.name = field[1]
-                self.wunder_key = field[2]
-                self.operator = field[3]
-                self.email = field[4]
-                self.phone = field[5]
-                self.location = field[6]
-                self.longitude = field[7]
-                self.latitude = field[8]
-                self.net_iface = field[9]
-                self.serial_port = field[10]
-                self.twilio_acct_sid = field[11]
-                self.twilio_auth_token = field[12]
+            for row in db_elements:
+                for field_name, field_value in zip(field_names, row):
+                    setattr(self, field_name, field_value)
 
             conn.close()
             self.logger.info("Site data loaded.")
@@ -239,7 +252,7 @@ class Site(object):
         #         #get_pin_modes(rtu)
         #         self.rtus.append(rtu)
         # except Exception, excpt:
-        #     if self.logger != None:
+        #     if self.logger is not None:
         #         self.logger.warning("No RTU found on USB: %s", excpt)
 
         return self.rtus
@@ -268,21 +281,24 @@ class Site(object):
         assets = self.get_assets()
         try:
             for asset in assets:
-                print "!" + asset_name + "!" + "!" + asset.name + "!"
+                print('!{asset_name}!!{asset_dot_name}!'.format(
+                    asset_name=asset_name,
+                    asset_dot_name=asset.name
+                ))
                 if asset_name == asset.name.lower().strip():
                     for rtu in self.rtus:
-                        print rtu.rtuid, asset.rtuid 
+                        print(rtu.rtuid, asset.rtuid)
                         if rtu.rtuid == asset.rtuid:
                             try:
-                                print 'Getting asset value', asset.name, "from", asset.rtuid
+                                print('Getting asset value', asset.name, 'from', asset.rtuid)
                                 command = "env"
                                 target_rtu = rtu_comm.RTUCommunicator()
                                 data = target_rtu.send_to_rtu(rtu.address, 80, 5, command)
-                                print data
+                                print(data)
                                 parsed_json = json.loads(data)
                                 asset.value = parsed_json[asset.pin]
                                 asset.timestamp = datetime.datetime.now()
-                                print asset.name, "is", asset.value
+                                print(asset.name, 'is', asset.value)
                                 value = str(asset.value)
                             except Exception, excpt:
                                 self.logger.exception("Error getting asset data: %s", excpt)
@@ -296,15 +312,18 @@ class Site(object):
         assets = self.get_assets()
         try:
             for asset in assets:
-                print "!" + asset_name + "!" + "!" + asset.name + "!"
+                print('!{asset_name}!!{asset_dot_name}!'.format(
+                    asset_name=asset_name,
+                    asset_dot_name=asset.name
+                ))
                 if asset_name == asset.name.lower().strip():
                     for rtu in self.rtus:
-                        print rtu.rtuid, asset.rtuid 
+                        print(rtu.rtuid, asset.rtuid)
                         if rtu.rtuid == asset.rtuid:
                             try:
-                                print 'Setting asset value', asset.name, "from", asset.rtuid
+                                print('Setting asset value', asset.name, 'from', asset.rtuid)
                                 command = "doc" + asset.pin + value
-                                print "set_asset_value: " + command
+                                print('set_asset_value:', command)
                                 target_rtu = rtu_comm.RTUCommunicator()
                                 data = target_rtu.send_to_rtu(rtu.address, 80, 5, command)
                             except Exception, excpt:
@@ -318,7 +337,7 @@ class Site(object):
         assets = self.get_assets()
         alert_params = get_alert_params()
         self.logger.info("Checking site for alert conditions.")
-        print "Found", len(alert_params), "alert parameters."
+        print('Found', len(alert_params), 'alert parameters.')
         try:
             for alert_param in alert_params:
                 for asset in assets:
@@ -326,18 +345,18 @@ class Site(object):
                         for rtu in self.rtus:
                             if rtu.rtuid == asset.rtuid:
                                 try:
-                                    print 'Getting asset status', asset.name, "from", asset.rtuid
+                                    print('Getting asset status', asset.name, 'from', asset.rtuid)
                                     command = "env"
                                     target_rtu = rtu_comm.RTUCommunicator()
                                     data = target_rtu.send_to_rtu(rtu.address, 80, 5, command)
-                                    print data
+                                    print(data)
                                     parsed_json = json.loads(data)
                                     asset.value = parsed_json[asset.pin]
                                     asset.timestamp = datetime.datetime.now()
-                                    print asset.name, "is", asset.value
-                                    print "Lower Threshold is", alert_param.lower_threshold
-                                    print "Upper Threshold is", alert_param.upper_threshold
-                                    if (float(asset.value) < alert_param.lower_threshold) or (float(asset.value) > alert_param.upper_threshold):
+                                    print(asset.name, 'is', asset.value)
+                                    print('Lower Threshold is', alert_param.lower_threshold)
+                                    print('Upper Threshold is', alert_param.upper_threshold)
+                                    if not (alert_param.lower_threshold < float(asset.value) < alert_param.upper_threshold):
                                         alert = Alert()
                                         alert.asset_id = asset.asset_id
                                         alert.value = asset.value
@@ -367,15 +386,15 @@ class Site(object):
                     for rtu in self.rtus:
                         if rtu.rtuid == asset.rtuid:
                             try:
-                                print 'Getting asset status', asset.name, "from", asset.rtuid
+                                print('Getting asset status', asset.name, 'from', asset.rtuid)
                                 command = "env"
                                 target_rtu = rtu_comm.RTUCommunicator()
                                 data = target_rtu.send_to_rtu(rtu.address, 80, 5, command)
-                                print data
+                                print(data)
                                 parsed_json = json.loads(data)
                                 asset.value = parsed_json[asset.pin]
                                 asset.timestamp = datetime.datetime.now()
-                                print asset.name, "is", asset.value
+                                print(asset.name, 'is', asset.value)
                                 result_assets.append(asset)
                             except Exception, excpt:
                                 self.logger.exception("Error getting asset data: %s", excpt)
@@ -390,24 +409,24 @@ class Site(object):
                                     result_assets.append(asset)
                     except Exception, excpt:
                         error = "Error getting virtual asset data: " + excpt
-                        print error
-                        if logger != None:
+                        print(error)
+                        if logger is not None:
                             logger.exception(error)
         return result_assets
 
     def log_sensor_data(self, data, virtual, logger):
         assets = self.get_assets()
-        if virtual == False:
+        if not virtual:
             try:
                 for asset in assets:
-                    if asset.enabled is True:
+                    if asset.enabled:
                         parsed_json = json.loads(data)
                         if asset.rtuid == parsed_json['name']:
                             value = parsed_json[asset.pin]
                             timestamp = '"' + str(datetime.datetime.now()) + '"'
                             unit = '"' + asset.unit + '"'
                             command = "INSERT INTO sensor_data (asset_id, timestamp, value, unit) VALUES (" + str(asset.asset_id) + ", " + timestamp + ", " + value + ", " + unit + ")"
-                            print command
+                            print(command)
                             conn = sqlite3.connect('hapi.db')
                             c=conn.cursor()
                             c.execute(command)
@@ -416,24 +435,24 @@ class Site(object):
                             self.push_data(asset.rtuid, asset.name, asset.context, str(datetime.datetime.now()), value, asset.unit)
 
             except Exception, excpt:
-                print "Error logging sensor data.", excpt
+                print('Error logging sensor data.', excpt)
         else:
             # For virtual assets, assume that the data is already parsed JSON
             try:
                 for asset in assets:
-                    if asset.enabled is True:
+                    if asset.enabled:
                         if asset.rtuid == "virtual":
                             if asset.abbreviation == "weather":
-                                print "asset.pin", asset.pin
-                                print "data[asset.pin]", data[asset.pin]
+                                print('asset.pin', asset.pin)
+                                print('data[asset.pin]', data[asset.pin])
 
                                 str(data[asset.pin])
                                 value = str(data[asset.pin]).replace("%", "")
-                                print "value", value
+                                print('value', value)
                                 timestamp = '"' + str(datetime.datetime.now()) + '"'
                                 unit = '"' + asset.unit + '"'
                                 command = "INSERT INTO sensor_data (asset_id, timestamp, value, unit) VALUES (" + str(asset.asset_id) + ", " + timestamp + ", " + str(value) + ", " + unit + ")"
-                                print command
+                                print(command)
                                 conn = sqlite3.connect('hapi.db')
                                 c=conn.cursor()
                                 c.execute(command)
@@ -441,10 +460,10 @@ class Site(object):
                                 self.push_data(asset.rtuid, asset.name, asset.context, str(datetime.datetime.now()), value, asset.unit)
                                 conn.close()
             except Exception, excpt:
-                print "Error logging sensor data.", excpt
+                print('Error logging sensor data.', excpt)
                 # error = "Error logging sensor data: " + excpt
-                # print error
-                # if logger != None:
+                # print(error)
+                # if logger is not None:
                 #     logger.exception(error)
 
 
@@ -453,10 +472,10 @@ class Site(object):
         #temp_c = parsed_json['current_observation']['temp_c']
         #rel_hmd = parsed_json['current_observation']['relative_humidity']
         #pressure = parsed_json['current_observation']['pressure_mb']
-        #print "Current weather in %s" % (location)
-        #print "    Temperature is: %sF, %sC" % (temp_f, temp_c)
-        #print "    Relative Humidity is: %s" % (rel_hmd)
-        #print "    Atmospheric Pressure is: %smb" % (pressure)
+        #print('Current weather in', location)
+        #print('    Temperature is: %sF, %sC' % (temp_f, temp_c))
+        #print('    Relative Humidity is:', rel_hmd)
+        #print('    Atmospheric Pressure is: %smb' % pressure)
         #response = parsed_json['current_observation']
 
     def push_data(self, rtu_id, asset_name, asset_context, timestamp, value, unit):
@@ -468,7 +487,7 @@ class Site(object):
                 if asset_context in item:
                     found = True
             
-            if found is False:
+            if not found:
                 client.query("CREATE DATABASE {0}".format('"' + asset_context + '"'))
 
             client = InfluxDBClient('138.197.74.74', 8086, 'early', 'adopter', asset_context)
@@ -488,7 +507,7 @@ class Site(object):
                     }
                 }
             ]
-            print str(json_body)
+            print(json_body)
             client.write_points(json_body)
             #self.logger.info("Wrote to analytic database: " + str(json_body))
         except Exception, excpt:
@@ -501,14 +520,14 @@ class Site(object):
         try:
             response = ""
             command = 'http://api.wunderground.com/api/' + site.wunder_key + '/geolookup/conditions/q/OH/Columbus.json'
-            print command
+            print(command)
             f = urllib2.urlopen(command)
             json_string = f.read()
             parsed_json = json.loads(json_string)
             response = parsed_json['current_observation']
             f.close()
         except Exception, excpt:
-            print "Error getting weather data.", excpt
+            print('Error getting weather data.', excpt)
         return response
 
     def log_command(self, job):
@@ -527,14 +546,14 @@ class Site(object):
         try:
             timestamp = '"' + str(datetime.datetime.now()) + '"'
             command = "INSERT INTO alert_log (asset_id, value, timestamp) VALUES (" + str(alert.asset_id) + ", " + timestamp + ", " + str(alert.value) + ")"
-            print command
+            print(command)
             conn = sqlite3.connect('hapi.db')
             c=conn.cursor()
             c.execute(command)
             conn.commit()
             conn.close()
         except Exception, excpt:
-            print "Error logging alert condition.", excpt
+            print('Error logging alert condition.', excpt)
 
     def send_alert_condition(self, site, asset, alert, alert_param, logger):
         try:
@@ -548,29 +567,36 @@ class Site(object):
                 message = message + "  Timestamp: " + timestamp + '\r\n'
                 #client = TwilioRestClient(ACCOUNT_SID, AUTH_TOKEN)      
                 #client.messages.create(to="+receiving number", from_="+sending number", body=message, )
-                print "Alert condition sent."
+                print('Alert condition sent.')
 
         except Exception, excpt:
-            print "Error sending alert condition.", excpt
+            print('Error sending alert condition.', excpt)
 
     def get_alert_params(self):
         alert_params = []
+        field_names = '''
+            asset_id
+            lower_threshold
+            upper_threshold
+            message
+            response_type
+        '''.split()
         try:
             conn = sqlite3.connect('hapi.db')
             c=conn.cursor()
-            sql = "SELECT asset_id, lower_threshold, upper_threshold, message, response_type FROM alert_params;"
+            sql = 'SELECT {field_names} FROM alert_params;'.format(
+                field_names=', '.join(field_names))
             rows = c.execute(sql)
-            for field in rows:
+            for row in rows:
                 alert_param = Asset()
-                alert_param.asset_id = field[0]
-                alert_param.lower_threshold = float(field[1])
-                alert_param.upper_threshold = float(field[2])
-                alert_param.message = field[3]
-                alert_param.response_type = field[4]
+                for field_name, field_value in zip(field_names, row):
+                    setattr(alert_param, field_name, field_value)
+                alert_param.lower_threshold = float(alert_param.lower_threshold)
+                alert_param.upper_threshold = float(alert_param.upper_threshold)
                 alert_params.append(alert_param)
             conn.close()
         except Exception, excpt:
-            print "Error loading alert parameters. %s", excpt
+            print('Error loading alert parameters.', excpt)
 
         return alert_params
 
@@ -607,23 +633,30 @@ class Scheduler(object):
     def load_interval_schedule(self):
         job_list = []
         self.logger.info("Scheduler data loading...")
+        field_names = '''
+            job_id
+            job_name
+            rtuid
+            command
+            time_unit
+            interval
+            at_time
+            enabled
+            sequence
+            timeout
+        '''.split()
         try:
             conn = sqlite3.connect('hapi.db')
             c=conn.cursor()
 
-            db_jobs = c.execute("SELECT job_id, job_name, rtuid, command, time_unit, interval, at_time, enabled, sequence, timeout FROM interval_schedule;")
+            sql = 'SELECT {field_names} FROM interval_schedule;'.format(
+                field_names=', '.join(field_names))
+            db_jobs = c.execute(sql)
             for row in db_jobs:
                 job = Scheduler.IntervalJob()
-                job.job_id = row[0]
-                job.job_name = row[1]
-                job.rtuid = row[2]
-                job.command = row[3].encode("ascii")
-                job.time_unit = row[4]
-                job.interval = row[5]
-                job.at_time = row[6]
-                job.enabled = row[7]
-                job.sequence = row[8]
-                job.timeout = row[9]
+                for field_name, field_value in zip(field_names, row):
+                    setattr(job, field_name, field_value)
+                job.command = job.command.encode('ascii')
                 job_list.append(job)
 
             conn.close()
@@ -670,62 +703,66 @@ class Scheduler(object):
                     self.logger.info("  Loading second job: " + job.job_name)
 
     def run_job(self, job):
-        if self.running == True:
+        if self.running:
             command = ""
             response = ""
             job_rtu = None
 
-            if job.enabled == 1:
-                print "Job enabled"
-                print "Job rtuid", job.rtuid
-                print "Job command", job.command
-                print "Job sequence", job.sequence
+            if job.enabled:
+                print('Job enabled')
+                print('Job rtuid', job.rtuid)
+                print('Job command', job.command)
+                print('Job sequence', job.sequence)
                 if job.sequence is None:
                     job.sequence = ""
 
                 if job.rtuid.lower() == "virtual":
-                    print 'Running on virtual RTU', job.command, "on", job.rtuid
+                    print('Running on virtual RTU', job.command, 'on', job.rtuid)
                     try:
                         response = eval(job.command)
                         if job.command != "spin":
                             self.site.log_sensor_data(response, True, self.logger)
                     except Exception, excpt:
-                        error = "Error running job " + job.job_name + " on " + job_rtu.rtuid + ": " + excpt
-                        print error
-                        if self.logger != None:
+                        error = 'Error running job {name} on {id}: {e}'.format(
+                            name=job.job_name,
+                            id=job_rtu.rtuid,
+                            e=excpt,
+                        )
+                        print(error)
+                        if self.logger is not None:
                             self.logger.exception(error)
                 else:
                     try:
                         for rtu_el in self.site.rtus:
                             if rtu_el.rtuid == job.rtuid:
-                                if rtu_el.online == 1:
+                                if rtu_el.online:
                                     job_rtu = rtu_el
 
-                        if (job_rtu != None):
+                        if job_rtu is not None:
                             if str.strip(job.sequence) != "":
-                                print 'Running sequence', job.sequence, "on", job.rtuid
+                                print('Running sequence', job.sequence, 'on', job.rtuid)
                                 conn = sqlite3.connect('hapi.db')
                                 c=conn.cursor()
                                 seq_jobs = c.execute('SELECT name, command, step_name, timeout FROM sequence WHERE name = "' + job.sequence + '" ORDER BY step ;')
-                                print "len(seq_jobs) = "  + str(len(seq_jobs))
+                                print('len(seq_jobs) =', len(seq_jobs))
                                 p = Process(target=self.process_sequence, args=(seq_jobs, job, job_rtu, seq_result,))
                                 p.start()
                                 conn.close()
                             else:
-                                print 'Running command', job.command, "on", job.rtuid
+                                print('Running command', job.command, 'on', job.rtuid)
                                 command = job.command
                                 target_rtu = rtu_comm.RTUCommunicator()
-                                print "Sending", command, "to ", job_rtu.address
+                                print('Sending', command, 'to ', job_rtu.address)
                                 response = target_rtu.send_to_rtu(job_rtu.address, 80, job.timeout, command)
-                                if (job.job_name == "Log Data"):
+                                if job.job_name == "Log Data":
                                     self.site.log_sensor_data(response, False, self.logger)
-                                elif (job.job_name == "Log Status"):
+                                elif job.job_name == "Log Status":
                                     pass
                                 else:
                                     log_command(job)
                         else:
-                            print "Could not find rtu."
-                            if self.logger != None:
+                            print('Could not find rtu.')
+                            if self.logger is not None:
                                 self.logger.info("Could not find rtu " + job.rtuid)
 
                     except Exception, excpt:
@@ -734,7 +771,7 @@ class Scheduler(object):
     def spin():
         for p in self.processes:
             if not p.is_alive():
-                print p.exitcode
+                print(p.exitcode)
 
 class HAPIListener(TelnetHandler):
     global the_rtu
@@ -748,7 +785,7 @@ class HAPIListener(TelnetHandler):
     global launch_time
     launch_time = datetime.datetime.now()
 
-    if site != None:
+    if site is not None:
         WELCOME = "\n" + "Welcome to HAPI facility " + site.name + '\n'
         WELCOME = WELCOME + "Operator: " + site.operator + '\n'
         WELCOME = WELCOME + "Phone: " + site.phone + '\n'
@@ -761,8 +798,8 @@ class HAPIListener(TelnetHandler):
     PROMPT = site.name + "> "
     
     # def __init__(self, *args):
-    #     print "Listener Init"
-    #     print args
+    #     print('Listener Init')
+    #     print(args)
 
     def session_start(self):
         self.the_rtus = []
@@ -817,10 +854,10 @@ class HAPIListener(TelnetHandler):
             asset = asset + " " + param.encode('utf-8').strip()
 
         asset = asset.lower().strip()
-        print "MC:Listener:asset:", asset
+        print('MC:Listener:asset:', asset)
         value = site.get_asset_value(asset)
 
-        print "Sending asset", params[0], value
+        print('Sending asset', params[0], value)
         self.writeline(value)
 
     @command('assets')
@@ -837,7 +874,7 @@ class HAPIListener(TelnetHandler):
         Sends a command to the connected RTU
 
         '''
-        if the_rtu == None:
+        if the_rtu is None:
             self.writeresponse("You are not connected to an RTU.")
         else:
             command = params[0]
@@ -865,7 +902,7 @@ class HAPIListener(TelnetHandler):
         for rtu in site.rtus:
             if rtu.rtuid.lower() == rtu_name.lower():
                 the_rtu = rtu
-        if the_rtu != None:
+        if the_rtu is not None:
             self.writeresponse("Connecting to " + rtu_name + "...")
             target_rtu = rtu_comm.RTUCommunicator()
             response = target_rtu.send_to_rtu(the_rtu.address, 80, 3, "env")            
@@ -899,7 +936,7 @@ class HAPIListener(TelnetHandler):
         Starts the Master Controller's Scheduler
 
         '''
-        if the_rtu == None:
+        if the_rtu is None:
             self.writeresponse("You are not connected to an RTU.")
         else:
             command = params[0]
@@ -908,10 +945,10 @@ class HAPIListener(TelnetHandler):
             scheduler.site = site
             scheduler.logger = self.logger
 
-            print "Running", params[0], params[1], "on", the_rtu.rtuid
+            print('Running', params[0], params[1], 'on', the_rtu.rtuid)
             job = IntervalJob()
             job.job_name = "User-defined"
-            job.enabled = 1
+            job.enabled = True
             job.rtuid = the_rtu.rtuid
 
             if params[0] == "command":
@@ -919,7 +956,7 @@ class HAPIListener(TelnetHandler):
             elif params[0] == "sequence":
                 job.sequence = params[1]
 
-            print "Passing job to the scheduler."
+            print('Passing job to the scheduler.')
             scheduler.run_job(job)
 
     @command('rtus')
@@ -938,7 +975,7 @@ class HAPIListener(TelnetHandler):
         Return operational status of the Master Controller
 
         '''
-        print "Received Status command."
+        print('Received Status command.')
         data = '\nMaster Controller Status\n'
         data = data + '  Software Version v' + version + '\n'
         data = data + '  Running on: ' + sys.platform + '\n'
@@ -980,10 +1017,10 @@ class HAPIListener(TelnetHandler):
             asset = asset + " " + param.encode('utf-8').strip()
 
         asset = asset.lower().strip()
-        print "MC:Listener:asset:", asset
+        print('MC:Listener:asset:', asset)
         value = site.set_asset_value(asset, "1")
 
-        print "Sending asset", params[0], value
+        print('Sending asset', params[0], value)
         self.writeline(value)
 
     @command('turnon')
@@ -997,10 +1034,10 @@ class HAPIListener(TelnetHandler):
             asset = asset + " " + param.encode('utf-8').strip()
 
         asset = asset.lower().strip()
-        print "MC:Listener:asset:", asset
+        print('MC:Listener:asset:', asset)
         value = site.set_asset_value(asset, "0")
 
-        print "Sending asset", params[0], value
+        print('Sending asset', params[0], value)
         self.writeline(value)
 
 
@@ -1047,7 +1084,7 @@ def main(argv):
     except Exception, excpt:
         logger.exception("Error loading site information. %s", excpt)
 
-    if site != None:
+    if site is not None:
         if len(site.rtus) == 0:
             logger.info("There are no RTUs online.")
         elif len(site.rtus) == 1:
@@ -1076,12 +1113,12 @@ def main(argv):
         logger.exception("Error initializing scheduler. %s", excpt)
 
     while 1:
-        #print listener_parent_conn.recv()
+        #print(listener_parent_conn.recv())
         try:
             if count % 60 == 0:
-                print ".",
+                print('.', end='')
             time.sleep(5)
-            count = count + 5
+            count += 5
             schedule.run_pending()
 
             if os.path.isfile("ipc.txt"):
@@ -1103,5 +1140,3 @@ def main(argv):
 
 if __name__ == "__main__":
     main(sys.argv[1:])
-
-

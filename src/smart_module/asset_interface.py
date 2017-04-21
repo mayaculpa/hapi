@@ -1,11 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""
-HAPI Master Controller v1.0
-Author: Tyler Reed
-Release: June 2016 Alpha
-
+'''
+HAPI Generic Asset Interface
+Authors: Tyler Reed
+Release: April 2017, Alpha Milestone
 Copyright 2016 Maya Culpa, LLC
 
 This program is free software: you can redistribute it and/or modify
@@ -20,34 +19,16 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
-"""
+'''
 
-from __future__ import print_function
+import importlib
+import asset_wt
 
-import sqlite3
-import json
+class AssetInterface(object):
+    # def __init__(self, asset_type):
+    #     # determine the correct asset library and import it
+    #     self.asset_lib = importlib.import_module("asset_" + str(asset_type))
+    #     eval('from "asset_" + str(asset_type) import AssetImpl')
 
-def dict_factory(cursor, row):
-    d = {}
-    for idx, col in enumerate(cursor.description):
-        d[col[0]] = row[idx]
-    return d
-
-connection = sqlite3.connect("hapi.db")
-connection.row_factory = dict_factory
-
-cursor = connection.cursor()
-
-cursor.execute("select * from sensor_data")
-
-# fetch all or one we'll go for all.
-
-results = cursor.fetchall()
-
-f = open('sensor_data.json', 'wb')
-f.write(json.dumps(results))
-f.close()
-
-print(results)
-
-connection.close()
+    def read_value(self):
+        return asset_wt.AssetImpl().read_value()
