@@ -1,29 +1,32 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
-# HAPI Project
-# Smart Module Status is responsible for fetching information from the system
-# Author: Pedro Freitas
-# Release: 0.2-alpha
-# Copyright 2017 Maya Culpa, LLC
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
 This is a wrapper on psutil to provide system information
 in a simple JSON way. If run stand-alone, print all information.
+
+HAPI Project
+Smart Module Status is responsible for fetching information from the system
+Author: Pedro Freitas
+Release: 0.1-alpha
+
+Copyright 2017 Maya Culpa, LLC
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
+
+from __future__ import print_function
 
 import time
 import datetime
@@ -41,7 +44,7 @@ class SystemStatus(object):
         self.disk = {"total": 0, "used": 0, "free": 0}
         self.timestamp = 0
         self.clients = -1
-        if update is True:
+        if update:
             self.update()
 
     def __str__(self):
@@ -71,6 +74,5 @@ class SystemStatus(object):
         self.timestamp = time.time()
 
 if __name__ == "__main__":
-    # Trying to please pylint on SYSINFO
-    SYSINFO = SystemStatus(update=True)
-    print SYSINFO
+    sysinfo = SystemStatus(update=True)
+    print(sysinfo)
