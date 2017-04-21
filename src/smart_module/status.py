@@ -38,8 +38,8 @@ import psutil
 class SystemStatus:
     """ Small class to handle system information """
 
-    def __init__(self, update=False):
-        """ If update, create the object and fetch all data """
+    def __init__(self, please_update=False):
+        """ If please_update, create the object and fetch all data """
         self.cpu = {"percentage": 0}
         self.bootdate = 0
         self.memory = {"used": 0, "free": 0}
@@ -47,7 +47,7 @@ class SystemStatus:
         self.disk = {"total": 0, "used": 0, "free": 0}
         self.timestamp = 0
         self.clients = -1
-        if update:
+        if please_update:
             self.update()
 
     def __str__(self):
