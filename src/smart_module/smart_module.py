@@ -144,6 +144,9 @@ class SmartModule(object):
         self.asset = Asset()
         self.scheduler = None
         self.hostname = ""
+        self.lastStatus = ""
+        # Testing. Maybe store it on db as well.
+        self.influxhost = {"host": "138.197.74.74", "port": 8086, "user": "early", "pass": "adopter"}
         logging.getLogger(sm_logger).info("Smart Module initialization complete.")
 
     def discover(self):
@@ -172,7 +175,8 @@ class SmartModule(object):
                 logging.getLogger(sm_logger).info("No Scheduler found. Becoming the Scheduler.")
                 self.scheduler = Scheduler()
                 self.scheduler.smart_module = self
-                self.scheduler.running = True
+                # running is always True after object creation. Should we remove it?
+                # self.scheduler.running = True
                 self.scheduler.prepare_jobs(self.scheduler.load_schedule())
                 self.comm.scheduler_found = True
                 self.comm.subscribe("SCHEDULER/QUERY")
@@ -236,7 +240,9 @@ class SmartModule(object):
         # This is the same as push_data()
         # I've tried to use a not OO apprach above -> connect_influx()
         timestamp = datetime.datetime.now() # Get timestamp
-        conn = self.connect_influx('138.197.74.74', 8086, 'early', 'adopter', asset_context)
+        #conn = self.connect_influx('138.197.74.74', 8086, 'early', 'adopter', asset_context)
+        conn = self.connect_influx(self.influxhost["host"], self.influxhost["port"], \
+                                   self.influxhost["user"], self.influxhost["pass"], asset_context)
         cpuinfo = [{"measurement": "cpu",
                     "tags": {
                         "asset": self.name
@@ -379,8 +385,10 @@ class SmartModule(object):
 
     def push_data(self, asset_name, asset_context, value, unit):
         try:
-            conn = self.connect_influx("138.197.74.74", 8086, "early", "adopter", asset_context)
-
+           #conn = self.connect_influx("138.197.74.74", 8086, "early", "adopter", asset_context)
+            conn = self.connect_influx(self.influxhost["host"], self.influxhost["port"], \
+                                       self.influxhost["user"], self.influxhost["pass"], \
+                                       asset_context)
             json_body = [
                 {
                     "measurement": asset_context,
@@ -567,7 +575,7 @@ class Scheduler(object):
         '''.split()
         try:
             conn = sqlite3.connect('hapi_core.db')
-            c=conn.cursor()
+            c = conn.cursor()
 
             sql = 'SELECT {field_names} FROM schedule;'.format(
                 field_names=', '.join(field_names))
