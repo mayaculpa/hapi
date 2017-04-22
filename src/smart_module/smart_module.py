@@ -355,7 +355,7 @@ class SmartModule(object):
             command = '''
                 INSERT INTO alert_log (asset_id, value, timestamp)
                 VALUES (?, ?, ?)
-            ''', (str(alert.id), now, str(alert.value))  #??? Are values out of order?
+            ''', (str(alert.id), str(alert.value), now)
             conn = sqlite3.connect('hapi_history.db')
             c=conn.cursor()
             c.execute(*command)

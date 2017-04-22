@@ -555,7 +555,7 @@ class Site(object):
             command = '''
                 INSERT INTO alert_log (asset_id, value, timestamp)
                 VALUES (?, ?, ?)
-            ''', (str(alert.asset_id), now, str(alert.value))  #??? Are values out of order?
+            ''', (str(alert.asset_id), str(alert.value), now)
             print(command)
             conn = sqlite3.connect('hapi.db')
             c=conn.cursor()
