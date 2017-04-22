@@ -787,22 +787,20 @@ if __name__ == "__main__":
 #         if the_rtu is None:
 #             self.writeresponse("You are not connected to an RTU.")
 #         else:
-#             command = params[0]
+#             command, value = params
 
 #             scheduler = Scheduler()
 #             scheduler.site = site
 #             scheduler.logger = self.logger
 
-#             print('Running', params[0], params[1], 'on', the_rtu.rtuid)
+#             print('Running', command, value, 'on', the_rtu.rtuid)
 #             job = IntervalJob()
 #             job.name = "User-defined"
 #             job.enabled = True
 #             job.rtuid = the_rtu.rtuid
 
-#             if params[0] == "command":
-#                 job.command = params[1]
-#             elif params[0] == "sequence":
-#                 job.sequence = params[1]
+#             if command in ('command', 'sequence'):
+#                 setattr(job, command, value)
 
 #             print('Passing job to the scheduler.')
 #             scheduler.run_job(job)
