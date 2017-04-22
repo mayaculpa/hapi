@@ -423,7 +423,7 @@ class SmartModule(object):
         days = uptime.days
         minutes, seconds = divmod(uptime.seconds, SECONDS_PER_MINUTE)
         hours, minutes = divmod(minutes, MINUTES_PER_HOUR)
-        s = '''
+        s = ('''
             Master Controller Status
               Software Version v{version}
               Running on: {platform}
@@ -433,9 +433,10 @@ class SmartModule(object):
                - v{sys_version}
                - location: {executable}
               Timestamp: {timestamp}
-              Uptime: This Smart Module has been online for {days} days, {hours} hours and {minutes} minutes.'
+              Uptime: This Smart Module has been online for '''
+                  '''{days} days, {hours} hours and {minutes} minutes.
             ###
-        '''.format(
+        ''').format(
             version=version,
             platform=sys.platform,
             encoding=sys.getdefaultencoding(),
@@ -446,8 +447,9 @@ class SmartModule(object):
             hours=hours,
             minutes=minutes,
         )
+        s = trim(s) + '\n'
         try:
-            self.comm.send("ENV/RESPONSE", trim(s) + '\n')
+            self.comm.send("ENV/RESPONSE", s)
         except Exception, excpt:
             logging.getLogger(sm_logger).exception("Error getting environment data: %s", excpt)
 
