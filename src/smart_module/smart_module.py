@@ -268,17 +268,15 @@ class SmartModule(object):
                 logging.getLogger(sm_logger).exception("Error logging sensor data: %s", excpt)
         else:
             # For virtual assets, assume that the data is already parsed JSON
+            unit_symbol = {
+                'temp_c': 'C',
+                'relative_humidity': '%',
+                'pressure_mb': 'mb',
+            }
             try:
-                for factor in ['temp_c', 'relative_humidity', 'pressure_mb']:
+                for factor in ('temp_c', 'relative_humidity', 'pressure_mb'):
                     value = str(data[factor]).replace("%", "")
-                    timestamp = '"' + str(datetime.datetime.now()) + '"'
-                    if factor == "temp_c":
-                        unit = 'C'
-                    elif factor == "relative_humidity":
-                        unit = '%'
-                    else:
-                        unit = 'mb'
-                    self.push_data(factor, "Environment", value, unit)
+                    self.push_data(factor, "Environment", value, unit_symbol[factor])
 
             except Exception, excpt:
                 logging.getLogger(sm_logger).exception("Error logging sensor data: %s", excpt)
