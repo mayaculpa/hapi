@@ -624,7 +624,7 @@ class DataSync(object):
     @staticmethod
     def write_db_version():
         try:
-            version = str(datetime.datetime.now().isoformat)
+            version = datetime.datetime.now().isoformat()
             command = 'UPDATE db_info SET data_version = ?;', (version,)
             conn = sqlite3.connect('hapi_core.db')
             c=conn.cursor()
