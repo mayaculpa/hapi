@@ -423,13 +423,16 @@ class Site(object):
                         parsed_json = json.loads(data)
                         if asset.rtuid == parsed_json['name']:
                             value = parsed_json[asset.pin]
-                            timestamp = '"' + str(datetime.datetime.now()) + '"'
-                            unit = '"' + asset.unit + '"'
-                            command = "INSERT INTO sensor_data (asset_id, timestamp, value, unit) VALUES (" + str(asset.asset_id) + ", " + timestamp + ", " + value + ", " + unit + ")"
+                            now = str(datetime.datetime.now())
+                            command = '''
+                                INSERT INTO sensor_data
+                                (asset_id, timestamp, value, unit)
+                                VALUES (?, ?, ?, ?)
+                            ''', (str(asset.asset_id), now, value, asset.unit)
                             print(command)
                             conn = sqlite3.connect('hapi.db')
                             c=conn.cursor()
-                            c.execute(command)
+                            c.execute(*command)
                             conn.commit()
                             conn.close()
                             self.push_data(asset.rtuid, asset.name, asset.context, str(datetime.datetime.now()), value, asset.unit)
@@ -446,16 +449,19 @@ class Site(object):
                                 print('asset.pin', asset.pin)
                                 print('data[asset.pin]', data[asset.pin])
 
-                                str(data[asset.pin])
-                                value = str(data[asset.pin]).replace("%", "")
+                                value = str(data[asset.pin])
+                                value = value.replace("%", "")  #??? why?
                                 print('value', value)
-                                timestamp = '"' + str(datetime.datetime.now()) + '"'
-                                unit = '"' + asset.unit + '"'
-                                command = "INSERT INTO sensor_data (asset_id, timestamp, value, unit) VALUES (" + str(asset.asset_id) + ", " + timestamp + ", " + str(value) + ", " + unit + ")"
+                                now = str(datetime.datetime.now())
+                                command = '''
+                                    INSERT INTO sensor_data
+                                    (asset_id, timestamp, value, unit)
+                                    VALUES (?, ?, ?, ?)
+                                ''', (str(asset.asset_id), now, value, asset.unit)
                                 print(command)
                                 conn = sqlite3.connect('hapi.db')
                                 c=conn.cursor()
-                                c.execute(command)
+                                c.execute(*command)
                                 conn.commit()
                                 self.push_data(asset.rtuid, asset.name, asset.context, str(datetime.datetime.now()), value, asset.unit)
                                 conn.close()
@@ -531,25 +537,29 @@ class Site(object):
         return response
 
     def log_command(self, job):
-        timestamp = '"' + str(datetime.datetime.now()) + '"'
-        name = '"' + job.job_name + '"'
-        rtuid = '"' + job.rtuid + '"'
-        command = "INSERT INTO command_log (rtuid, timestamp, command) VALUES (" + rtuid + ", " + timestamp + ", " + name + ")"
+        now = str(datetime.datetime.now())
+        command = '''
+            INSERT INTO command_log (rtuid, timestamp, command)
+            VALUES (?, ?, ?)
+        ''', (job.rtuid, now, job.job_name)
         logger.info("Executed " + job.job_name + " on " + job.rtuid)
         conn = sqlite3.connect('hapi.db')
         c=conn.cursor()
-        c.execute(command)
+        c.execute(*command)
         conn.commit()
         conn.close()
 
     def log_alert_condition(self, alert, logger):
         try:
-            timestamp = '"' + str(datetime.datetime.now()) + '"'
-            command = "INSERT INTO alert_log (asset_id, value, timestamp) VALUES (" + str(alert.asset_id) + ", " + timestamp + ", " + str(alert.value) + ")"
+            now = str(datetime.datetime.now())
+            command = '''
+                INSERT INTO alert_log (asset_id, value, timestamp)
+                VALUES (?, ?, ?)
+            ''', (str(alert.asset_id), now, str(alert.value))  #??? Are values out of order?
             print(command)
             conn = sqlite3.connect('hapi.db')
             c=conn.cursor()
-            c.execute(command)
+            c.execute(*command)
             conn.commit()
             conn.close()
         except Exception, excpt:
@@ -743,7 +753,13 @@ class Scheduler(object):
                                 print('Running sequence', job.sequence, 'on', job.rtuid)
                                 conn = sqlite3.connect('hapi.db')
                                 c=conn.cursor()
-                                seq_jobs = c.execute('SELECT name, command, step_name, timeout FROM sequence WHERE name = "' + job.sequence + '" ORDER BY step ;')
+                                command = '''
+                                    SELECT name, command, step_name, timeout
+                                    FROM sequence
+                                    WHERE name=?
+                                    ORDER BY step ;
+                                ''', (job.sequence,)
+                                seq_jobs = c.execute(*command)
                                 print('len(seq_jobs) =', len(seq_jobs))
                                 p = Process(target=self.process_sequence, args=(seq_jobs, job, job_rtu, seq_result,))
                                 p.start()

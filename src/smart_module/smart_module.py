@@ -335,13 +335,15 @@ class SmartModule(object):
 
     def log_command(self, job, result):
         try:
-            timestamp = '"' + str(datetime.datetime.now()) + '"'
-            name = '"' + job.name + '"'
-            command = "INSERT INTO command_log (timestamp, command, result) VALUES (" + timestamp + ", " + name + ", " + result + ")"
-            logging.getLogger(sm_logger).info("Executed " + job.name)
+            now = str(datetime.datetime.now())
+            command = '''
+                INSERT INTO command_log (timestamp, command, result)
+                VALUES (?, ?, ?)
+            ''', (now, job.name, result)
+            logging.getLogger(sm_logger).info("Executed %s", job.name)
             conn = sqlite3.connect('hapi_history.db')
             c=conn.cursor()
-            c.execute(command)
+            c.execute(*command)
             conn.commit()
             conn.close()
         except Exception, excpt:
@@ -349,11 +351,14 @@ class SmartModule(object):
 
     def log_alert_condition(self, alert):
         try:
-            timestamp = '"' + str(datetime.datetime.now()) + '"'
-            command = "INSERT INTO alert_log (asset_id, value, timestamp) VALUES (" + str(alert.id) + ", " + timestamp + ", " + str(alert.value) + ")"
+            now = str(datetime.datetime.now())
+            command = '''
+                INSERT INTO alert_log (asset_id, value, timestamp)
+                VALUES (?, ?, ?)
+            ''', (str(alert.id), now, str(alert.value))  #??? Are values out of order?
             conn = sqlite3.connect('hapi_history.db')
             c=conn.cursor()
-            c.execute(command)
+            c.execute(*command)
             conn.commit()
             conn.close()
         except Exception, excpt:
@@ -559,7 +564,13 @@ class Scheduler(object):
                                 print('Running sequence', job.sequence, 'on', job.rtuid)
                                 conn = sqlite3.connect('hapi_core.db')
                                 c=conn.cursor()
-                                seq_jobs = c.execute('SELECT name, command, step_name, timeout FROM sequence WHERE name = "' + job.sequence + '" ORDER BY step ;')
+                                command = '''
+                                    SELECT name, command, step_name, timeout
+                                    FROM sequence
+                                    WHERE name=?
+                                    ORDER BY step ;
+                                ''', (job.sequence,)
+                                seq_jobs = c.execute(*command)
                                 print('len(seq_jobs) =', len(seq_jobs))
                                 p = Process(target=self.process_sequence, args=(seq_jobs, job, job_rtu, seq_result,))
                                 p.start()
@@ -614,10 +625,10 @@ class DataSync(object):
     def write_db_version():
         try:
             version = str(datetime.datetime.now().isoformat)
-            command = 'UPDATE db_info SET data_version = "' + version + '";'
+            command = 'UPDATE db_info SET data_version = ?;', (version,)
             conn = sqlite3.connect('hapi_core.db')
             c=conn.cursor()
-            c.execute(command)
+            c.execute(*command)
             conn.commit()
             conn.close()
             logging.getLogger(sm_logger).info("Wrote database version: " + version)
