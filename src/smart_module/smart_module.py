@@ -342,7 +342,7 @@ class SmartModule(object):
             ''', (now, job.name, result)
             logging.getLogger(sm_logger).info("Executed %s", job.name)
             conn = sqlite3.connect('hapi_history.db')
-            c=conn.cursor()
+            c = conn.cursor()
             c.execute(*command)
             conn.commit()
             conn.close()
@@ -357,7 +357,7 @@ class SmartModule(object):
                 VALUES (?, ?, ?)
             ''', (str(alert.id), str(alert.value), now)
             conn = sqlite3.connect('hapi_history.db')
-            c=conn.cursor()
+            c = conn.cursor()
             c.execute(*command)
             conn.commit()
             conn.close()
@@ -392,7 +392,7 @@ class SmartModule(object):
         '''.split()
         try:
             conn = sqlite3.connect('hapi_core.db')
-            c=conn.cursor()
+            c = conn.cursor()
             sql = 'SELECT {field_names} FROM alert_params;'.format(
                 field_names=', '.join(field_names))
             rows = c.execute(sql)
@@ -488,7 +488,7 @@ class Scheduler(object):
         '''.split()
         try:
             conn = sqlite3.connect('hapi_core.db')
-            c=conn.cursor()
+            c = conn.cursor()
 
             sql = 'SELECT {field_names} FROM schedule;'.format(
                 field_names=', '.join(field_names))
@@ -563,7 +563,7 @@ class Scheduler(object):
                             if job_rtu is not None:  #??? job_rtu is always None. Bug?
                                 print('Running sequence', job.sequence, 'on', job.rtuid)
                                 conn = sqlite3.connect('hapi_core.db')
-                                c=conn.cursor()
+                                c = conn.cursor()
                                 command = '''
                                     SELECT name, command, step_name, timeout
                                     FROM sequence
@@ -610,7 +610,7 @@ class DataSync(object):
         version = ""
         try:
             conn = sqlite3.connect('hapi_core.db')
-            c=conn.cursor()
+            c = conn.cursor()
             sql = "SELECT data_version FROM db_info;"
             data = c.execute(sql)
             for element in data:
@@ -627,7 +627,7 @@ class DataSync(object):
             version = datetime.datetime.now().isoformat()
             command = 'UPDATE db_info SET data_version = ?;', (version,)
             conn = sqlite3.connect('hapi_core.db')
-            c=conn.cursor()
+            c = conn.cursor()
             c.execute(*command)
             conn.commit()
             conn.close()

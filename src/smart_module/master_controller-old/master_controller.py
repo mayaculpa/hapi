@@ -168,7 +168,7 @@ class Site(object):
         '''.split()
         try:
             conn = sqlite3.connect('hapi.db')
-            c=conn.cursor()
+            c = conn.cursor()
             sql = 'SELECT {field_names} FROM assets;'.format(
                 field_names=', '.join(field_names))
             rows = c.execute(sql)
@@ -431,7 +431,7 @@ class Site(object):
                             ''', (str(asset.asset_id), now, value, asset.unit)
                             print(command)
                             conn = sqlite3.connect('hapi.db')
-                            c=conn.cursor()
+                            c = conn.cursor()
                             c.execute(*command)
                             conn.commit()
                             conn.close()
@@ -460,7 +460,7 @@ class Site(object):
                                 ''', (str(asset.asset_id), now, value, asset.unit)
                                 print(command)
                                 conn = sqlite3.connect('hapi.db')
-                                c=conn.cursor()
+                                c = conn.cursor()
                                 c.execute(*command)
                                 conn.commit()
                                 self.push_data(asset.rtuid, asset.name, asset.context, str(datetime.datetime.now()), value, asset.unit)
@@ -544,7 +544,7 @@ class Site(object):
         ''', (job.rtuid, now, job.job_name)
         logger.info("Executed " + job.job_name + " on " + job.rtuid)
         conn = sqlite3.connect('hapi.db')
-        c=conn.cursor()
+        c = conn.cursor()
         c.execute(*command)
         conn.commit()
         conn.close()
@@ -558,7 +558,7 @@ class Site(object):
             ''', (str(alert.asset_id), str(alert.value), now)
             print(command)
             conn = sqlite3.connect('hapi.db')
-            c=conn.cursor()
+            c = conn.cursor()
             c.execute(*command)
             conn.commit()
             conn.close()
@@ -593,7 +593,7 @@ class Site(object):
         '''.split()
         try:
             conn = sqlite3.connect('hapi.db')
-            c=conn.cursor()
+            c = conn.cursor()
             sql = 'SELECT {field_names} FROM alert_params;'.format(
                 field_names=', '.join(field_names))
             rows = c.execute(sql)
@@ -657,7 +657,7 @@ class Scheduler(object):
         '''.split()
         try:
             conn = sqlite3.connect('hapi.db')
-            c=conn.cursor()
+            c = conn.cursor()
 
             sql = 'SELECT {field_names} FROM interval_schedule;'.format(
                 field_names=', '.join(field_names))
@@ -752,7 +752,7 @@ class Scheduler(object):
                             if str.strip(job.sequence) != "":
                                 print('Running sequence', job.sequence, 'on', job.rtuid)
                                 conn = sqlite3.connect('hapi.db')
-                                c=conn.cursor()
+                                c = conn.cursor()
                                 command = '''
                                     SELECT name, command, step_name, timeout
                                     FROM sequence
