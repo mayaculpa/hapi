@@ -365,11 +365,21 @@ class SmartModule(object):
     def send_alert_condition(self, alert, alert_param):
         try:
             if alert_param.response_type.lower() == "sms":
-                timestamp = '"' + str(datetime.datetime.now()) + '"'
-                message = "Alert from " + self.name + ": " + alert.asset_id + '\r\n'
-                message = message + alert_param.message + '\r\n'
-                message = message + "  Value: " + str(alert.value) + '\r\n'
-                message = message + "  Timestamp: " + timestamp + '\r\n'
+                message = '''
+                    Alert from {name}: {id}
+                    {message}
+                      Value: {value}
+                      Timestamp: "{now}"
+                '''.format(
+                    name=self.name,
+                    id=alert.asset_id,
+                    message=alert_param.message,
+                    value=alert.value,
+                    now=datetime.datetime.now(),
+                )
+                message = trim(message) + '\n'
+                message = message.replace('\n', '\r\n')  #??? ugly! necessary? write place?
+
                 self.twilio_acct_sid = field[9]  #??? Where is field defined?
                 self.twilio_auth_token = field[10]  #??? Where is field defined?
                 client = TwilioRestClient(self.twilio_acct_sid, self.twilio_auth_token)
