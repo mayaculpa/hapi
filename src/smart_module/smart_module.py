@@ -481,9 +481,19 @@ class Scheduler(object):
 
     def process_sequence(self, seq_jobs, job, job_rtu, seq_result):
         for row in seq_jobs:
-            seq_result.put("Running " + row[0] + ":" + row[2] + "(" + job.command + ")" + " on " + job.rtuid + " at " + job_rtu.address + ".")
-            command = row[1].encode("ascii")
-            timeout = int(row[3])
+            name, command, step_name, timeout = row
+            seq_result.put(
+                'Running {name}:{step_name}({command}) on {id} at {address}.'.
+                format(
+                    name=name,
+                    step_name=step_name,
+                    command=job.command,
+                    id=job.rtuid,
+                    address=job_rtu.address,
+                )
+            )
+            command = command.encode("ascii")
+            timeout = int(timeout)
             self.site.comm.send("COMMAND/" + job.rtuid, command)
             time.sleep(timeout)
 
