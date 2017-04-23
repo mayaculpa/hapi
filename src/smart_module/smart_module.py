@@ -4,7 +4,7 @@
 """
 HAPI Smart Module v2.1.2
 Authors: Tyler Reed, Pedro Freitas
-Release: December 2016 Beta
+Release: April 2017 Beta Milestone
 
 Copyright 2016 Maya Culpa, LLC
 
@@ -182,7 +182,7 @@ class SmartModule(object):
                 self.comm.subscribe("SCHEDULER/QUERY")
                 self.comm.unsubscribe("SCHEDULER/RESPONSE")
                 self.comm.send("SCHEDULER/RESPONSE", socket.gethostname() + ".local")
-                self.comm.send("ANNOUNCE", socket.gethostname() + ".local" + " is running the Scheduler.")
+                self.comm.send("ANNOUNCE", socket.gethostname() + ".local is running the Scheduler.")
                 logging.getLogger(sm_logger).info("Scheduler program loaded.")
             except Exception, excpt:
                 logging.getLogger(sm_logger).exception("Error initializing scheduler. %s", excpt)
@@ -403,21 +403,26 @@ class SmartModule(object):
             ]
             conn.write_points(json_body)
             print(json_body)
-            logging.getLogger(sm_logger).info("Wrote to analytic database: " + str(json_body))
+            logging.getLogger(sm_logger).info("Wrote to analytic database: %s", json_body)
         except Exception, excpt:
             logging.getLogger(sm_logger).exception('Error writing to analytic database: %s', excpt)
 
     def get_weather(self):
         response = ""
+        url = (
+            'http://api.wunderground.com/'
+            'api/{key}/conditions/q/{lat},{lon}.json'
+        ).format(
+            key=self.wunder_key,
+            lat=self.latitude,
+            lon=self.longitude,
+        )
+        print(url)
         try:
-            response = ""
-            command = 'http://api.wunderground.com/api/' + self.wunder_key + '/conditions/q/' + self.latitude + ',' + self.longitude + '.json'
-            print(command)
-            f = urllib2.urlopen(command)
+            f = urllib2.urlopen(url)
             json_string = f.read()
             parsed_json = json.loads(json_string)
             response = parsed_json['current_observation']
-            print(str(response).replace("u'", ''))  # Is there a trailing "'"?
             f.close()
         except Exception, excpt:
             print('Error getting weather data.', excpt)
@@ -471,11 +476,9 @@ class SmartModule(object):
                 )
                 message = trim(message) + '\n'
                 message = message.replace('\n', '\r\n')  #??? ugly! necessary? write place?
-
-                self.twilio_acct_sid = field[9]  #??? Where is field defined?
-                self.twilio_auth_token = field[10]  #??? Where is field defined?
+                if (self.twilio_acct_sid is not "") and (self.twilio_auth_token is not ""):
                 client = TwilioRestClient(self.twilio_acct_sid, self.twilio_auth_token)
-                #client.messages.create(to="+receiving number", from_="+sending number", body=message, )
+                client.messages.create(to="+receiving number", from_="+sending number", body=message, )
                 logging.getLogger(sm_logger).info("Alert condition sent.")
 
         except Exception, excpt:
@@ -567,9 +570,19 @@ class Scheduler(object):
 
     def process_sequence(self, seq_jobs, job, job_rtu, seq_result):
         for row in seq_jobs:
-            seq_result.put("Running " + row[0] + ":" + row[2] + "(" + job.command + ")" + " on " + job.rtuid + " at " + job_rtu.address + ".")
-            command = row[1].encode("ascii")
-            timeout = int(row[3])
+            name, command, step_name, timeout = row
+            seq_result.put(
+                'Running {name}:{step_name}({command}) on {id} at {address}.'.
+                format(
+                    name=name,
+                    step_name=step_name,
+                    command=job.command,
+                    id=job.rtuid,
+                    address=job_rtu.address,
+                )
+            )
+            command = command.encode("ascii")
+            timeout = int(timeout)
             self.site.comm.send("COMMAND/" + job.rtuid, command)
             time.sleep(timeout)
 
@@ -662,21 +675,20 @@ class Scheduler(object):
                 else:
                     try:
                         if job.sequence != "":
-                            if job_rtu is not None:  #??? job_rtu is always None. Bug?
-                                print('Running sequence', job.sequence, 'on', job.rtuid)
-                                conn = sqlite3.connect('hapi_core.db')
-                                c = conn.cursor()
-                                command = '''
-                                    SELECT name, command, step_name, timeout
-                                    FROM sequence
-                                    WHERE name=?
-                                    ORDER BY step ;
-                                ''', (job.sequence,)
-                                seq_jobs = c.execute(*command)
-                                print('len(seq_jobs) =', len(seq_jobs))
-                                p = Process(target=self.process_sequence, args=(seq_jobs, job, job_rtu, seq_result,))
-                                p.start()
-                                conn.close()
+                            print('Running sequence', job.sequence)
+                            conn = sqlite3.connect('hapi_core.db')
+                            c = conn.cursor()
+                            command = '''
+                                SELECT name, command, step_name, timeout
+                                FROM sequence
+                                WHERE name=?
+                                ORDER BY step ;
+                            ''', (job.sequence,)
+                            seq_jobs = c.execute(*command)
+                            print('len(seq_jobs) =', len(seq_jobs))
+                            p = Process(target=self.process_sequence, args=(seq_jobs, job, job_rtu, seq_result,))
+                            p.start()
+                            conn.close()
                         else:
                             print('Running command', job.command)
                             # Check pre-defined jobs
@@ -697,15 +709,6 @@ class Scheduler(object):
                     except Exception, excpt:
                         logging.getLogger(sm_logger).exception('Error running job: %s', excpt)
 
-    # class ErrorLogger(Handler):
-    #     def __init__(self, client):
-    #         Handler.__init__()
-    #         self.client = client
-
-    #     def emit(self, record):
-    #         log_entry = self.format(record)
-    #         return client.send("ERROR", log_entry)
-
 class DataSync(object):
     @staticmethod
     def read_db_version():
@@ -718,7 +721,7 @@ class DataSync(object):
             for element in data:
                 version = element[0]
             conn.close()
-            logging.getLogger(sm_logger).info("Read database version: " + str(version))
+            logging.getLogger(sm_logger).info("Read database version: %s", version)
             return version
         except Exception, excpt:
             logging.getLogger(sm_logger).info("Error reading database version: %s", excpt)
@@ -733,7 +736,7 @@ class DataSync(object):
             c.execute(*command)
             conn.commit()
             conn.close()
-            logging.getLogger(sm_logger).info("Wrote database version: " + version)
+            logging.getLogger(sm_logger).info("Wrote database version: %s", version)
         except Exception, excpt:
             logging.getLogger(sm_logger).info("Error writing database version: %s", excpt)
 
@@ -806,12 +809,6 @@ if __name__ == "__main__":
     main()
 
 # class HAPIListener(TelnetHandler):
-#     PROMPT = site.name + "> "
-
-#     # def __init__(self, *args):
-#     #     print('Listener Init')
-#     #     print(args)
-
 #     @command('abc')
 #     def command_abc(self, params):
 #         '''<context of assets for data>
