@@ -785,7 +785,7 @@ if __name__ == "__main__":
 #         if the_rtu is None:
 #             self.writeresponse("You are not connected to an RTU.")
 #         else:
-#             command, value = params
+#             command, value = params[:2]
 
 #             scheduler = Scheduler()
 #             scheduler.site = site
