@@ -26,28 +26,25 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-# Todo:
-#   3.1. Network active connections;
-#   1.3. Memory Process time.
-
 from __future__ import print_function
 
 import time
+import datetime
 import psutil
 
-class SystemStatus:
+class SystemStatus(object):
     """ Small class to handle system information """
 
-    def __init__(self, please_update=False):
+    def __init__(self, update=False):
         """ If please_update, create the object and fetch all data """
         self.cpu = {"percentage": 0}
         self.bootdate = 0
-        self.memory = {"used": 0, "free": 0}
+        self.memory = {"used": 0, "free": 0, "cached": 0}
         self.network = {"packet_sent": 0, "packet_recv": 0}
         self.disk = {"total": 0, "used": 0, "free": 0}
         self.timestamp = 0
         self.clients = -1
-        if please_update:
+        if update:
             self.update()
 
     def __str__(self):
@@ -58,13 +55,15 @@ class SystemStatus:
     def update(self):
         """ Function to update the entire class information """
         self.cpu["percentage"] = psutil.cpu_percent(interval=0.7)
-        self.boot = psutil.boot_time()
+        self.boot = datetime.datetime.fromtimestamp(psutil.boot_time())\
+                    .strftime("%Y-%m-%d %H:%M:%S")
         # Fetch all information about Memory in a temp variable
         # then assign each value to a specific key (psutil usually returns
         # a named tuple)
         tempmemoryinfo = psutil.virtual_memory()
         self.memory["used"] = tempmemoryinfo[3]
         self.memory["free"] = tempmemoryinfo[4]
+        self.memory["cached"] = tempmemoryinfo[8]
         tempnetworkinfo = psutil.net_io_counters()
         self.network["packet_sent"] = tempnetworkinfo[2]
         self.network["packet_recv"] = tempnetworkinfo[3]

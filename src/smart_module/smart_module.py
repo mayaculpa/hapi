@@ -144,6 +144,9 @@ class SmartModule(object):
         self.asset = Asset()
         self.scheduler = None
         self.hostname = ""
+        self.lastStatus = ""
+        # Testing. Maybe store it on db as well.
+        self.influxhost = {"host": "138.197.74.74", "port": 8086, "user": "early", "pass": "adopter"}
         logging.getLogger(sm_logger).info("Smart Module initialization complete.")
 
     def discover(self):
@@ -172,11 +175,13 @@ class SmartModule(object):
                 logging.getLogger(sm_logger).info("No Scheduler found. Becoming the Scheduler.")
                 self.scheduler = Scheduler()
                 self.scheduler.smart_module = self
-                self.scheduler.running = True
+                # running is always True after object creation. Should we remove it?
+                # self.scheduler.running = True
                 self.scheduler.prepare_jobs(self.scheduler.load_schedule())
                 self.comm.scheduler_found = True
                 self.comm.subscribe("SCHEDULER/QUERY")
                 self.comm.unsubscribe("SCHEDULER/RESPONSE")
+                self.comm.unsubscribe("STATUS/QUERY")
                 self.comm.send("SCHEDULER/RESPONSE", socket.gethostname() + ".local")
                 self.comm.send("ANNOUNCE", socket.gethostname() + ".local is running the Scheduler.")
                 logging.getLogger(sm_logger).info("Scheduler program loaded.")
@@ -211,6 +216,103 @@ class SmartModule(object):
         except Exception, excpt:
             logging.getLogger(sm_logger).exception("Error loading site data: %s", excpt)
 
+    def connect_influx(self, asset_context):
+        """ Connect to InfluxDB server and searches for the database
+            in 'asset_context'.
+            Return the connection to the database.
+        """
+        influxcon = InfluxDBClient(self.influxhost["host"], self.influxhost["port"], \
+                                   self.influxhost["user"], self.influxhost["pass"])
+        databases = influxcon.get_list_database()
+        found = False
+        for db in databases:
+            if asset_context in db:
+                found = True
+
+        if found is False:
+            influxcon.query("CREATE DATABASE {0}".format('"' + asset_context + '"'))
+
+        influxcon = InfluxDBClient(self.influxhost["host"], self.influxhost["port"], \
+                                   self.influxhost["user"], self.influxhost["pass"], asset_context)
+        return influxcon
+
+    def push_sysinfo(self, asset_context, information):
+        """ Push System Status information to InfluxDB server
+            'information' will hold the JSON output of SystemStatus
+        """
+        # This is the same as push_data()
+        # I've tried to use a not OO apprach above -> connect_influx()
+        timestamp = datetime.datetime.now() # Get timestamp
+        #conn = self.connect_influx('138.197.74.74', 8086, 'early', 'adopter', asset_context)
+        conn = self.connect_influx(asset_context)
+        cpuinfo = [{"measurement": "cpu",
+                    "tags": {
+                        "asset": self.name
+                    },
+                    "time": timestamp,
+                    "fields": {
+                        "unit": "percentage",
+                        "load": information.cpu["percentage"]
+                    }
+                  }]
+        meminfo = [{"measurement": "memory",
+                    "tags": {
+                        "asset": self.name
+                    },
+                    "time": timestamp,
+                    "fields": {
+                        "unit": "bytes",
+                        "free": information.memory["free"],
+                        "used": information.memory["used"],
+                        "cached": information.memory["cached"]
+                    }
+                  }]
+        netinfo = [{"measurement": "network",
+                    "tags": {
+                        "asset": self.name
+                    },
+                    "time": timestamp,
+                    "fields": {
+                        "unit": "packets",
+                        "packet_recv": information.network["packet_recv"],
+                        "packet_sent": information.network["packet_sent"]
+                    }
+                  }]
+        botinfo = [{"measurement": "boot",
+                    "tags": {
+                        "asset": self.name
+                    },
+                    "time": timestamp,
+                    "fields": {
+                        "unit": "timestamp",
+                        "date": information.boot
+                    }
+                  }]
+        diskinf = [{"measurement": "disk",
+                    "tags": {
+                        "asset": self.name
+                    },
+                    "time": timestamp,
+                    "fields": {
+                        "unit": "bytes",
+                        "total": information.disk["total"],
+                        "free": information.disk["free"],
+                        "used": information.disk["used"]
+                    }
+                  }]
+        ctsinfo = [{"measurement": "clients",
+                    "tags": {
+                        "asset": self.name
+                    },
+                    "time": timestamp,
+                    "fields": {
+                        "unit": "integer",
+                        "clients": information.clients
+                    }
+                  }]
+        json = cpuinfo + meminfo + netinfo + botinfo + diskinf + ctsinfo
+        conn.write_points(json)
+
     def get_status(self, brokerconnections):
         try:
             sysinfo = SystemStatus(update=True)
@@ -218,6 +320,10 @@ class SmartModule(object):
             return str(sysinfo)
         except Exception, excpt:
             logging.getLogger(sm_logger).exception("Error getting System Status: %s", excpt)
+
+    # Will be called by the Scheduler to ask for System Status information
+    def on_query_status(self):
+        self.comm.send("STATUS/QUERY", "I might need to know how you are!")
 
     def get_asset_data(self):
         value = ""
@@ -283,18 +389,8 @@ class SmartModule(object):
 
     def push_data(self, asset_name, asset_context, value, unit):
         try:
-            client = InfluxDBClient('138.197.74.74', 8086, 'early', 'adopter')
-            dbs = client.get_list_database()
-            found = False
-            for item in dbs:
-                if asset_context in item:
-                    found = True
-
-            if not found:
-                client.query("CREATE DATABASE {0}".format('"' + asset_context + '"'))
-
-            client = InfluxDBClient('138.197.74.74', 8086, 'early', 'adopter', asset_context)
-
+           #conn = self.connect_influx("138.197.74.74", 8086, "early", "adopter", asset_context)
+            conn = self.connect_influx(asset_context)
             json_body = [
                 {
                     "measurement": asset_context,
@@ -309,8 +405,8 @@ class SmartModule(object):
                     }
                 }
             ]
+            conn.write_points(json_body)
             print(json_body)
-            client.write_points(json_body)
             logging.getLogger(sm_logger).info("Wrote to analytic database: %s", json_body)
         except Exception, excpt:
             logging.getLogger(sm_logger).exception('Error writing to analytic database: %s', excpt)

@@ -52,6 +52,7 @@ class Communicator(object):
         try:
             self.logger.info("Connecting to " + self.broker_name + " over standard WiFi.")
             self.client.connect("mqttbroker.local", 1883, 5)
+            # Probably testing code?
             self.send("ANNOUNCE", "neuromancer.local" + " is online.")
         except Exception, excpt:
             self.logger.exception("Error connecting to broker. %s", excpt)
@@ -98,14 +99,20 @@ class Communicator(object):
             self.smart_module.asset_data.update({asset:msg.payload})
 
         elif "ASSET/RESPONSE" in msg.topic:
-            if self.smart_module.scheduler is not None:
+            if self.smart_module.scheduler:
                 asset_id = msg.topic.split("/")[2]
                 self.smart_module.check_alert(asset_id, float(msg.payload))
                 self.smart_module.check_alert(asset_id, float(msg.payload))
                 print('Asset = ', asset_id, msg.payload)
 
         elif "STATUS/QUERY" in msg.topic:
-            self.send("STATUS/RESPONSE", self.smart_module.get_status(self.broker_connections))
+            self.smart_module.lastStatus = self.smart_module.get_status(self.broker_connections)
+            self.send("STATUS/RESPONSE", self.smart_module.lastStatus)
+
+        # Not sure why System Status should be Scheduled, if we're listen for queries?
+        elif "STATUS/RESPONSE" in msg.topic:
+            # Pushing System Status to Influx Server
+            self.smart_module.push_sysinfo("system", self.smart_module.lastStatus)
 
         # Scheduler messages
         elif "SCHEDULER/RESPONSE" in msg.topic:
@@ -113,7 +120,7 @@ class Communicator(object):
             self.logger.info(msg.payload + " has identified itself as the Scheduler.")
 
         elif "SCHEDULER/QUERY" in msg.topic:
-            if self.smart_module.scheduler is not None:
+            if self.smart_module.scheduler:
                 self.send("SCHEDULER/RESPONSE", self.smart_module.hostname)
                 self.logger.info("Sent SCHEDULER/RESPONSE")
                 #self.site.asset_data.update({asset:msg.payload})
@@ -137,7 +144,7 @@ class Communicator(object):
 
     def send(self, topic, message):
         try:
-            if self.client is not None:
+            if self.client:
                 self.client.publish(topic, message)
         except Exception, excpt:
             self.logger.info("Error publishing message: %s", excpt)
