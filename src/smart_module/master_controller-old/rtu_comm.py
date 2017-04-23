@@ -50,7 +50,7 @@ class RTUCommunicator(object):
             tn.close()
         else:
             return ""
-            response = ""
+            response = []
             ser = serial.Serial('/dev/ttyACM0', 9600)
             time.sleep(timeout)
 
@@ -59,8 +59,9 @@ class RTUCommunicator(object):
             ser.flush()
             time.sleep(2)            
             while ser.in_waiting > 0:
-                response = response + ser.readline()
+                response.append(ser.readline())
                 time.sleep(0.1)
+            response = ''.join(response)
 
             ser.close()
             #print('USB response:', response)

@@ -168,7 +168,7 @@ class Site(object):
         '''.split()
         try:
             conn = sqlite3.connect('hapi.db')
-            c=conn.cursor()
+            c = conn.cursor()
             sql = 'SELECT {field_names} FROM assets;'.format(
                 field_names=', '.join(field_names))
             rows = c.execute(sql)
@@ -225,11 +225,19 @@ class Site(object):
             try:
                 target_rtu = rtu_comm.RTUCommunicator()
                 response = target_rtu.send_to_rtu(ip_address, 80, 5, "sta").split('\r\n')
-                self.logger.info(response[0] + " at " + ip_address + " is running " + response[1])
+                id, version = response[:2]
+                self.logger.info(
+                    '{id} at {ip_address} is running {version}'.
+                    format(
+                        id=id,
+                        ip_address=ip_address,
+                        version=version,
+                    )
+                )
                 rtu = RemoteTerminalUnit()
-                rtu.rtuid = response[0]
+                rtu.rtuid = id
                 rtu.address = ip_address
-                rtu.version = response[1]
+                rtu.version = version
                 rtu.online = True
                 # get_pin_modes(rtu)
                 self.rtus.append(rtu)
@@ -423,13 +431,16 @@ class Site(object):
                         parsed_json = json.loads(data)
                         if asset.rtuid == parsed_json['name']:
                             value = parsed_json[asset.pin]
-                            timestamp = '"' + str(datetime.datetime.now()) + '"'
-                            unit = '"' + asset.unit + '"'
-                            command = "INSERT INTO sensor_data (asset_id, timestamp, value, unit) VALUES (" + str(asset.asset_id) + ", " + timestamp + ", " + value + ", " + unit + ")"
+                            now = str(datetime.datetime.now())
+                            command = '''
+                                INSERT INTO sensor_data
+                                (asset_id, timestamp, value, unit)
+                                VALUES (?, ?, ?, ?)
+                            ''', (str(asset.asset_id), now, value, asset.unit)
                             print(command)
                             conn = sqlite3.connect('hapi.db')
-                            c=conn.cursor()
-                            c.execute(command)
+                            c = conn.cursor()
+                            c.execute(*command)
                             conn.commit()
                             conn.close()
                             self.push_data(asset.rtuid, asset.name, asset.context, str(datetime.datetime.now()), value, asset.unit)
@@ -446,16 +457,19 @@ class Site(object):
                                 print('asset.pin', asset.pin)
                                 print('data[asset.pin]', data[asset.pin])
 
-                                str(data[asset.pin])
-                                value = str(data[asset.pin]).replace("%", "")
+                                value = str(data[asset.pin])
+                                value = value.replace("%", "")  #??? why?
                                 print('value', value)
-                                timestamp = '"' + str(datetime.datetime.now()) + '"'
-                                unit = '"' + asset.unit + '"'
-                                command = "INSERT INTO sensor_data (asset_id, timestamp, value, unit) VALUES (" + str(asset.asset_id) + ", " + timestamp + ", " + str(value) + ", " + unit + ")"
+                                now = str(datetime.datetime.now())
+                                command = '''
+                                    INSERT INTO sensor_data
+                                    (asset_id, timestamp, value, unit)
+                                    VALUES (?, ?, ?, ?)
+                                ''', (str(asset.asset_id), now, value, asset.unit)
                                 print(command)
                                 conn = sqlite3.connect('hapi.db')
-                                c=conn.cursor()
-                                c.execute(command)
+                                c = conn.cursor()
+                                c.execute(*command)
                                 conn.commit()
                                 self.push_data(asset.rtuid, asset.name, asset.context, str(datetime.datetime.now()), value, asset.unit)
                                 conn.close()
@@ -531,25 +545,29 @@ class Site(object):
         return response
 
     def log_command(self, job):
-        timestamp = '"' + str(datetime.datetime.now()) + '"'
-        name = '"' + job.job_name + '"'
-        rtuid = '"' + job.rtuid + '"'
-        command = "INSERT INTO command_log (rtuid, timestamp, command) VALUES (" + rtuid + ", " + timestamp + ", " + name + ")"
+        now = str(datetime.datetime.now())
+        command = '''
+            INSERT INTO command_log (rtuid, timestamp, command)
+            VALUES (?, ?, ?)
+        ''', (job.rtuid, now, job.job_name)
         logger.info("Executed " + job.job_name + " on " + job.rtuid)
         conn = sqlite3.connect('hapi.db')
-        c=conn.cursor()
-        c.execute(command)
+        c = conn.cursor()
+        c.execute(*command)
         conn.commit()
         conn.close()
 
     def log_alert_condition(self, alert, logger):
         try:
-            timestamp = '"' + str(datetime.datetime.now()) + '"'
-            command = "INSERT INTO alert_log (asset_id, value, timestamp) VALUES (" + str(alert.asset_id) + ", " + timestamp + ", " + str(alert.value) + ")"
+            now = str(datetime.datetime.now())
+            command = '''
+                INSERT INTO alert_log (asset_id, value, timestamp)
+                VALUES (?, ?, ?)
+            ''', (str(alert.asset_id), str(alert.value), now)
             print(command)
             conn = sqlite3.connect('hapi.db')
-            c=conn.cursor()
-            c.execute(command)
+            c = conn.cursor()
+            c.execute(*command)
             conn.commit()
             conn.close()
         except Exception, excpt:
@@ -583,7 +601,7 @@ class Site(object):
         '''.split()
         try:
             conn = sqlite3.connect('hapi.db')
-            c=conn.cursor()
+            c = conn.cursor()
             sql = 'SELECT {field_names} FROM alert_params;'.format(
                 field_names=', '.join(field_names))
             rows = c.execute(sql)
@@ -647,7 +665,7 @@ class Scheduler(object):
         '''.split()
         try:
             conn = sqlite3.connect('hapi.db')
-            c=conn.cursor()
+            c = conn.cursor()
 
             sql = 'SELECT {field_names} FROM interval_schedule;'.format(
                 field_names=', '.join(field_names))
@@ -742,8 +760,14 @@ class Scheduler(object):
                             if str.strip(job.sequence) != "":
                                 print('Running sequence', job.sequence, 'on', job.rtuid)
                                 conn = sqlite3.connect('hapi.db')
-                                c=conn.cursor()
-                                seq_jobs = c.execute('SELECT name, command, step_name, timeout FROM sequence WHERE name = "' + job.sequence + '" ORDER BY step ;')
+                                c = conn.cursor()
+                                command = '''
+                                    SELECT name, command, step_name, timeout
+                                    FROM sequence
+                                    WHERE name=?
+                                    ORDER BY step ;
+                                ''', (job.sequence,)
+                                seq_jobs = c.execute(*command)
                                 print('len(seq_jobs) =', len(seq_jobs))
                                 p = Process(target=self.process_sequence, args=(seq_jobs, job, job_rtu, seq_result,))
                                 p.start()
@@ -829,31 +853,28 @@ class HAPIListener(TelnetHandler):
     def command_abc(self, params):
         '''<context of assets for data>
         Gets Asset data By Context.
-
         '''
-        if len(params) > 0:
-            context = params[0]
+        if params:
+            context, = params[:1]
             self.writeresponse("Gathering asset data by context: " + context)
-            data = site.assets_by_context(context)
-            result = "{"
-            for asset in data:
-                result = result + '"' + asset.name + '":"' + asset.value + '"' + ','
-            result = result + "}"
-            self.writeresponse(result)
+            assets = site.assets_by_context(context)
+            result = ''.join(
+                '"{a.name}":"{a.value}",'.format(a=asset)
+                for asset in assets
+            )
+            result = '{%s}' % result
         else:
-            self.writeresponse('No context provided.')
+            result = 'No context provided.'
+        self.writeresponse(result)
 
     @command('asset')
     def command_asset(self, params):
         '''<get value for named asset>
         Gets the current value for the named asset.
         '''
-        asset = ""
-        
-        for param in params:
-            asset = asset + " " + param.encode('utf-8').strip()
+        asset = ' '.join(param.encode('utf-8').strip() for param in params)
+        asset = asset.lower()
 
-        asset = asset.lower().strip()
         print('MC:Listener:asset:', asset)
         value = site.get_asset_value(asset)
 
@@ -916,9 +937,8 @@ class HAPIListener(TelnetHandler):
         Starts the Master Controller's Scheduler
 
         '''
-        f = open("ipc.txt", "wb")
-        f.write("run")
-        f.close() 
+        with open('ipc.txt', 'wb') as f:
+            f.write('run')
 
     @command('pause')
     def command_pause(self, params):
@@ -926,9 +946,8 @@ class HAPIListener(TelnetHandler):
         Pauses the Master Controller's Scheduler
 
         '''
-        f = open("ipc.txt", "wb")
-        f.write("pause")
-        f.close()
+        with open('ipc.txt', 'wb') as f:
+            f.write('pause')
 
     @command('run')
     def command_run(self, params):
@@ -939,22 +958,20 @@ class HAPIListener(TelnetHandler):
         if the_rtu is None:
             self.writeresponse("You are not connected to an RTU.")
         else:
-            command = params[0]
+            command, value = params[:2]
 
             scheduler = Scheduler()
             scheduler.site = site
             scheduler.logger = self.logger
 
-            print('Running', params[0], params[1], 'on', the_rtu.rtuid)
+            print('Running', command, value, 'on', the_rtu.rtuid)
             job = IntervalJob()
             job.job_name = "User-defined"
             job.enabled = True
             job.rtuid = the_rtu.rtuid
 
-            if params[0] == "command":
-                job.command = params[1]
-            elif params[0] == "sequence":
-                job.sequence = params[1]
+            if command in ('command', 'sequence'):
+                setattr(job, command, value)
 
             print('Passing job to the scheduler.')
             scheduler.run_job(job)
@@ -967,7 +984,13 @@ class HAPIListener(TelnetHandler):
         '''
         self.writeresponse(str(len(self.the_rtus)) + " RTUs found on-site.")
         for rtu in self.the_rtus:
-            self.writeresponse(rtu.rtuid + " at " + rtu.address + " is online and running HAPI " + rtu.version + ".")
+            self.writeresponse(
+                '{id} at {address} is online and running HAPI {version}.'.
+                format(
+                    id=rtu.rtuid,
+                    address=rtu.address,
+                    version=rtu.version,
+                )
     
     @command('status')
     def command_status(self, params):
@@ -1002,21 +1025,17 @@ class HAPIListener(TelnetHandler):
         Kills the HAPI listener service
 
         '''
-        f = open("ipc.txt", "wb")
-        f.write("stop")
-        f.close()
+        with open('ipc.txt', 'wb') as f:
+            f.write('stop')
 
     @command('turnoff')
     def command_turnoff(self, params):
         '''<Turn On Asset>
         Turn on the named asset.
         '''
-        asset = ""
-        
-        for param in params:
-            asset = asset + " " + param.encode('utf-8').strip()
+        asset = ' '.join(param.encode('utf-8').strip() for param in params)
+        asset = asset.lower()
 
-        asset = asset.lower().strip()
         print('MC:Listener:asset:', asset)
         value = site.set_asset_value(asset, "1")
 
@@ -1028,12 +1047,9 @@ class HAPIListener(TelnetHandler):
         '''<Turn On Asset>
         Turn on the named asset.
         '''
-        asset = ""
-        
-        for param in params:
-            asset = asset + " " + param.encode('utf-8').strip()
+        asset = ' '.join(param.encode('utf-8').strip() for param in params)
+        asset = asset.lower()
 
-        asset = asset.lower().strip()
         print('MC:Listener:asset:', asset)
         value = site.set_asset_value(asset, "0")
 
@@ -1112,7 +1128,7 @@ def main(argv):
     except Exception, excpt:
         logger.exception("Error initializing scheduler. %s", excpt)
 
-    while 1:
+    while True:
         #print(listener_parent_conn.recv())
         try:
             if count % 60 == 0:
@@ -1122,19 +1138,18 @@ def main(argv):
             schedule.run_pending()
 
             if os.path.isfile("ipc.txt"):
-                f = open("ipc.txt", "rb")
-                data = f.read()
-                f.close()
-                open("ipc.txt", 'w').close()
-                if data != "":
-                    if data == "run":
-                        scheduler.running = True
-                        logger.info("The scheduler is running.")
-                    elif data == "pause":
-                        logger.info("The scheduler has been paused.")
-                        scheduler.running = False
-                    else:
-                        logger.info("Received from Listener: " + data)
+                with open('ipc.txt', 'rb') as f:
+                    data = f.read()
+                with open("ipc.txt", 'w'):
+                    pass
+                if data == "run":
+                    scheduler.running = True
+                    logger.info("The scheduler is running.")
+                elif data == "pause":
+                    logger.info("The scheduler has been paused.")
+                    scheduler.running = False
+                elif data:
+                    logger.info('Received from Listener: %s', data)
         except Exception, excpt:
             logger.exception("Error in Master Controller main loop. %s", excpt)            
 

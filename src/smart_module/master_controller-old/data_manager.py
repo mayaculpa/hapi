@@ -54,7 +54,7 @@ def get_raw_log():
     rtu_list = []
     try:
         conn = sqlite3.connect('hapi.db')
-        c=conn.cursor()
+        c = conn.cursor()
         db_elements = c.execute("SELECT  FROM rtus WHERE online = 1;")
         for unit in db_elements:
             rtu = RemoteTerminalUnit()
