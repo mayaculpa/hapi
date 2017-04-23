@@ -4,7 +4,7 @@
 """
 HAPI Smart Module v2.1.2
 Authors: Tyler Reed, Pedro Freitas
-Release: December 2016 Beta
+Release: April 2017 Beta Milestone
 
 Copyright 2016 Maya Culpa, LLC
 
@@ -331,7 +331,6 @@ class SmartModule(object):
             json_string = f.read()
             parsed_json = json.loads(json_string)
             response = parsed_json['current_observation']
-            print(str(response).replace("u'", ''))  # Is there a trailing "'"?
             f.close()
         except Exception, excpt:
             print('Error getting weather data.', excpt)
@@ -385,11 +384,9 @@ class SmartModule(object):
                 )
                 message = trim(message) + '\n'
                 message = message.replace('\n', '\r\n')  #??? ugly! necessary? write place?
-
-                self.twilio_acct_sid = field[9]  #??? Where is field defined?
-                self.twilio_auth_token = field[10]  #??? Where is field defined?
+                if (self.twilio_acct_sid is not "") and (self.twilio_auth_token is not ""):
                 client = TwilioRestClient(self.twilio_acct_sid, self.twilio_auth_token)
-                #client.messages.create(to="+receiving number", from_="+sending number", body=message, )
+                client.messages.create(to="+receiving number", from_="+sending number", body=message, )
                 logging.getLogger(sm_logger).info("Alert condition sent.")
 
         except Exception, excpt:
@@ -586,21 +583,20 @@ class Scheduler(object):
                 else:
                     try:
                         if job.sequence != "":
-                            if job_rtu is not None:  #??? job_rtu is always None. Bug?
-                                print('Running sequence', job.sequence, 'on', job.rtuid)
-                                conn = sqlite3.connect('hapi_core.db')
-                                c = conn.cursor()
-                                command = '''
-                                    SELECT name, command, step_name, timeout
-                                    FROM sequence
-                                    WHERE name=?
-                                    ORDER BY step ;
-                                ''', (job.sequence,)
-                                seq_jobs = c.execute(*command)
-                                print('len(seq_jobs) =', len(seq_jobs))
-                                p = Process(target=self.process_sequence, args=(seq_jobs, job, job_rtu, seq_result,))
-                                p.start()
-                                conn.close()
+                            print('Running sequence', job.sequence)
+                            conn = sqlite3.connect('hapi_core.db')
+                            c = conn.cursor()
+                            command = '''
+                                SELECT name, command, step_name, timeout
+                                FROM sequence
+                                WHERE name=?
+                                ORDER BY step ;
+                            ''', (job.sequence,)
+                            seq_jobs = c.execute(*command)
+                            print('len(seq_jobs) =', len(seq_jobs))
+                            p = Process(target=self.process_sequence, args=(seq_jobs, job, job_rtu, seq_result,))
+                            p.start()
+                            conn.close()
                         else:
                             print('Running command', job.command)
                             # Check pre-defined jobs
@@ -620,15 +616,6 @@ class Scheduler(object):
 
                     except Exception, excpt:
                         logging.getLogger(sm_logger).exception('Error running job: %s', excpt)
-
-    # class ErrorLogger(Handler):
-    #     def __init__(self, client):
-    #         Handler.__init__()
-    #         self.client = client
-
-    #     def emit(self, record):
-    #         log_entry = self.format(record)
-    #         return client.send("ERROR", log_entry)
 
 class DataSync(object):
     @staticmethod
@@ -730,12 +717,6 @@ if __name__ == "__main__":
     main()
 
 # class HAPIListener(TelnetHandler):
-#     PROMPT = site.name + "> "
-
-#     # def __init__(self, *args):
-#     #     print('Listener Init')
-#     #     print(args)
-
 #     @command('abc')
 #     def command_abc(self, params):
 #         '''<context of assets for data>
