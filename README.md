@@ -1,14 +1,15 @@
 ![HAPI Project](/readme/hapi.png?raw=true "HAPI Project")
 
+# Under heavily development
+We're currently under heavily development.
+We would love to have you participate! Drop us a note and we'll add you into our product development Slack server so you can keep up with the latest.
+
 # HAPI
 http://hapihq.com/
 
 ## Wiki Page
 Don't forget to check our Wiki Page
 ![HAPI Wiki Page](/../../wiki "Wiki Page")
-
-## Under heavily development
-We're currently under heavily development.
 
 ## Our purpose
 is to develop a suite of tools that will allow people to grow a variety of food in diverse environments. Our primary focus is on building intelligent automation for hydroponics and aquaponics. Imagine systems in your garage, basement or local community center that can churn out strawberries and kale, year-round with minimal expertise, expense and effort. That’s what we’re shooting for.
