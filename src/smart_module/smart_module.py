@@ -368,17 +368,15 @@ class SmartModule(object):
                 logging.getLogger(sm_logger).exception("Error logging sensor data: %s", excpt)
         else:
             # For virtual assets, assume that the data is already parsed JSON
+            unit_symbol = {
+                'temp_c': 'C',
+                'relative_humidity': '%',
+                'pressure_mb': 'mb',
+            }
             try:
-                for factor in ['temp_c', 'relative_humidity', 'pressure_mb']:
+                for factor in ('temp_c', 'relative_humidity', 'pressure_mb'):
                     value = str(data[factor]).replace("%", "")
-                    timestamp = '"' + str(datetime.datetime.now()) + '"'
-                    if factor == "temp_c":
-                        unit = 'C'
-                    elif factor == "relative_humidity":
-                        unit = '%'
-                    else:
-                        unit = 'mb'
-                    self.push_data(factor, "Environment", value, unit)
+                    self.push_data(factor, "Environment", value, unit_symbol[factor])
 
             except Exception, excpt:
                 logging.getLogger(sm_logger).exception("Error logging sensor data: %s", excpt)
@@ -427,13 +425,15 @@ class SmartModule(object):
 
     def log_command(self, job, result):
         try:
-            timestamp = '"' + str(datetime.datetime.now()) + '"'
-            name = '"' + job.name + '"'
-            command = "INSERT INTO command_log (timestamp, command, result) VALUES (" + timestamp + ", " + name + ", " + result + ")"
-            logging.getLogger(sm_logger).info("Executed " + job.name)
+            now = str(datetime.datetime.now())
+            command = '''
+                INSERT INTO command_log (timestamp, command, result)
+                VALUES (?, ?, ?)
+            ''', (now, job.name, result)
+            logging.getLogger(sm_logger).info("Executed %s", job.name)
             conn = sqlite3.connect('hapi_history.db')
-            c=conn.cursor()
-            c.execute(command)
+            c = conn.cursor()
+            c.execute(*command)
             conn.commit()
             conn.close()
         except Exception, excpt:
@@ -441,11 +441,14 @@ class SmartModule(object):
 
     def log_alert_condition(self, alert):
         try:
-            timestamp = '"' + str(datetime.datetime.now()) + '"'
-            command = "INSERT INTO alert_log (asset_id, value, timestamp) VALUES (" + str(alert.id) + ", " + timestamp + ", " + str(alert.value) + ")"
+            now = str(datetime.datetime.now())
+            command = '''
+                INSERT INTO alert_log (asset_id, value, timestamp)
+                VALUES (?, ?, ?)
+            ''', (str(alert.id), str(alert.value), now)
             conn = sqlite3.connect('hapi_history.db')
-            c=conn.cursor()
-            c.execute(command)
+            c = conn.cursor()
+            c.execute(*command)
             conn.commit()
             conn.close()
         except Exception, excpt:
@@ -454,11 +457,21 @@ class SmartModule(object):
     def send_alert_condition(self, alert, alert_param):
         try:
             if alert_param.response_type.lower() == "sms":
-                timestamp = '"' + str(datetime.datetime.now()) + '"'
-                message = "Alert from " + self.name + ": " + alert.asset_id + '\r\n'
-                message = message + alert_param.message + '\r\n'
-                message = message + "  Value: " + str(alert.value) + '\r\n'
-                message = message + "  Timestamp: " + timestamp + '\r\n'
+                message = '''
+                    Alert from {name}: {id}
+                    {message}
+                      Value: {value}
+                      Timestamp: "{now}"
+                '''.format(
+                    name=self.name,
+                    id=alert.asset_id,
+                    message=alert_param.message,
+                    value=alert.value,
+                    now=datetime.datetime.now(),
+                )
+                message = trim(message) + '\n'
+                message = message.replace('\n', '\r\n')  #??? ugly! necessary? write place?
+
                 self.twilio_acct_sid = field[9]  #??? Where is field defined?
                 self.twilio_auth_token = field[10]  #??? Where is field defined?
                 client = TwilioRestClient(self.twilio_acct_sid, self.twilio_auth_token)
@@ -479,7 +492,7 @@ class SmartModule(object):
         '''.split()
         try:
             conn = sqlite3.connect('hapi_core.db')
-            c=conn.cursor()
+            c = conn.cursor()
             sql = 'SELECT {field_names} FROM alert_params;'.format(
                 field_names=', '.join(field_names))
             rows = c.execute(sql)
@@ -502,7 +515,7 @@ class SmartModule(object):
         days = uptime.days
         minutes, seconds = divmod(uptime.seconds, SECONDS_PER_MINUTE)
         hours, minutes = divmod(minutes, MINUTES_PER_HOUR)
-        s = '''
+        s = ('''
             Master Controller Status
               Software Version v{version}
               Running on: {platform}
@@ -512,9 +525,10 @@ class SmartModule(object):
                - v{sys_version}
                - location: {executable}
               Timestamp: {timestamp}
-              Uptime: This Smart Module has been online for {days} days, {hours} hours and {minutes} minutes.'
+              Uptime: This Smart Module has been online for '''
+                  '''{days} days, {hours} hours and {minutes} minutes.
             ###
-        '''.format(
+        ''').format(
             version=version,
             platform=sys.platform,
             encoding=sys.getdefaultencoding(),
@@ -525,8 +539,9 @@ class SmartModule(object):
             hours=hours,
             minutes=minutes,
         )
+        s = trim(s) + '\n'
         try:
-            self.comm.send("ENV/RESPONSE", trim(s) + '\n')
+            self.comm.send("ENV/RESPONSE", s)
         except Exception, excpt:
             logging.getLogger(sm_logger).exception("Error getting environment data: %s", excpt)
 
@@ -650,8 +665,14 @@ class Scheduler(object):
                             if job_rtu is not None:  #??? job_rtu is always None. Bug?
                                 print('Running sequence', job.sequence, 'on', job.rtuid)
                                 conn = sqlite3.connect('hapi_core.db')
-                                c=conn.cursor()
-                                seq_jobs = c.execute('SELECT name, command, step_name, timeout FROM sequence WHERE name = "' + job.sequence + '" ORDER BY step ;')
+                                c = conn.cursor()
+                                command = '''
+                                    SELECT name, command, step_name, timeout
+                                    FROM sequence
+                                    WHERE name=?
+                                    ORDER BY step ;
+                                ''', (job.sequence,)
+                                seq_jobs = c.execute(*command)
                                 print('len(seq_jobs) =', len(seq_jobs))
                                 p = Process(target=self.process_sequence, args=(seq_jobs, job, job_rtu, seq_result,))
                                 p.start()
@@ -691,7 +712,7 @@ class DataSync(object):
         version = ""
         try:
             conn = sqlite3.connect('hapi_core.db')
-            c=conn.cursor()
+            c = conn.cursor()
             sql = "SELECT data_version FROM db_info;"
             data = c.execute(sql)
             for element in data:
@@ -705,11 +726,11 @@ class DataSync(object):
     @staticmethod
     def write_db_version():
         try:
-            version = str(datetime.datetime.now().isoformat)
-            command = 'UPDATE db_info SET data_version = "' + version + '";'
+            version = datetime.datetime.now().isoformat()
+            command = 'UPDATE db_info SET data_version = ?;', (version,)
             conn = sqlite3.connect('hapi_core.db')
-            c=conn.cursor()
-            c.execute(command)
+            c = conn.cursor()
+            c.execute(*command)
             conn.commit()
             conn.close()
             logging.getLogger(sm_logger).info("Wrote database version: " + version)
@@ -795,19 +816,19 @@ if __name__ == "__main__":
 #     def command_abc(self, params):
 #         '''<context of assets for data>
 #         Gets Asset data By Context.
-
 #         '''
-#         if len(params) > 0:
+#         if params:
 #             context = params[0]
 #             self.writeresponse("Gathering asset data by context: " + context)
 #             data = site.assets_by_context(context)
-#             result = "{"
-#             for asset in data:
-#                 result = result + '"' + asset.name + '":"' + asset.value + '"' + ','
-#             result = result + "}"
-#             self.writeresponse(result)
+#             result = ''.join(
+#                 '"{a.name}":"{a.value}",'.format(a=asset)
+#                 for asset in data
+#             )
+#             result = '{%s}' % result
 #         else:
-#             self.writeresponse('No context provided.')
+#             result = 'No context provided.'
+#         self.writeresponse(result)
 
 #     @command('cmd')
 #     def command_cmd(self, params):
@@ -835,9 +856,8 @@ if __name__ == "__main__":
 #         Starts the Master Controller's Scheduler
 
 #         '''
-#         f = open("ipc.txt", "wb")
-#         f.write("run")
-#         f.close()
+#         with open('ipc.txt', 'wb') as f:
+#             f.write('run')
 
 #     @command('pause')
 #     def command_pause(self, params):
@@ -845,9 +865,8 @@ if __name__ == "__main__":
 #         Pauses the Master Controller's Scheduler
 
 #         '''
-#         f = open("ipc.txt", "wb")
-#         f.write("pause")
-#         f.close()
+#         with open('ipc.txt', 'wb') as f:
+#             f.write('pause')
 
 #     @command('run')
 #     def command_run(self, params):
@@ -858,22 +877,20 @@ if __name__ == "__main__":
 #         if the_rtu is None:
 #             self.writeresponse("You are not connected to an RTU.")
 #         else:
-#             command = params[0]
+#             command, value = params[:2]
 
 #             scheduler = Scheduler()
 #             scheduler.site = site
 #             scheduler.logger = self.logger
 
-#             print('Running', params[0], params[1], 'on', the_rtu.rtuid)
+#             print('Running', command, value, 'on', the_rtu.rtuid)
 #             job = IntervalJob()
 #             job.name = "User-defined"
 #             job.enabled = True
 #             job.rtuid = the_rtu.rtuid
 
-#             if params[0] == "command":
-#                 job.command = params[1]
-#             elif params[0] == "sequence":
-#                 job.sequence = params[1]
+#             if command in ('command', 'sequence'):
+#                 setattr(job, command, value)
 
 #             print('Passing job to the scheduler.')
 #             scheduler.run_job(job)
@@ -884,21 +901,17 @@ if __name__ == "__main__":
 #         Kills the HAPI listener service
 
 #         '''
-#         f = open("ipc.txt", "wb")
-#         f.write("stop")
-#         f.close()
+#         with open('ipc.txt', 'wb') as f:
+#             f.write('stop')
 
 #     @command('turnoff')
 #     def command_turnoff(self, params):
 #         '''<Turn Off Asset>
 #         Turn off the named asset.
 #         '''
-#         asset = ""
+#         asset = ' '.join(param.encode('utf-8').strip() for param in params)
+#         asset = asset.lower()
 
-#         for param in params:
-#             asset = asset + " " + param.encode('utf-8').strip()
-
-#         asset = asset.lower().strip()
 #         print('MC:Listener:asset:', asset)
 #         value = site.set_asset_value(asset, "1")
 
@@ -910,12 +923,9 @@ if __name__ == "__main__":
 #         '''<Turn On Asset>
 #         Turn on the named asset.
 #         '''
-#         asset = ""
+#         asset = ' '.join(param.encode('utf-8').strip() for param in params)
+#         asset = asset.lower()
 
-#         for param in params:
-#             asset = asset + " " + param.encode('utf-8').strip()
-
-#         asset = asset.lower().strip()
 #         print('MC:Listener:asset:', asset)
 #         value = site.set_asset_value(asset, "0")
 
