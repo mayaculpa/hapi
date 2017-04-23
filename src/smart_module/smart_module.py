@@ -181,7 +181,7 @@ class SmartModule(object):
                 self.comm.scheduler_found = True
                 self.comm.subscribe("SCHEDULER/QUERY")
                 self.comm.unsubscribe("SCHEDULER/RESPONSE")
-                self.comm.unsubscribe("STATUS/QUERY")
+                self.comm.subscribe("STATUS/RESPONSE")
                 self.comm.send("SCHEDULER/RESPONSE", socket.gethostname() + ".local")
                 self.comm.send("ANNOUNCE", socket.gethostname() + ".local is running the Scheduler.")
                 logging.getLogger(sm_logger).info("Scheduler program loaded.")
