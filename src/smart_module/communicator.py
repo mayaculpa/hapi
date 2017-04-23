@@ -76,7 +76,7 @@ class Communicator(object):
         self.client.subscribe("SYNCHRONIZE/CORE", qos=0)
         self.client.subscribe("SYNCHRONIZE/GET", qos=0)
         self.client.subscribe("ASSET/QUERY" + "/#")
-        self.client.subscribe("STATUS/#")
+        self.client.subscribe("STATUS/QUERY")
 
     def subscribe(self, topic):
         self.client.subscribe(topic)
