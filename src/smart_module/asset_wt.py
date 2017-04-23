@@ -38,17 +38,19 @@ class AssetImpl(object):
         try:
             os.system('modprobe w1-gpio')
             os.system('modprobe w1-therm')
-            self.base_dir = '/sys/bus/w1/devices/'
-            self.device_folder = glob.glob(self.base_dir + '28*')[0]
-            self.device_file = self.device_folder + '/w1_slave'
-            print "Device file: " + self.device_file
+            base_dir = '/sys/bus/w1/devices'
+            device_dir = glob.glob(os.path.join(base_dir, '28*'))[0]
+            self.device_path = os.path.join(device_dir, 'w1_slave')
+            print('Device file:', self.device_path)
         except Exception, excpt:
             logging.getLogger(sm_logger).exception("Error initializing sensor interface: %s", excpt)
 
     def read_temp_raw(self):
         try:
-            catdata = subprocess.Popen(['cat',self.device_file], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            out,err = catdata.communicate()
+            catdata = subprocess.Popen(
+                ['cat', self.device_path],
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            out, err = catdata.communicate()
             out_decode = out.decode('utf-8')
             lines = out_decode.split('\n')
             return lines
