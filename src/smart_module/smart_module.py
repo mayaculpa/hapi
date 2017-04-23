@@ -724,19 +724,19 @@ if __name__ == "__main__":
 #     def command_abc(self, params):
 #         '''<context of assets for data>
 #         Gets Asset data By Context.
-
 #         '''
-#         if len(params) > 0:
+#         if params:
 #             context = params[0]
 #             self.writeresponse("Gathering asset data by context: " + context)
 #             data = site.assets_by_context(context)
-#             result = "{"
-#             for asset in data:
-#                 result = result + '"' + asset.name + '":"' + asset.value + '"' + ','
-#             result = result + "}"
-#             self.writeresponse(result)
+#             result = ''.join(
+#                 '"{a.name}":"{a.value}",'.format(a=asset)
+#                 for asset in data
+#             )
+#             result = '{%s}' % result
 #         else:
-#             self.writeresponse('No context provided.')
+#             result = 'No context provided.'
+#         self.writeresponse(result)
 
 #     @command('cmd')
 #     def command_cmd(self, params):
@@ -764,9 +764,8 @@ if __name__ == "__main__":
 #         Starts the Master Controller's Scheduler
 
 #         '''
-#         f = open("ipc.txt", "wb")
-#         f.write("run")
-#         f.close()
+#         with open('ipc.txt', 'wb') as f:
+#             f.write('run')
 
 #     @command('pause')
 #     def command_pause(self, params):
@@ -774,9 +773,8 @@ if __name__ == "__main__":
 #         Pauses the Master Controller's Scheduler
 
 #         '''
-#         f = open("ipc.txt", "wb")
-#         f.write("pause")
-#         f.close()
+#         with open('ipc.txt', 'wb') as f:
+#             f.write('pause')
 
 #     @command('run')
 #     def command_run(self, params):
@@ -811,21 +809,17 @@ if __name__ == "__main__":
 #         Kills the HAPI listener service
 
 #         '''
-#         f = open("ipc.txt", "wb")
-#         f.write("stop")
-#         f.close()
+#         with open('ipc.txt', 'wb') as f:
+#             f.write('stop')
 
 #     @command('turnoff')
 #     def command_turnoff(self, params):
 #         '''<Turn Off Asset>
 #         Turn off the named asset.
 #         '''
-#         asset = ""
+#         asset = ' '.join(param.encode('utf-8').strip() for param in params)
+#         asset = asset.lower()
 
-#         for param in params:
-#             asset = asset + " " + param.encode('utf-8').strip()
-
-#         asset = asset.lower().strip()
 #         print('MC:Listener:asset:', asset)
 #         value = site.set_asset_value(asset, "1")
 
@@ -837,12 +831,9 @@ if __name__ == "__main__":
 #         '''<Turn On Asset>
 #         Turn on the named asset.
 #         '''
-#         asset = ""
+#         asset = ' '.join(param.encode('utf-8').strip() for param in params)
+#         asset = asset.lower()
 
-#         for param in params:
-#             asset = asset + " " + param.encode('utf-8').strip()
-
-#         asset = asset.lower().strip()
 #         print('MC:Listener:asset:', asset)
 #         value = site.set_asset_value(asset, "0")
 
