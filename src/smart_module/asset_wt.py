@@ -64,7 +64,7 @@ class AssetImpl(object):
             temp_c = -50
             lines = self.read_temp_raw()
             print(lines)
-            while lines[0].strip()[-3:] != 'YES':
+            while not lines[0].strip().endswith('YES'):
                 time.sleep(0.2)
                 lines = self.read_temp_raw()
                 print(lines)
@@ -76,4 +76,3 @@ class AssetImpl(object):
             return temp_c
         except Exception, excpt:
             logging.getLogger(sm_logger).exception("Error getting converted sensor data: %s", excpt)
-
