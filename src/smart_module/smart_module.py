@@ -181,6 +181,7 @@ class SmartModule(object):
                 self.comm.scheduler_found = True
                 self.comm.subscribe("SCHEDULER/QUERY")
                 self.comm.unsubscribe("SCHEDULER/RESPONSE")
+                self.comm.unsubscribe("STATUS/QUERY")
                 self.comm.send("SCHEDULER/RESPONSE", socket.gethostname() + ".local")
                 self.comm.send("ANNOUNCE", socket.gethostname() + ".local is running the Scheduler.")
                 logging.getLogger(sm_logger).info("Scheduler program loaded.")
@@ -215,12 +216,13 @@ class SmartModule(object):
         except Exception, excpt:
             logging.getLogger(sm_logger).exception("Error loading site data: %s", excpt)
 
-    def connect_influx(self, host, port, user, password, asset_context):
+    def connect_influx(self, asset_context):
         """ Connect to InfluxDB server and searches for the database
             in 'asset_context'.
             Return the connection to the database.
         """
-        influxcon = InfluxDBClient(host, port, user, password)
+        influxcon = InfluxDBClient(self.influxhost["host"], self.influxhost["port"], \
+                                   self.influxhost["user"], self.influxhost["pass"])
         databases = influxcon.get_list_database()
         found = False
         for db in databases:
@@ -230,7 +232,8 @@ class SmartModule(object):
         if found is False:
             influxcon.query("CREATE DATABASE {0}".format('"' + asset_context + '"'))
 
-        influxcon = InfluxDBClient(host, port, user, password, asset_context)
+        influxcon = InfluxDBClient(self.influxhost["host"], self.influxhost["port"], \
+                                   self.influxhost["user"], self.influxhost["pass"], asset_context)
         return influxcon
 
     def push_sysinfo(self, asset_context, information):
@@ -241,8 +244,7 @@ class SmartModule(object):
         # I've tried to use a not OO apprach above -> connect_influx()
         timestamp = datetime.datetime.now() # Get timestamp
         #conn = self.connect_influx('138.197.74.74', 8086, 'early', 'adopter', asset_context)
-        conn = self.connect_influx(self.influxhost["host"], self.influxhost["port"], \
-                                   self.influxhost["user"], self.influxhost["pass"], asset_context)
+        conn = self.connect_influx(asset_context)
         cpuinfo = [{"measurement": "cpu",
                     "tags": {
                         "asset": self.name
@@ -319,6 +321,10 @@ class SmartModule(object):
         except Exception, excpt:
             logging.getLogger(sm_logger).exception("Error getting System Status: %s", excpt)
 
+    # Will be called by the Scheduler to ask for System Status information
+    def on_query_status(self):
+        self.comm.send("STATUS/QUERY", "I might need to know how you are!")
+
     def get_asset_data(self):
         value = ""
         try:
@@ -384,9 +390,7 @@ class SmartModule(object):
     def push_data(self, asset_name, asset_context, value, unit):
         try:
            #conn = self.connect_influx("138.197.74.74", 8086, "early", "adopter", asset_context)
-            conn = self.connect_influx(self.influxhost["host"], self.influxhost["port"], \
-                                       self.influxhost["user"], self.influxhost["pass"], \
-                                       asset_context)
+            conn = self.connect_influx(asset_context)
             json_body = [
                 {
                     "measurement": asset_context,
