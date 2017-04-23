@@ -62,7 +62,9 @@ def get_raw_log():
     try:
         conn = sqlite3.connect('hapi.db')
         c = conn.cursor()
-        query = c.execute("SELECT  FROM rtus WHERE online = 1;")
+        query = c.execute(
+            'SELECT {field_names} FROM rtus WHERE online = 1;'.
+            format(field_names=', '.join(field_names)))
         for row in query:
             rtu = RemoteTerminalUnit()
             for field_name, field_value in zip(field_names, row):
