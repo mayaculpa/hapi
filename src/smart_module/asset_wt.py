@@ -22,6 +22,8 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 '''
 
+from __future__ import print_function
+
 import asset_interface
 import w1thermsensor    #pip install w1thermsensor
 import os
@@ -61,11 +63,11 @@ class AssetImpl(object):
         try:
             temp_c = -50
             lines = self.read_temp_raw()
-            print lines
+            print(lines)
             while lines[0].strip()[-3:] != 'YES':
                 time.sleep(0.2)
                 lines = self.read_temp_raw()
-                print lines
+                print(lines)
             equals_pos = lines[1].find('t=')
             if equals_pos != -1:
                 temp_string = lines[1][equals_pos+2:]
