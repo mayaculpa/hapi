@@ -51,22 +51,26 @@ def get_weather():
     return response
 
 def get_raw_log():
-    rtu_list = []
+    rtus = []
+    field_names = '''
+        rtuid
+        protocol
+        address
+        version
+        online
+    '''.split()
     try:
         conn = sqlite3.connect('hapi.db')
         c = conn.cursor()
-        db_elements = c.execute("SELECT  FROM rtus WHERE online = 1;")
-        for unit in db_elements:
+        query = c.execute("SELECT  FROM rtus WHERE online = 1;")
+        for row in query:
             rtu = RemoteTerminalUnit()
-            rtu.rtuid = unit[0]
-            rtu.protocol = unit[1]
-            rtu.address = unit[2]
-            rtu.version = unit[3]
-            rtu.online = unit[4]
-            rtu_list.append(rtu)
+            for field_name, field_value in zip(field_names, row):
+                setattr(rtu, field_name, field_value)
+            rtus.append(rtu)
             get_pin_modes(rtu)
         conn.close()
     except Exception, excpt:
-        print('Error loading rtu table. %s', excpt)
+        print('Error loading rtu table.', excpt)
 
-    return rtu_list
+    return rtus
