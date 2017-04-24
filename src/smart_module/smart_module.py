@@ -480,10 +480,10 @@ class SmartModule(object):
                 )
                 message = trim(message) + '\n'
                 message = message.replace('\n', '\r\n')  #??? ugly! necessary? write place?
-                if (self.twilio_acct_sid is not "") and (self.twilio_auth_token is not ""):
-                client = TwilioRestClient(self.twilio_acct_sid, self.twilio_auth_token)
-                client.messages.create(to="+receiving number", from_="+sending number", body=message, )
-                logging.getLogger(sm_logger).info("Alert condition sent.")
+#               if (self.twilio_acct_sid is not "") and (self.twilio_auth_token is not ""):
+#               client = TwilioRestClient(self.twilio_acct_sid, self.twilio_auth_token)
+#               client.messages.create(to="+receiving number", from_="+sending number", body=message, )
+#               logging.getLogger(sm_logger).info("Alert condition sent.")
 
         except Exception, excpt:
             print('Error sending alert condition.', excpt)
