@@ -317,7 +317,7 @@ class SmartModule(object):
         try:
             sysinfo = SystemStatus(update=True)
             sysinfo.clients = brokerconnections
-            return str(sysinfo)
+            return sysinfo
         except Exception, excpt:
             logging.getLogger(sm_logger).exception("Error getting System Status: %s", excpt)
 
@@ -480,9 +480,9 @@ class SmartModule(object):
                 )
                 message = trim(message) + '\n'
                 message = message.replace('\n', '\r\n')  #??? ugly! necessary? write place?
-                if (self.twilio_acct_sid is not "") and (self.twilio_auth_token is not ""):
-                client = TwilioRestClient(self.twilio_acct_sid, self.twilio_auth_token)
-                client.messages.create(to="+receiving number", from_="+sending number", body=message, )
+                # if (self.twilio_acct_sid is not "") and (self.twilio_auth_token is not ""):
+                # client = TwilioRestClient(self.twilio_acct_sid, self.twilio_auth_token)
+                # client.messages.create(to="+receiving number", from_="+sending number", body=message, )
                 logging.getLogger(sm_logger).info("Alert condition sent.")
 
         except Exception, excpt:
@@ -689,7 +689,7 @@ class Scheduler(object):
                                 ORDER BY step ;
                             ''', (job.sequence,)
                             seq_jobs = c.execute(*command)
-                            print('len(seq_jobs) =', len(seq_jobs))
+                            #print('len(seq_jobs) =', len(seq_jobs))
                             p = Process(target=self.process_sequence, args=(seq_jobs, job, job_rtu, seq_result,))
                             p.start()
                             conn.close()
