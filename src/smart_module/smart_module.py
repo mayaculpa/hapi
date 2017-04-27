@@ -44,6 +44,7 @@ import logging
 from influxdb import InfluxDBClient
 from status import SystemStatus
 import asset_interface
+from alert import Alert
 
 reload(sys)
 version = "3.0 Alpha"
@@ -90,11 +91,6 @@ class Asset(object):
         self.enabled = True
         self.value = None
 
-class Alert(object):
-    def __init__(self):
-        self.id = -1
-        self.value = 0.0
-
 class AssetInterface(object):
     def __init__(self, asset_type):
         # determine the correct asset library and import it
@@ -102,14 +98,6 @@ class AssetInterface(object):
 
     def read_value():
         return AssetImpl().read_value()
-
-class AlertParam(object):
-    def __init__(self):
-        self.id = -1
-        self.lower_threshold = 0.0
-        self.upper_threshold = 0.0
-        self.message = ""
-        self.response_type = "sms"
 
 class SmartModule(object):
     """Represents a HAPI Smart Module (Implementation).
@@ -145,8 +133,8 @@ class SmartModule(object):
         self.scheduler = None
         self.hostname = ""
         self.lastStatus = ""
-        # Testing. Maybe store it on db as well.
-        self.influxhost = {"host": "138.197.74.74", "port": 8086, "user": "early", "pass": "adopter"}
+        self.influxhost = {"host": "138.197.74.74", "port": 8086, "user": "early",
+                           "pass": "adopter"}
         logging.getLogger(sm_logger).info("Smart Module initialization complete.")
 
     def discover(self):
@@ -240,10 +228,7 @@ class SmartModule(object):
         """ Push System Status information to InfluxDB server
             'information' will hold the JSON output of SystemStatus
         """
-        # This is the same as push_data()
-        # I've tried to use a not OO apprach above -> connect_influx()
-        timestamp = datetime.datetime.now() # Get timestamp
-        #conn = self.connect_influx('138.197.74.74', 8086, 'early', 'adopter', asset_context)
+        timestamp = datetime.datetime.now()
         conn = self.connect_influx(asset_context)
         cpuinfo = [{"measurement": "cpu",
                     "tags": {
@@ -321,8 +306,8 @@ class SmartModule(object):
         except Exception, excpt:
             logging.getLogger(sm_logger).exception("Error getting System Status: %s", excpt)
 
-    # Will be called by the Scheduler to ask for System Status information
     def on_query_status(self):
+        ''' It'll be called by the Scheduler to ask for System Status information '''
         self.comm.send("STATUS/QUERY", "I might need to know how you are!")
 
     def get_asset_data(self):
@@ -337,34 +322,6 @@ class SmartModule(object):
             logging.getLogger(sm_logger).exception("Error getting asset data: %s", excpt)
 
         return value
-
-    def check_alert(self, asset_id, asset_value):
-        alert_params = self.get_alert_params()
-        logging.getLogger(sm_logger).info(
-            "Checking asset for alert conditions: %s :: %s",
-            asset_id, asset_value)
-        try:
-            for alert_param in alert_params:
-                if alert_param.asset_id == asset_id:
-                    try:
-                        timestamp = datetime.datetime.now()
-                        print(asset.name, 'is', asset.value)
-                        print('Lower Threshold is', alert_param.lower_threshold)
-                        print('Upper Threshold is', alert_param.upper_threshold)
-                        if not (alert_param.lower_threshold < asset_value < alert_param.upper_threshold):
-                            logging.getLogger(sm_logger).info(
-                                "Alert condition detected: %s :: %s",
-                                asset_id, asset_value)
-                            alert = Alert()
-                            alert.asset_id = asset_id
-                            alert.value = asset_value
-                            self.log_alert_condition(alert)
-                            self.send_alert_condition(self, alert, alert_param)
-                    except Exception, excpt:
-                        logging.getLogger(sm_logger).exception("Error getting asset data: %s", excpt)
-
-        except Exception, excpt:
-            logging.getLogger(sm_logger).exception("Error getting asset data: %s", excpt)
 
     def log_sensor_data(self, data, virtual):
         if not virtual:
@@ -447,74 +404,6 @@ class SmartModule(object):
             conn.close()
         except Exception, excpt:
             logging.getLogger(sm_logger).exception("Error logging command: %s", excpt)
-
-    def log_alert_condition(self, alert):
-        try:
-            now = str(datetime.datetime.now())
-            command = '''
-                INSERT INTO alert_log (asset_id, value, timestamp)
-                VALUES (?, ?, ?)
-            ''', (str(alert.id), str(alert.value), now)
-            conn = sqlite3.connect('hapi_history.db')
-            c = conn.cursor()
-            c.execute(*command)
-            conn.commit()
-            conn.close()
-        except Exception, excpt:
-            logging.getLogger(sm_logger).exception("Error logging alert condition: %s", excpt)
-
-    def send_alert_condition(self, alert, alert_param):
-        try:
-            if alert_param.response_type.lower() == "sms":
-                message = '''
-                    Alert from {name}: {id}
-                    {message}
-                      Value: {value}
-                      Timestamp: "{now}"
-                '''.format(
-                    name=self.name,
-                    id=alert.asset_id,
-                    message=alert_param.message,
-                    value=alert.value,
-                    now=datetime.datetime.now(),
-                )
-                message = trim(message) + '\n'
-                message = message.replace('\n', '\r\n')  #??? ugly! necessary? write place?
-                # if (self.twilio_acct_sid is not "") and (self.twilio_auth_token is not ""):
-                # client = TwilioRestClient(self.twilio_acct_sid, self.twilio_auth_token)
-                # client.messages.create(to="+receiving number", from_="+sending number", body=message, )
-                logging.getLogger(sm_logger).info("Alert condition sent.")
-
-        except Exception, excpt:
-            print('Error sending alert condition.', excpt)
-
-    def get_alert_params(self):
-        alert_params = []
-        field_names = '''
-            asset_id
-            lower_threshold
-            upper_threshold
-            message
-            response_type
-        '''.split()
-        try:
-            conn = sqlite3.connect('hapi_core.db')
-            c = conn.cursor()
-            sql = 'SELECT {field_names} FROM alert_params;'.format(
-                field_names=', '.join(field_names))
-            rows = c.execute(sql)
-            for row in rows:
-                alert_param = AlertParam()
-                for field_name, field_value in zip(field_names, row):
-                    setattr(alert_param, field_name, field_value)
-                alert_param.lower_threshold = float(alert_param.lower_threshold)
-                alert_param.upper_threshold = float(alert_param.upper_threshold)
-                alert_params.append(alert_param)
-            conn.close()
-        except Exception, excpt:
-            logging.getLogger(sm_logger).exception("Error getting alert parameters: %s", excpt)
-
-        return alert_params
 
     def get_env(self):
         now = datetime.datetime.now()
@@ -690,7 +579,8 @@ class Scheduler(object):
                             ''', (job.sequence,)
                             seq_jobs = c.execute(*command)
                             #print('len(seq_jobs) =', len(seq_jobs))
-                            p = Process(target=self.process_sequence, args=(seq_jobs, job, job_rtu, seq_result,))
+                            p = Process(target=self.process_sequence, \
+                                        args=(seq_jobs, job, job_rtu, seq_result,))
                             p.start()
                             conn.close()
                         else:
