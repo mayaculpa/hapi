@@ -205,11 +205,10 @@ class SmartModule(object):
             logging.getLogger(sm_logger).exception("Error loading site data: %s", excpt)
 
     def connect_influx(self, asset_context):
-        """ Connect to InfluxDB server and searches for the database
-            in 'asset_context'.
-            Return the connection to the database.
+        """ Connect to InfluxDB server and searches for the database in 'asset_context'.
+            Return the connection to the database or create it if necessary.
         """
-        influxcon = InfluxDBClient(self.influxhost["host"], self.influxhost["port"], \
+        influxcon = InfluxDBClient(self.influxhost["host"], self.influxhost["port"],
                                    self.influxhost["user"], self.influxhost["pass"])
         databases = influxcon.get_list_database()
         found = False
@@ -220,14 +219,13 @@ class SmartModule(object):
         if found is False:
             influxcon.query("CREATE DATABASE {0}".format('"' + asset_context + '"'))
 
-        influxcon = InfluxDBClient(self.influxhost["host"], self.influxhost["port"], \
+        influxcon = InfluxDBClient(self.influxhost["host"], self.influxhost["port"],
                                    self.influxhost["user"], self.influxhost["pass"], asset_context)
         return influxcon
 
     def push_sysinfo(self, asset_context, information):
-        """ Push System Status information to InfluxDB server
-            'information' will hold the JSON output of SystemStatus
-        """
+        ''' Push System Status (stats) information to InfluxDB server '''
+        # We should consider, somehow, a better approach
         timestamp = datetime.datetime.now()
         conn = self.connect_influx(asset_context)
         cpuinfo = [{"measurement": "cpu",
@@ -299,6 +297,7 @@ class SmartModule(object):
         conn.write_points(json)
 
     def get_status(self, brokerconnections):
+        ''' Fetch system information (stats) and return a list with a single dictionary (JSON) '''
         try:
             sysinfo = SystemStatus(update=True)
             sysinfo.clients = brokerconnections
@@ -314,6 +313,7 @@ class SmartModule(object):
         value = ""
         try:
             #ai = asset_interface.AssetInterface(self.asset.type)
+            # Is this line correct? It needs a parameter
             ai = asset_interface.AssetInterface()
             value = str(ai.read_value())
             self.push_data(self.asset.name, self.asset.context, value, self.asset.unit)
@@ -550,58 +550,58 @@ class Scheduler(object):
                     logging.getLogger(sm_logger).info("  Loading second job: " + job.name)
 
     def run_job(self, job):
-        if self.running:
-            response = ""
-            job_rtu = None
+        if not self.running or not job.enabled:
+            return
 
-            if job.enabled:
-                if job.sequence is None:
-                    job.sequence = ""
+        response = ""
+        job_rtu = None
 
-                if job.virtual:
-                    print('Running virtual job:', job.name, job.command)
-                    try:
-                        response = eval(job.command)
-                        self.smart_module.log_sensor_data(response, True)
-                    except Exception, excpt:
-                        logging.getLogger(sm_logger).exception("Error running job. %s", excpt)
+        if job.sequence is None:
+            job.sequence = ""
+
+        if job.virtual:
+            print('Running virtual job:', job.name, job.command)
+            try:
+                response = eval(job.command)
+                self.smart_module.log_sensor_data(response, True)
+            except Exception, excpt:
+                logging.getLogger(sm_logger).exception("Error running job. %s", excpt)
+        else:
+            try:
+                if job.sequence != "":
+                    print('Running sequence', job.sequence)
+                    conn = sqlite3.connect('hapi_core.db')
+                    c = conn.cursor()
+                    command = '''
+                        SELECT name, command, step_name, timeout
+                        FROM sequence
+                        WHERE name=?
+                        ORDER BY step ;
+                    ''', (job.sequence,)
+                    seq_jobs = c.execute(*command)
+                    #print('len(seq_jobs) =', len(seq_jobs))
+                    p = Process(target=self.process_sequence, args=(seq_jobs, job, job_rtu, seq_result,))
+                    p.start()
+                    conn.close()
                 else:
-                    try:
-                        if job.sequence != "":
-                            print('Running sequence', job.sequence)
-                            conn = sqlite3.connect('hapi_core.db')
-                            c = conn.cursor()
-                            command = '''
-                                SELECT name, command, step_name, timeout
-                                FROM sequence
-                                WHERE name=?
-                                ORDER BY step ;
-                            ''', (job.sequence,)
-                            seq_jobs = c.execute(*command)
-                            #print('len(seq_jobs) =', len(seq_jobs))
-                            p = Process(target=self.process_sequence, \
-                                        args=(seq_jobs, job, job_rtu, seq_result,))
-                            p.start()
-                            conn.close()
-                        else:
-                            print('Running command', job.command)
-                            # Check pre-defined jobs
-                            if job.name == "Log Data":
-                                self.site.comm.send("QUERY/#", "query")
-                                # self.site.log_sensor_data(response, False, self.logger)
+                    print('Running command', job.command)
+                    # Check pre-defined jobs
+                    if job.name == "Log Data":
+                        self.site.comm.send("QUERY/#", "query")
+                        # self.site.log_sensor_data(response, False, self.logger)
 
-                            elif job.name == "Log Status":
-                                self.site.comm.send("REPORT/#", "report")
+                    elif job.name == "Log Status":
+                        self.site.comm.send("REPORT/#", "report")
 
-                            else:
-                                eval(job.command)
-                                # if job_rtu is not None:  #??? job_rtu is always None. Bug?
-                                #     self.site.comm.send("COMMAND/" + job.rtuid, job.command)
+                    else:
+                        eval(job.command)
+                        # if job_rtu is not None:  #??? job_rtu is always None. Bug?
+                        #     self.site.comm.send("COMMAND/" + job.rtuid, job.command)
 
-                            #self.log_command(job, "")
+                    #self.log_command(job, "")
 
-                    except Exception, excpt:
-                        logging.getLogger(sm_logger).exception('Error running job: %s', excpt)
+            except Exception, excpt:
+                logging.getLogger(sm_logger).exception('Error running job: %s', excpt)
 
 class DataSync(object):
     @staticmethod
