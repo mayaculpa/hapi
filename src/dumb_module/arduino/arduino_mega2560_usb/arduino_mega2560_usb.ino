@@ -474,7 +474,7 @@ void loop() {
       // res  - resets the Arduino
       if ((inputCommand == "res") && (idle_mode == false)) {
         cmdFound = true;
-        for (int x = 0; x < 54; x++) {
+        for (int x = 0; x < 70; x++) {
           if (pinControl[x] == 3) {
             digitalWrite(x, LOW); // If this Pin is a Digital Output Turn it off
           }
