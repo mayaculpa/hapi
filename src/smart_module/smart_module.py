@@ -389,7 +389,6 @@ class SmartModule(object):
 
     def push_data(self, asset_name, asset_context, value, unit):
         try:
-           #conn = self.connect_influx("138.197.74.74", 8086, "early", "adopter", asset_context)
             conn = self.connect_influx(asset_context)
             json_body = [
                 {
