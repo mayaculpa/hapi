@@ -60,17 +60,17 @@ class SystemStatus(object):
         # Fetch all information about Memory in a temp variable
         # then assign each value to a specific key (psutil usually returns
         # a named tuple)
-        tempmemoryinfo = psutil.virtual_memory()
-        self.memory["used"] = tempmemoryinfo[3]
-        self.memory["free"] = tempmemoryinfo[4]
-        self.memory["cached"] = tempmemoryinfo[8]
-        tempnetworkinfo = psutil.net_io_counters()
-        self.network["packet_sent"] = tempnetworkinfo[2]
-        self.network["packet_recv"] = tempnetworkinfo[3]
-        tempdiskinfo = psutil.disk_usage('/')
-        self.disk["total"] = tempdiskinfo[0]
-        self.disk["used"] = tempdiskinfo[1]
-        self.disk["free"] = tempdiskinfo[2]
+        virtual_memory = psutil.virtual_memory()
+        self.memory["used"] = virtual_memory.used
+        self.memory["free"] = virtual_memory.free
+        self.memory["cached"] = virtual_memory.cached
+        net_io_counters = psutil.net_io_counters()
+        self.network["packet_sent"] = net_io_counters.packets_sent
+        self.network["packet_recv"] = net_io_counters.packets_recv
+        disk_usage = psutil.disk_usage('/')
+        self.disk["total"] = disk_usage.total
+        self.disk["used"] = disk_usage.used
+        self.disk["free"] = disk_usage.free
         self.timestamp = time.time()
 
 if __name__ == "__main__":

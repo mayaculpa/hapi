@@ -660,57 +660,58 @@ class Scheduler(object):
                     logging.getLogger(sm_logger).info("  Loading second job: " + job.name)
 
     def run_job(self, job):
-        if self.running:
-            response = ""
-            job_rtu = None
+        if not self.running or not job.enabled:
+            return
 
-            if job.enabled:
-                if job.sequence is None:
-                    job.sequence = ""
+        response = ""
+        job_rtu = None
 
-                if job.virtual:
-                    print('Running virtual job:', job.name, job.command)
-                    try:
-                        response = eval(job.command)
-                        self.smart_module.log_sensor_data(response, True)
-                    except Exception, excpt:
-                        logging.getLogger(sm_logger).exception("Error running job. %s", excpt)
+        if job.sequence is None:
+            job.sequence = ""
+
+        if job.virtual:
+            print('Running virtual job:', job.name, job.command)
+            try:
+                response = eval(job.command)
+                self.smart_module.log_sensor_data(response, True)
+            except Exception, excpt:
+                logging.getLogger(sm_logger).exception("Error running job. %s", excpt)
+        else:
+            try:
+                if job.sequence != "":
+                    print('Running sequence', job.sequence)
+                    conn = sqlite3.connect('hapi_core.db')
+                    c = conn.cursor()
+                    command = '''
+                        SELECT name, command, step_name, timeout
+                        FROM sequence
+                        WHERE name=?
+                        ORDER BY step ;
+                    ''', (job.sequence,)
+                    seq_jobs = c.execute(*command)
+                    #print('len(seq_jobs) =', len(seq_jobs))
+                    p = Process(target=self.process_sequence, args=(seq_jobs, job, job_rtu, seq_result,))
+                    p.start()
+                    conn.close()
                 else:
-                    try:
-                        if job.sequence != "":
-                            print('Running sequence', job.sequence)
-                            conn = sqlite3.connect('hapi_core.db')
-                            c = conn.cursor()
-                            command = '''
-                                SELECT name, command, step_name, timeout
-                                FROM sequence
-                                WHERE name=?
-                                ORDER BY step ;
-                            ''', (job.sequence,)
-                            seq_jobs = c.execute(*command)
-                            #print('len(seq_jobs) =', len(seq_jobs))
-                            p = Process(target=self.process_sequence, args=(seq_jobs, job, job_rtu, seq_result,))
-                            p.start()
-                            conn.close()
-                        else:
-                            print('Running command', job.command)
-                            # Check pre-defined jobs
-                            if job.name == "Log Data":
-                                self.site.comm.send("QUERY/#", "query")
-                                # self.site.log_sensor_data(response, False, self.logger)
+                    print('Running command', job.command)
+                    # Check pre-defined jobs
+                    if job.name == "Log Data":
+                        self.site.comm.send("QUERY/#", "query")
+                        # self.site.log_sensor_data(response, False, self.logger)
 
-                            elif job.name == "Log Status":
-                                self.site.comm.send("REPORT/#", "report")
+                    elif job.name == "Log Status":
+                        self.site.comm.send("REPORT/#", "report")
 
-                            else:
-                                eval(job.command)
-                                # if job_rtu is not None:  #??? job_rtu is always None. Bug?
-                                #     self.site.comm.send("COMMAND/" + job.rtuid, job.command)
+                    else:
+                        eval(job.command)
+                        # if job_rtu is not None:  #??? job_rtu is always None. Bug?
+                        #     self.site.comm.send("COMMAND/" + job.rtuid, job.command)
 
-                            #self.log_command(job, "")
+                    #self.log_command(job, "")
 
-                    except Exception, excpt:
-                        logging.getLogger(sm_logger).exception('Error running job: %s', excpt)
+            except Exception, excpt:
+                logging.getLogger(sm_logger).exception('Error running job: %s', excpt)
 
 class DataSync(object):
     @staticmethod
