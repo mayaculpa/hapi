@@ -27,65 +27,10 @@ import sys
 import datetime
 import logging
 import sqlite3
-
-VERSION = "3.0 Alpha"
-SM_LOGGER = "smart_module"
-
-def trim(docstring):
-    """Trim docstring."""
-    # Not sure...
-    if not docstring:
-        return ''
-    # Convert tabs to spaces (following the normal Python rules)
-    # and split into a list of lines:
-    lines = docstring.expandtabs().splitlines()
-    # Determine minimum indentation (first line doesn't count):
-    indent = sys.maxint
-    for line in lines[1:]:
-        stripped = line.lstrip()
-        if stripped:
-            indent = min(indent, len(line) - len(stripped))
-    # Remove indentation (first line is special):
-    trimmed = [lines[0].strip()]
-    if indent < sys.maxint:
-        for line in lines[1:]:
-            trimmed.append(line[indent:].rstrip())
-    # Strip off trailing and leading blank lines:
-    while trimmed and not trimmed[-1]:
-        trimmed.pop()
-    while trimmed and not trimmed[0]:
-        trimmed.pop(0)
-    # Return a single string:
-    return '\n'.join(trimmed)
-
-class DatabaseConn(object):
-    """Hold necessary information to connect and perform operations on SQLite3 database."""
-    def __init__(self, connect=False, dbfile="hapi_core.db"):
-        """Create object to hold and connect to SQLite3."""
-        self.dbfile = dbfile
-        self.connection = None
-        self.cursor = None
-        self.log = logging.getLogger(SM_LOGGER)
-        if connect:
-            self.connect()
-
-    def connect(self):
-        """Connect to the SQLite3 database and initialize cursor."""
-        try:
-            self.connection = sqlite3.connect(self.dbfile)
-            self.cursor = self.connection.cursor()
-        except Exception, excpt:
-            self.log.exception("Error connection to database: %s", excpt)
-
-    def __del__(self):
-        """Close SQLite3 database connection."""
-        try:
-            self.connection.close()
-            self.log.info("Database connection closed.")
-        except Exception, excpt:
-            self.log.exception("Error trying to close db connection: %s", excpt)
+from utilities import *
 
 class Alert(object):
+    """Hold information about current alert status about a given asset."""
     def __init__(self, asset_id):
         self.id = asset_id
         self.lower_threshold = 0.0
@@ -96,6 +41,7 @@ class Alert(object):
         self.log = logging.getLogger(SM_LOGGER)
 
     def __str__(self):
+        """Use to pass Alert information in JSON."""
         return str([{"id": self.id,
                      "lower": self.lower_threshold,
                      "upper": self.upper_threshold,
@@ -106,12 +52,12 @@ class Alert(object):
 
     def check_alert(self, value, sm_name):
         """Check current value with threshold and send alert if necessary."""
-        self.current = value
+        self.current = float(value)
         self.get_alert_params()
         self.log.info("Checking asset for alert conditions: %s :: %s", self.id, str(self.current))
         print('Lower Threshold is', self.lower_threshold)
         print('Upper Threshold is', self.upper_threshold)
-        if not self.lower_threshold < value < self.upper_threshold:
+        if not self.lower_threshold <= self.current <= self.upper_threshold:
             self.log.info("Alert condition detected: %s :: %s", self.id, str(self.current))
             self.log_alert_condition()
             self.send_alert_condition(sm_name)
@@ -149,11 +95,9 @@ class Alert(object):
             # client.messages.create(to="+receiving number", from_="+sending number",
             #                        body=message)
             print("sms sent (testing): ", trim(message))
-            pass
 
         if self.response_type.lower() == "email":
             print("email sent (testing): ", trim(message))
-            pass
 
         self.log.info("Alert condition sent.")
 
@@ -171,17 +115,16 @@ class Alert(object):
         sql = 'SELECT {field_names} FROM alert_params WHERE asset_id={asset};'.format(
             field_names=', '.join(field_names), asset=self.id)
         database = DatabaseConn(connect=True)
-        row = database.cursor.execute(sql)
-        row = database.cursor.fetchone()
+        row = database.cursor.execute(sql).fetchone()
         self.id, self.lower_threshold, self.upper_threshold, self.message, self.response_type = row
-        #print(database.cursor.fetchone())
-        # for field_name, field_value in zip(field_names, row):
-        #     print(field_name, field_value)
-        #     setattr(self, field_name, field_value)
         self.lower_threshold = float(self.lower_threshold)
         self.upper_threshold = float(self.upper_threshold)
 
 if __name__ == "__main__":
     alert = Alert(1)
-    alert.check_alert(20, "testing")
-    print(alert)
+    try:
+        value = sys.argv[1]
+        alert.check_alert(value, "testing")
+        print(alert)
+    except Exception, excpt:
+        print("You should provide a value.")
