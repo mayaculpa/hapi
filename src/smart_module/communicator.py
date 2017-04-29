@@ -107,7 +107,7 @@ class Communicator(object):
 
         elif "STATUS/QUERY" in msg.topic:
             self.smart_module.lastStatus = self.smart_module.get_status(self.broker_connections)
-            self.send("STATUS/RESPONSE", self.smart_module.lastStatus)
+            self.send("STATUS/RESPONSE", str(self.smart_module.lastStatus))
 
         # Not sure why System Status should be Scheduled, if we're listen for queries?
         elif "STATUS/RESPONSE" in msg.topic:
