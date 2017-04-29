@@ -34,6 +34,7 @@ Communications Protocol: Ethernet, USB
 //**** Begin Board Selection Section ****
 //#define RTU_ENET          // Define for Arduino 2560 via Ethernet shield
 #define RTU_USB           // Define for Arduino 2560 via USB
+//#define RTU_UNO           // Define for Arduino UNO via USB
 //#define RTU_ESP           // Define for NodeMCU, or ESP8266-based device
 
 // Required for ESP (WiFi) connection
@@ -57,40 +58,7 @@ Communications Protocol: Ethernet, USB
 #include <OneWire.h>
 #include <DallasTemperature.h>
 
-#ifdef RTU_ESP
-#define NUM_DIGITAL 17    // Number of digital I/O pins
-#define NUM_ANALOG  1     // Number of analog I/O pins
-#define PIN_MAP_SIZE NUM_DIGITAL*2   // Array size for default state data
-                                     // 2 bytes per digital I/O pin, 1st byte = State, 2nd byte = Value
-
-// Default pin allocation
-#define ONE_WIRE_BUS 13   // Reserved pin for 1-Wire bus
-#define PH_SENSORPIN 14   // Reserved pin for pH probe
-#define DHTTYPE DHT22     // Sets DHT type
-#define DHTPIN 12         // Reserved pin for DHT-22 sensor
-
-// Default pin modes
-// 0 not used or reserved;  1 digital input; 2 digital input_pullup; 3 digital output; 4 analog output; 5 analog input;
-// Analog input pins are assumed to be used as analog input pins
-int pinControl[NUM_DIGITAL+NUM_ANALOG] = {
-  3, 3, 3, 1, 3, 3, 0, 0,   //  0 -  8  // Digital i/o
-  0, 0, 0, 0, 3, 3, 3, 3,   //  9 - 15
-  3,                        // 16
-  5                         // A0       //Analog Input
-};
-
-// Default pin states
-// Defaults determine the value of output pins with the RTU initializes
-// 0 = LOW, 1 = HIGH
-int pinDefaults[NUM_DIGITAL+NUM_ANALOG] = {
-  1, 1, 1, 1, 1, 1, 0, 0,   //  0 -  8  // Digital i/o
-  0, 0, 0, 0, 1, 1, 1, 1,   //  9 - 15
-  1,                        // 16
-  5                         // A0       //Analog Input
-};
-
-#else // RTU_USB OR RTU_ENET
-
+#ifdef RTU_ENET
 #define NUM_DIGITAL 54    // Number of digital I/O pins
 #define NUM_ANALOG  16    // Number of analog I/O pins
 #define PIN_MAP_SIZE NUM_DIGITAL*2   // Array size for default digital state data
@@ -134,16 +102,145 @@ int pinDefaults[NUM_DIGITAL+NUM_ANALOG] = {
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   // 54 - 63
   0, 0, 0, 0, 0, 0                // 64 - 69
 };
+#endif
+
+
+#ifdef RTU_USB
+#define NUM_DIGITAL 54    // Number of digital I/O pins
+#define NUM_ANALOG  16    // Number of analog I/O pins
+#define PIN_MAP_SIZE NUM_DIGITAL*2   // Array size for default digital state data
+                                     // 2 bytes per digital I/O pin, 1st byte = State, 2nd byte = Value
+
+// Default pin allocation
+#define ONE_WIRE_BUS 8   // Reserved pin for 1-Wire bus
+#define PH_SENSORPIN A1  // Reserved pin for pH probe
+#define DHTTYPE DHT22    // Sets DHT type
+#define DHTPIN 12        // Reserved pin for DHT-22 sensor
+
+
+// Default pin modes
+// 0 not used or reserved;  1 digital input; 2 digital input_pullup; 3 digital output; 4 analog output; 5 analog input;
+// Analog input pins are assumed to be used as analog input pins
+int pinControl[NUM_DIGITAL+NUM_ANALOG] = {
+                                  // DIGITAL
+  0, 0, 3, 3, 0, 3, 3, 3, 3, 3,   //  0 -  9
+  0, 2, 1, 3, 0, 0, 0, 0, 0, 0,   // 10 - 19
+  0, 0, 3, 3, 3, 3, 3, 3, 1, 1,   // 20 - 29
+  1, 1, 1, 1, 1, 1, 1, 1, 1, 1,   // 30 - 39
+  1, 1, 1, 1, 1, 1, 1, 1, 2, 2,   // 40 - 49
+  0, 0, 0, 0,                     // 50 - 53
+                                  // ANALOG
+  5, 5, 5, 5, 5, 5, 5, 5, 5, 5,   // 54 - 63
+  5, 5, 0, 0, 0, 0                // 64 - 69
+};
+
+// Default pin states
+// Defaults determine the value of output pins with the RTU initializes
+// 0 = LOW, 1 = HIGH
+int pinDefaults[NUM_DIGITAL+NUM_ANALOG] = {
+                                  // DIGITAL
+  0, 0, 1, 1, 0, 1, 1, 1, 1, 1,   //  0 -  9
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   // 10 - 19
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   // 20 - 29
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   // 30 - 39
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   // 40 - 49
+  0, 0, 0, 0,                     // 50 - 53
+                                  // ANALOG
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   // 54 - 63
+  0, 0, 0, 0, 0, 0                // 64 - 69
+};
+#endif
+
+
+#ifdef RTU_UNO
+#define NUM_DIGITAL 14    // Number of digital I/O pins
+#define NUM_ANALOG   6    // Number of analog I/O pins
+#define PIN_MAP_SIZE NUM_DIGITAL*2   // Array size for default digital state data
+                                     // 2 bytes per digital I/O pin, 1st byte = State, 2nd byte = Value
+
+// Default pin allocation
+#define ONE_WIRE_BUS 8   // Reserved pin for 1-Wire bus
+#define PH_SENSORPIN A1  // Reserved pin for pH probe
+#define DHTTYPE DHT22    // Sets DHT type
+#define DHTPIN 12        // Reserved pin for DHT-22 sensor
+#define THERMISTOR 2     // Analog Read Temperature
+
+// Default pin modes
+// 0 not used or reserved;  1 digital input; 2 digital input_pullup; 3 digital output; 4 analog output; 5 analog input;
+// Analog input pins are assumed to be used as analog input pins
+int pinControl[NUM_DIGITAL+NUM_ANALOG] = {
+                                  // DIGITAL
+  0, 0, 3, 3, 3, 3, 3, 0, 2, 1, 	//  0 -  9
+  1, 1, 2, 3,                     // 10 - 13
+                                  // ANALOG
+  5, 5, 5, 5, 5, 5                // 14 - 20
+};
+
+// Default pin states
+// Defaults determine the value of output pins with the RTU initializes
+// 0 = LOW, 1 = HIGH
+int pinDefaults[NUM_DIGITAL+NUM_ANALOG] = {
+                                  // DIGITAL
+  0, 0, 1, 1, 0, 1, 1, 1, 1, 1,   //  0 -  9
+  0, 0, 0, 0,                     // 10 - 13
+                                  // ANALOG
+  0, 0, 0, 0, 0, 0                // 14 - 20
+};
+#endif
+
+#ifdef RTU_ESP
+#define NUM_DIGITAL 17    // Number of digital I/O pins
+#define NUM_ANALOG  1     // Number of analog I/O pins
+#define PIN_MAP_SIZE NUM_DIGITAL*2   // Array size for default state data
+                                     // 2 bytes per digital I/O pin, 1st byte = State, 2nd byte = Value
+
+// Default pin allocation
+#define ONE_WIRE_BUS 13   // Reserved pin for 1-Wire bus
+#define PH_SENSORPIN 14   // Reserved pin for pH probe
+#define DHTTYPE DHT22     // Sets DHT type
+#define DHTPIN 12         // Reserved pin for DHT-22 sensor
+
+// Default pin modes
+// 0 not used or reserved;  1 digital input; 2 digital input_pullup; 3 digital output; 4 analog output; 5 analog input;
+// Analog input pins are assumed to be used as analog input pins
+int pinControl[NUM_DIGITAL+NUM_ANALOG] = {
+  3, 3, 3, 1, 3, 3, 0, 0,   //  0 -  8  // Digital i/o
+  0, 0, 0, 0, 3, 3, 3, 3,   //  9 - 15
+  3,                        // 16
+  5                         // A0       //Analog Input
+};
+
+// Default pin states
+// Defaults determine the value of output pins with the RTU initializes
+// 0 = LOW, 1 = HIGH
+int pinDefaults[NUM_DIGITAL+NUM_ANALOG] = {
+  1, 1, 1, 1, 1, 1, 0, 0,   //  0 -  8  // Digital i/o
+  0, 0, 0, 0, 1, 1, 1, 1,   //  9 - 15
+  1,                        // 16
+  5                         // A0       //Analog Input
+};
 
 #endif
+
 
 OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature wp_sensors(&oneWire);
 
 //**** Begin Main Variable Definition Section ****
 String HAPI_CLI_VERSION = "v2.2";  // The version of the firmware the RTU is running
-String RTUID = "RTU1";             // This RTUs Unique ID Number - unique across site
-boolean idle_mode = false;         // a boolean representing the idle mode of the RTU
+#ifdef RTU_ENET
+String RTUID = "RTU001";             // This RTUs Unique ID Number - unique across site
+#endif
+#ifdef RTU_USB
+String RTUID = "RTU101";             // This RTUs Unique ID Number - unique across site
+#endif
+#ifdef RTU_ESP
+String RTUID = "RTU301";             // This RTUs Unique ID Number - unique across site
+#endif
+#ifdef RTU_UNO
+String RTUID = "RTU201";             // This RTUs Unique ID Number - unique across site
+#endif
+idle_mode = false;         // a boolean representing the idle mode of the RTU
 boolean metric = true;             // should values be returned in metric or US customary units
 String inputString = "";           // A string to hold incoming data
 String inputCommand = "";          // A string to hold the command
@@ -243,18 +340,32 @@ void writeLine(String response, boolean EOL) {
   for (int i = 0; i < response.length(); i++)
     {
     inChar = (char)response.charAt(i);
-#ifndef RTU_USB
+#ifdef RTU_ENET
     rtuServer.write(inChar);
-#else
+#endif
+    #ifdef RTU_ESP
+    rtuServer.write(inChar);
+#endif
+#ifdef RTU_USB
+    Serial.write(inChar);
+#endif
+    #ifdef RTU_UNO
     Serial.write(inChar);
 #endif
     }
   if ((String)inChar != "\n") {
     if (EOL) {
-#ifndef RTU_USB
-      rtuServer.write("\r\n");
-#else
-      Serial.write("\r\n");
+#ifdef RTU_ENET
+    rtuServer.write(inChar);
+#endif
+    #ifdef RTU_ESP
+    rtuServer.write(inChar);
+#endif
+#ifdef RTU_USB
+    Serial.write(inChar);
+#endif
+    #ifdef RTU_UNO
+    Serial.write(inChar);
 #endif
     }
   }
@@ -363,6 +474,9 @@ float readThermistorTemp(int iDevice) {
 #ifdef RTU_USB
 String getCommand() {
 #endif
+#ifdef RTU_UNO
+String getCommand() {
+#endif
 #ifdef RTU_ENET
 String getCommand(EthernetClient client) {
 #endif
@@ -378,7 +492,16 @@ String getCommand(WiFiClient client) {
 #ifdef RTU_USB
   while ((Serial.available() > 0) && (stringComplete == false)) {
     inChar = (char)Serial.read();  // read the bytes incoming from the client:
-#else
+#endif
+#ifdef RTU_UNO
+  while ((Serial.available() > 0) && (stringComplete == false)) {
+    inChar = (char)Serial.read();  // read the bytes incoming from the client:
+#endif
+#ifdef RTU_ENET    
+  while ((client.available() > 0) && (stringComplete == false)) {
+    inChar = (char)client.read();  // read the bytes incoming from the client:
+#endif
+#ifdef RTU_ENET    
   while ((client.available() > 0) && (stringComplete == false)) {
     inChar = (char)client.read();  // read the bytes incoming from the client:
 #endif
@@ -456,6 +579,9 @@ String getStatus() {
   Serial.println(retval);
   
 #ifdef RTU_USB
+  retval = retval + "Connected on USB\r\n";
+#endif
+#ifdef RTU_UNO
   retval = retval + "Connected on USB\r\n";
 #endif
 #ifdef RTU_ENET
@@ -588,7 +714,18 @@ void loop() {
 #ifdef RTU_USB
   if (Serial.available()) {
     inputString = getCommand();
-#else   // RTU_ENET or RTU_ESP
+#endif
+#ifdef RTU_UNO
+  if (Serial.available()) {
+    inputString = getCommand();
+#endif
+#ifdef RTU_ENET
+  // Wait for a new client to connect
+  client = rtuServer.available();
+  if (client) {
+    inputString = getCommand(client);
+#endif
+#ifdef RTU_ESP
   // Wait for a new client to connect
   client = rtuServer.available();
   if (client) {
@@ -674,7 +811,10 @@ void loop() {
 
       String response = buildResponse();
       writeLine(response, true);
-#ifndef RTU_USB   // i.e. RTU_ENET or RTU_ESP
+#ifdef RTU_ENET
+      client.stop();
+#endif
+#ifdef RTU_ESP
       client.stop();
 #endif
     }
