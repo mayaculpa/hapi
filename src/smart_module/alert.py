@@ -22,24 +22,18 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-# Attention: a lot of these comments should be deleted!
-
-# BOBP system modules first, then third-libs and local modules
 from __future__ import print_function
 import sys
 import datetime
 import logging
 import sqlite3
 
-# We should consider a way to handle those variable. Loading them on each module doesn't seem
-# like a good idea
-# BOBP - constants with all CAPS
 VERSION = "3.0 Alpha"
 SM_LOGGER = "smart_module"
-HAPI_DATABASE = "hapi_core.db"
 
-# Not sure...
 def trim(docstring):
+    """Trim docstring."""
+    # Not sure...
     if not docstring:
         return ''
     # Convert tabs to spaces (following the normal Python rules)
@@ -64,92 +58,108 @@ def trim(docstring):
     # Return a single string:
     return '\n'.join(trimmed)
 
+class DatabaseConn(object):
+    """Hold necessary information to connect and perform operations on SQLite3 database."""
+    def __init__(self, connect=False, dbfile="hapi_core.db"):
+        """Create object to hold and connect to SQLite3."""
+        self.dbfile = dbfile
+        self.connection = None
+        self.cursor = None
+        self.log = logging.getLogger(SM_LOGGER)
+        if connect:
+            self.connect()
+
+    def connect(self):
+        """Connect to the SQLite3 database and initialize cursor."""
+        try:
+            self.connection = sqlite3.connect(self.dbfile)
+            self.cursor = self.connection.cursor()
+        except Exception, excpt:
+            self.log.exception("Error connection to database: %s", excpt)
+
+    def __del__(self):
+        """Close SQLite3 database connection."""
+        try:
+            self.connection.close()
+            self.log.info("Database connection closed.")
+        except Exception, excpt:
+            self.log.exception("Error trying to close db connection: %s", excpt)
+
 class Alert(object):
-    def __init__(self):
-        self.id = -1
+    def __init__(self, asset_id):
+        self.id = asset_id
         self.lower_threshold = 0.0
         self.upper_threshold = 0.0
+        self.current = 0.0
         self.message = ""
         self.response_type = ""
+        self.log = logging.getLogger(SM_LOGGER)
 
-    # See if it's necessary to change the parameters
-    # I believe we should receive a copy of Asset and the sm name
-    def check_alert(self, asset_id, asset_value):
-        #alert_params = self.get_alert_params()
-        logging.getLogger(SM_LOGGER).info("Checking asset for alert conditions: %s :: %s",
-                                          asset_id, asset_value)
-        # Consider a better approach for the following code
-        try:
-            for ap in alert_params:
-                if ap.asset_id == asset_id:
-                    try:
-                        # timestamp not in use? Why
-                        # timestamp = datetime.datetime.now()
-                        # asset is define in smart_module.py
-                        # fix it
-                        print(asset.name, 'is', asset.value)
-                        print('Lower Threshold is', ap.lower_threshold)
-                        print('Upper Threshold is', ap.upper_threshold)
-                        if not ap.lower_threshold < asset_value < ap.upper_threshold:
-                            logging.getLogger(SM_LOGGER).info("Alert condition detected: %s :: %s",
-                                                              asset_id, asset_value)
-                            # It's not possible to have an object of a class inside its class def
-                            # fix it
-                            alert = Alert()
-                            alert.asset_id = asset_id
-                            alert.value = asset_value
-                            self.log_alert_condition(alert)
-                            self.send_alert_condition(self, alert, ap)
-                    except Exception, excpt:
-                        logging.getLogger(SM_LOGGER).exception("Error getting asset data: %s",
-                                                               excpt)
-        except Exception, excpt:
-            logging.getLogger(SM_LOGGER).exception("Error getting asset data: %s", excpt)
+    def __str__(self):
+        return str([{"id": self.id,
+                     "lower": self.lower_threshold,
+                     "upper": self.upper_threshold,
+                     "current": self.current,
+                     "message": self.message,
+                     "response": self.response_type
+                    }])
 
-    def log_alert_condition(self, alert):
-        try:
-            now = str(datetime.datetime.now())
-            command = '''
-                INSERT INTO alert_log (asset_id, value, timestamp)
-                VALUES (?, ?, ?)
-            ''', (str(alert.id), str(alert.value), now)
-            conn = sqlite3.connect('hapi_history.db')
-            c = conn.cursor()
-            c.execute(*command)
-            conn.commit()
-            conn.close()
-        except Exception, excpt:
-            logging.getLogger(SM_LOGGER).exception("Error logging alert condition: %s", excpt)
+    def check_alert(self, value, sm_name):
+        """Check current value with threshold and send alert if necessary."""
+        self.current = value
+        self.get_alert_params()
+        self.log.info("Checking asset for alert conditions: %s :: %s", self.id, str(self.current))
+        print('Lower Threshold is', self.lower_threshold)
+        print('Upper Threshold is', self.upper_threshold)
+        if not self.lower_threshold < value < self.upper_threshold:
+            self.log.info("Alert condition detected: %s :: %s", self.id, str(self.current))
+            self.log_alert_condition()
+            self.send_alert_condition(sm_name)
 
-    # Not sure how we'll handle SMS alert notifications
-    def send_alert_condition(self, alert, alert_param):
-        try:
-            if alert_param.response_type.lower() == "sms":
-                # Attention it gets information from smart module class, such as name
-                message = '''
-                    Alert from {name}: {id}
-                    {message}
-                    Value: {value}
-                    Timestamp: "{now}"
-                '''.format(
-                    name=self.name,
-                    id=alert.asset_id,
-                    message=alert_param.message,
-                    value=alert.value,
-                    now=datetime.datetime.now(),
-                )
-                message = trim(message) + '\n'
-                message = message.replace('\n', '\r\n')  #??? ugly! necessary? write place?
-                # if (self.twilio_acct_sid is not "") and (self.twilio_auth_token is not ""):
-                # client = TwilioRestClient(self.twilio_acct_sid, self.twilio_auth_token)
-                # client.messages.create(to="+receiving number", from_="+sending number",
-                #                        body=message)
-                logging.getLogger(SM_LOGGER).info("Alert condition sent.")
-        except Exception, excpt:
-            print('Error sending alert condition.', excpt)
+    def log_alert_condition(self):
+        """Update database alert log."""
+        now = str(datetime.datetime.now())
+        command = '''
+            INSERT INTO alert_log (asset_id, value, timestamp)
+            VALUES (?, ?, ?)
+        ''', (str(self.id), str(self.current), now)
+        db = DatabaseConn(connect=True, dbfile="hapi_history.db")
+        db.cursor.execute(*command)
+        db.connection.commit()
+
+    def send_alert_condition(self, sm_name):
+        """Send alert according to 'self.response_type'."""
+        message = '''
+            Alert from {name}: {id}
+            {message}
+            Value: {value}
+            Timestamp: "{now}"
+        '''.format(
+            name=str(sm_name),
+            id=self.id,
+            message=self.message,
+            value=self.current,
+            now=datetime.datetime.now(),
+        )
+        if self.response_type.lower() == "sms":
+            # message = trim(message) + '\n'
+            # message = message.replace('\n', '\r\n')  #??? ugly! necessary? write place?
+            # if (self.twilio_acct_sid is not "") and (self.twilio_auth_token is not ""):
+            # client = TwilioRestClient(self.twilio_acct_sid, self.twilio_auth_token)
+            # client.messages.create(to="+receiving number", from_="+sending number",
+            #                        body=message)
+            print("sms sent (testing): ", trim(message))
+            pass
+
+        if self.response_type.lower() == "email":
+            print("email sent (testing): ", trim(message))
+            pass
+
+        self.log.info("Alert condition sent.")
 
     def get_alert_params(self):
-        ''' Update the object to hold its alert information '''
+        """Update the object to hold its alert information."""
+        self.log.info("Fetching alert parameters.")
         field_names = '''
             asset_id
             lower_threshold
@@ -157,18 +167,21 @@ class Alert(object):
             message
             response_type
         '''.split()
-        try:
-            conn = sqlite3.connect(HAPI_DATABASE)
-            c = conn.cursor()
-            # Isn't this confusing? Using the field name for a variable called field_names?
-            sql = 'SELECT {field_names} FROM alert_params WHERE asset_id={asset};'.format(
-                field_names=', '.join(field_names), asset=self.id)
-            row = c.execute(sql)
-            for field_name, field_value in zip(field_names, row):
-                # Not sure if this will work
-                setattr(self, field_name, field_value)
-            self.lower_threshold = float(self.lower_threshold)
-            self.upper_threshold = float(self.upper_threshold)
-            conn.close()
-        except Exception, excpt:
-            logging.getLogger(SM_LOGGER).exception("Error getting alert parameters: %s", excpt)
+        # Isn't this confusing? Using the field name for a variable called field_names?
+        sql = 'SELECT {field_names} FROM alert_params WHERE asset_id={asset};'.format(
+            field_names=', '.join(field_names), asset=self.id)
+        database = DatabaseConn(connect=True)
+        row = database.cursor.execute(sql)
+        row = database.cursor.fetchone()
+        self.id, self.lower_threshold, self.upper_threshold, self.message, self.response_type = row
+        #print(database.cursor.fetchone())
+        # for field_name, field_value in zip(field_names, row):
+        #     print(field_name, field_value)
+        #     setattr(self, field_name, field_value)
+        self.lower_threshold = float(self.lower_threshold)
+        self.upper_threshold = float(self.upper_threshold)
+
+if __name__ == "__main__":
+    alert = Alert(1)
+    alert.check_alert(20, "testing")
+    print(alert)
