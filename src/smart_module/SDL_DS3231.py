@@ -39,7 +39,8 @@ import smbus
 def _bcd_to_int(bcd, n=2):
     """Decode n least significant packed binary coded decimal digits to binary.
     Return binary result.
-    n defaults to 2 (BCD digits)."""
+    n defaults to 2 (BCD digits).
+    n=0 decodes all digits."""
     return int(('%x' % bcd)[-n:])
 
 
@@ -56,17 +57,45 @@ def _bcd_to_int(bcd, n=2):
     return x
 
 
-def _int_to_bcd(n):
-    """Encode a one or two digits number to the BCD.
+def _int_to_bcd(x, n=2):
     """
+    Encode the n least significant decimal digits of x
+    to packed binary coded decimal (BCD).
+    Return BCD value.
+    n defaults to 2 (digits).
+    n=0 encodes all digits.
+    """
+
+    return int(('%d' % x)[-n:], 0x10)
+
+
+def _int_to_bcd(x, n=2):
+    """
+    Encode the n least significant decimal digits of x
+    to packed binary coded decimal (BCD).
+    Return BCD value.
+    n defaults to 2 (digits).
+    n=0 encodes all digits.
+    """
+
+    return int(str(x)[-n:], 0x10)
+
+
+def _int_to_bcd(x, n=2):
+    """
+    Encode the n least significant decimal digits of x
+    to packed binary coded decimal (BCD).
+    Return BCD value.
+    n defaults to 2 (digits).
+    """
+
     bcd = 0
-    for i in (n // 10, n % 10):
-        for p in (8, 4, 2, 1):
-            if i >= p:
-                bcd += 1
-                i -= p
-            bcd <<= 1
-    return bcd >> 1
+    m = 1
+    for _ in range(n):
+        x, digit = divmod(x, 10)
+        bcd += m * digit
+        m *= 0x10
+    return bcd
 
 
 class SDL_DS3231():
