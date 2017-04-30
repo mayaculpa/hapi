@@ -44,39 +44,10 @@ import logging
 from influxdb import InfluxDBClient
 from status import SystemStatus
 import asset_interface
+from alert import Alert
+from utilities import *
 
 reload(sys)
-version = "3.0 Alpha"
-sm_logger = "smart_module"
-
-SECONDS_PER_MINUTE = 60
-MINUTES_PER_HOUR = 60
-
-# from PEP 257:
-def trim(docstring):
-    if not docstring:
-        return ''
-    # Convert tabs to spaces (following the normal Python rules)
-    # and split into a list of lines:
-    lines = docstring.expandtabs().splitlines()
-    # Determine minimum indentation (first line doesn't count):
-    indent = sys.maxint
-    for line in lines[1:]:
-        stripped = line.lstrip()
-        if stripped:
-            indent = min(indent, len(line) - len(stripped))
-    # Remove indentation (first line is special):
-    trimmed = [lines[0].strip()]
-    if indent < sys.maxint:
-        for line in lines[1:]:
-            trimmed.append(line[indent:].rstrip())
-    # Strip off trailing and leading blank lines:
-    while trimmed and not trimmed[-1]:
-        trimmed.pop()
-    while trimmed and not trimmed[0]:
-        trimmed.pop(0)
-    # Return a single string:
-    return '\n'.join(trimmed)
 
 class Asset(object):
     def __init__(self):
@@ -90,11 +61,6 @@ class Asset(object):
         self.enabled = True
         self.value = None
 
-class Alert(object):
-    def __init__(self):
-        self.id = -1
-        self.value = 0.0
-
 class AssetInterface(object):
     def __init__(self, asset_type):
         # determine the correct asset library and import it
@@ -102,14 +68,6 @@ class AssetInterface(object):
 
     def read_value():
         return AssetImpl().read_value()
-
-class AlertParam(object):
-    def __init__(self):
-        self.id = -1
-        self.lower_threshold = 0.0
-        self.upper_threshold = 0.0
-        self.message = ""
-        self.response_type = "sms"
 
 class SmartModule(object):
     """Represents a HAPI Smart Module (Implementation).
@@ -125,7 +83,7 @@ class SmartModule(object):
     """
 
     def __init__(self):
-        logging.getLogger(sm_logger).info("Smart Module Initializing.")
+        #logging.getLogger(SM_LOGGER).info("Smart Module Initializing.")
         self.comm = communicator.Communicator()
         self.data_sync = DataSync()
         self.comm.smart_module = self
@@ -145,12 +103,14 @@ class SmartModule(object):
         self.scheduler = None
         self.hostname = ""
         self.lastStatus = ""
-        # Testing. Maybe store it on db as well.
-        self.influxhost = {"host": "138.197.74.74", "port": 8086, "user": "early", "pass": "adopter"}
-        logging.getLogger(sm_logger).info("Smart Module initialization complete.")
+        self.influxhost = {"host": "138.197.74.74", "port": 8086, "user": "early",
+                           "pass": "adopter"}
+        self.dbconn = DatabaseConn(connect=True)
+        self.log = logging.getLogger(SM_LOGGER)
+        #logging.getLogger(SM_LOGGER).info("Smart Module initialization complete.")
 
     def discover(self):
-        logging.getLogger(sm_logger).info("Performing Discovery...")
+        self.log.info("Performing Discovery...")
         subprocess.call("sudo ./host-hapi.sh", shell=True)
         self.comm.smart_module = self
         self.comm.client.loop_start()
@@ -172,7 +132,7 @@ class SmartModule(object):
         if not self.comm.scheduler_found:
             # Loading scheduled jobs
             try:
-                logging.getLogger(sm_logger).info("No Scheduler found. Becoming the Scheduler.")
+                self.log.info("No Scheduler found. Becoming the Scheduler.")
                 self.scheduler = Scheduler()
                 self.scheduler.smart_module = self
                 # running is always True after object creation. Should we remove it?
@@ -184,9 +144,9 @@ class SmartModule(object):
                 self.comm.subscribe("STATUS/RESPONSE")
                 self.comm.send("SCHEDULER/RESPONSE", socket.gethostname() + ".local")
                 self.comm.send("ANNOUNCE", socket.gethostname() + ".local is running the Scheduler.")
-                logging.getLogger(sm_logger).info("Scheduler program loaded.")
+                self.log.info("Scheduler program loaded.")
             except Exception, excpt:
-                logging.getLogger(sm_logger).exception("Error initializing scheduler. %s", excpt)
+                self.log.exception("Error initializing scheduler. %s", excpt)
 
     def load_site_data(self):
         field_names = '''
@@ -203,25 +163,23 @@ class SmartModule(object):
             twilio_auth_token
         '''.split()
         try:
-            conn = sqlite3.connect('hapi_core.db')
-            c = conn.cursor()
+            #conn = sqlite3.connect('hapi_core.db')
+            #c = conn.cursor()
             sql = 'SELECT {field_names} FROM site LIMIT 1;'.format(
                 field_names=', '.join(field_names))
-            db_elements = c.execute(sql)
+            db_elements = self.dbconn.cursor.execute(sql)
             for row in db_elements:
                 for field_name, field_value in zip(field_names, row):
                     setattr(self, field_name, field_value)
-            conn.close()
-            logging.getLogger(sm_logger).info("Site data loaded.")
+            self.log.info("Site data loaded.")
         except Exception, excpt:
-            logging.getLogger(sm_logger).exception("Error loading site data: %s", excpt)
+            self.log.exception("Error loading site data: %s", excpt)
 
     def connect_influx(self, asset_context):
-        """ Connect to InfluxDB server and searches for the database
-            in 'asset_context'.
-            Return the connection to the database.
-        """
-        influxcon = InfluxDBClient(self.influxhost["host"], self.influxhost["port"], \
+        """Connect to InfluxDB server and searches for the database in 'asset_context'.
+           Return the connection to the database or create it if necessary."""
+
+        influxcon = InfluxDBClient(self.influxhost["host"], self.influxhost["port"],
                                    self.influxhost["user"], self.influxhost["pass"])
         databases = influxcon.get_list_database()
         found = False
@@ -232,18 +190,14 @@ class SmartModule(object):
         if found is False:
             influxcon.query("CREATE DATABASE {0}".format('"' + asset_context + '"'))
 
-        influxcon = InfluxDBClient(self.influxhost["host"], self.influxhost["port"], \
+        influxcon = InfluxDBClient(self.influxhost["host"], self.influxhost["port"],
                                    self.influxhost["user"], self.influxhost["pass"], asset_context)
         return influxcon
 
     def push_sysinfo(self, asset_context, information):
-        """ Push System Status information to InfluxDB server
-            'information' will hold the JSON output of SystemStatus
-        """
-        # This is the same as push_data()
-        # I've tried to use a not OO apprach above -> connect_influx()
-        timestamp = datetime.datetime.now() # Get timestamp
-        #conn = self.connect_influx('138.197.74.74', 8086, 'early', 'adopter', asset_context)
+        """Push System Status (stats) information to InfluxDB server."""
+        # We should consider, somehow, a better approach
+        timestamp = datetime.datetime.now()
         conn = self.connect_influx(asset_context)
         cpuinfo = [{"measurement": "cpu",
                     "tags": {
@@ -314,64 +268,38 @@ class SmartModule(object):
         conn.write_points(json)
 
     def get_status(self, brokerconnections):
+        """Fetch system information (stats) and return a list with a single dictionary (JSON)."""
         try:
             sysinfo = SystemStatus(update=True)
             sysinfo.clients = brokerconnections
             return sysinfo
         except Exception, excpt:
-            logging.getLogger(sm_logger).exception("Error getting System Status: %s", excpt)
+            self.log.exception("Error getting System Status: %s", excpt)
 
-    # Will be called by the Scheduler to ask for System Status information
     def on_query_status(self):
+        """It'll be called by the Scheduler to ask for System Status information."""
         self.comm.send("STATUS/QUERY", "I might need to know how you are!")
 
     def get_asset_data(self):
         value = ""
         try:
             #ai = asset_interface.AssetInterface(self.asset.type)
+            # Is this line correct? It needs a parameter
             ai = asset_interface.AssetInterface()
             value = str(ai.read_value())
             self.push_data(self.asset.name, self.asset.context, value, self.asset.unit)
             self.comm.send("RESPONSE/ASSET/" + self.asset.name, value)
         except Exception, excpt:
-            logging.getLogger(sm_logger).exception("Error getting asset data: %s", excpt)
+            self.log.exception("Error getting asset data: %s", excpt)
 
         return value
-
-    def check_alert(self, asset_id, asset_value):
-        alert_params = self.get_alert_params()
-        logging.getLogger(sm_logger).info(
-            "Checking asset for alert conditions: %s :: %s",
-            asset_id, asset_value)
-        try:
-            for alert_param in alert_params:
-                if alert_param.asset_id == asset_id:
-                    try:
-                        timestamp = datetime.datetime.now()
-                        print(asset.name, 'is', asset.value)
-                        print('Lower Threshold is', alert_param.lower_threshold)
-                        print('Upper Threshold is', alert_param.upper_threshold)
-                        if not (alert_param.lower_threshold < asset_value < alert_param.upper_threshold):
-                            logging.getLogger(sm_logger).info(
-                                "Alert condition detected: %s :: %s",
-                                asset_id, asset_value)
-                            alert = Alert()
-                            alert.asset_id = asset_id
-                            alert.value = asset_value
-                            self.log_alert_condition(alert)
-                            self.send_alert_condition(self, alert, alert_param)
-                    except Exception, excpt:
-                        logging.getLogger(sm_logger).exception("Error getting asset data: %s", excpt)
-
-        except Exception, excpt:
-            logging.getLogger(sm_logger).exception("Error getting asset data: %s", excpt)
 
     def log_sensor_data(self, data, virtual):
         if not virtual:
             try:
                 self.push_data(self.asset.name, self.asset.context, value, asset.unit)
             except Exception, excpt:
-                logging.getLogger(sm_logger).exception("Error logging sensor data: %s", excpt)
+                self.log.exception("Error logging sensor data: %s", excpt)
         else:
             # For virtual assets, assume that the data is already parsed JSON
             unit_symbol = {
@@ -385,7 +313,7 @@ class SmartModule(object):
                     self.push_data(factor, "Environment", value, unit_symbol[factor])
 
             except Exception, excpt:
-                logging.getLogger(sm_logger).exception("Error logging sensor data: %s", excpt)
+                self.log.exception("Error logging sensor data: %s", excpt)
 
     def push_data(self, asset_name, asset_context, value, unit):
         try:
@@ -406,9 +334,9 @@ class SmartModule(object):
             ]
             conn.write_points(json_body)
             print(json_body)
-            logging.getLogger(sm_logger).info("Wrote to analytic database: %s", json_body)
+            self.log.info("Wrote to analytic database: %s", json_body)
         except Exception, excpt:
-            logging.getLogger(sm_logger).exception('Error writing to analytic database: %s', excpt)
+            self.log.exception('Error writing to analytic database: %s', excpt)
 
     def get_weather(self):
         response = ""
@@ -429,6 +357,7 @@ class SmartModule(object):
             f.close()
         except Exception, excpt:
             print('Error getting weather data.', excpt)
+            self.log.exception('Error getting weather data: %s', excpt)
         return response
 
     def log_command(self, job, result):
@@ -438,82 +367,14 @@ class SmartModule(object):
                 INSERT INTO command_log (timestamp, command, result)
                 VALUES (?, ?, ?)
             ''', (now, job.name, result)
-            logging.getLogger(sm_logger).info("Executed %s", job.name)
+            self.log.info("Executed %s", job.name)
             conn = sqlite3.connect('hapi_history.db')
             c = conn.cursor()
             c.execute(*command)
             conn.commit()
             conn.close()
         except Exception, excpt:
-            logging.getLogger(sm_logger).exception("Error logging command: %s", excpt)
-
-    def log_alert_condition(self, alert):
-        try:
-            now = str(datetime.datetime.now())
-            command = '''
-                INSERT INTO alert_log (asset_id, value, timestamp)
-                VALUES (?, ?, ?)
-            ''', (str(alert.id), str(alert.value), now)
-            conn = sqlite3.connect('hapi_history.db')
-            c = conn.cursor()
-            c.execute(*command)
-            conn.commit()
-            conn.close()
-        except Exception, excpt:
-            logging.getLogger(sm_logger).exception("Error logging alert condition: %s", excpt)
-
-    def send_alert_condition(self, alert, alert_param):
-        try:
-            if alert_param.response_type.lower() == "sms":
-                message = '''
-                    Alert from {name}: {id}
-                    {message}
-                      Value: {value}
-                      Timestamp: "{now}"
-                '''.format(
-                    name=self.name,
-                    id=alert.asset_id,
-                    message=alert_param.message,
-                    value=alert.value,
-                    now=datetime.datetime.now(),
-                )
-                message = trim(message) + '\n'
-                message = message.replace('\n', '\r\n')  #??? ugly! necessary? write place?
-                # if (self.twilio_acct_sid is not "") and (self.twilio_auth_token is not ""):
-                # client = TwilioRestClient(self.twilio_acct_sid, self.twilio_auth_token)
-                # client.messages.create(to="+receiving number", from_="+sending number", body=message, )
-                logging.getLogger(sm_logger).info("Alert condition sent.")
-
-        except Exception, excpt:
-            print('Error sending alert condition.', excpt)
-
-    def get_alert_params(self):
-        alert_params = []
-        field_names = '''
-            asset_id
-            lower_threshold
-            upper_threshold
-            message
-            response_type
-        '''.split()
-        try:
-            conn = sqlite3.connect('hapi_core.db')
-            c = conn.cursor()
-            sql = 'SELECT {field_names} FROM alert_params;'.format(
-                field_names=', '.join(field_names))
-            rows = c.execute(sql)
-            for row in rows:
-                alert_param = AlertParam()
-                for field_name, field_value in zip(field_names, row):
-                    setattr(alert_param, field_name, field_value)
-                alert_param.lower_threshold = float(alert_param.lower_threshold)
-                alert_param.upper_threshold = float(alert_param.upper_threshold)
-                alert_params.append(alert_param)
-            conn.close()
-        except Exception, excpt:
-            logging.getLogger(sm_logger).exception("Error getting alert parameters: %s", excpt)
-
-        return alert_params
+            self.log.exception("Error logging command: %s", excpt)
 
     def get_env(self):
         now = datetime.datetime.now()
@@ -549,13 +410,15 @@ class SmartModule(object):
         try:
             self.comm.send("ENV/RESPONSE", s)
         except Exception, excpt:
-            logging.getLogger(sm_logger).exception("Error getting environment data: %s", excpt)
+            self.log.exception("Error getting environment data: %s", excpt)
 
 class Scheduler(object):
     def __init__(self):
         self.running = True
         self.smart_module = None
         self.processes = []
+        self.dbconn = DatabaseConn(connect=True)
+        self.log = logging.getLogger(SM_LOGGER)
 
     class Job(object):
         def __init__(self):
@@ -591,7 +454,7 @@ class Scheduler(object):
 
     def load_schedule(self):
         jobs = []
-        logging.getLogger(sm_logger).info("Loading Schedule Data...")
+        self.log.info("Loading Schedule Data...")
         field_names = '''
             id
             name
@@ -605,21 +468,19 @@ class Scheduler(object):
             virtual
         '''.split()
         try:
-            conn = sqlite3.connect('hapi_core.db')
-            c = conn.cursor()
-
+            #conn = sqlite3.connect('hapi_core.db')
+            #c = conn.cursor()
             sql = 'SELECT {field_names} FROM schedule;'.format(
                 field_names=', '.join(field_names))
-            db_jobs = c.execute(sql)
+            db_jobs = self.dbconn.cursor.execute(sql)
             for row in db_jobs:
                 job = Scheduler.Job()
                 for field_name, field_value in zip(field_names, row):
                     setattr(job, field_name, field_value)
                 jobs.append(job)
-            conn.close()
-            logging.getLogger(sm_logger).info("Schedule Data Loaded.")
+            self.log.info("Schedule Data Loaded.")
         except Exception, excpt:
-            logging.getLogger(sm_logger).exception("Error loading schedule. %s", excpt)
+            self.log.exception("Error loading schedule. %s", excpt)
 
         return jobs
 
@@ -628,36 +489,36 @@ class Scheduler(object):
             if job.time_unit.lower() == "month":
                 if job.interval > -1:
                     #schedule.every(job.interval).months.do(self.run_job, job)
-                    logging.getLogger(sm_logger).info("  Loading monthly job: " + job.name)
+                    self.log.info("  Loading monthly job: " + job.name)
             elif job.time_unit.lower() == "week":
                 if job.interval > -1:
                     schedule.every(job.interval).weeks.do(self.run_job, job)
-                    logging.getLogger(sm_logger).info("  Loading weekly job: " + job.name)
+                    self.log.info("  Loading weekly job: " + job.name)
             elif job.time_unit.lower() == "day":
                 if job.interval > -1:
                     schedule.every(job.interval).days.do(self.run_job, job)
-                    logging.getLogger(sm_logger).info("  Loading daily job: " + job.name)
+                    self.log.info("  Loading daily job: " + job.name)
                 else:
                     schedule.every().day.at(job.at_time).do(self.run_job, job)
-                    logging.getLogger(sm_logger).info("  Loading time-based job: " + job.name)
+                    self.log.info("  Loading time-based job: " + job.name)
             elif job.time_unit.lower() == "hour":
                 if job.interval > -1:
                     schedule.every(job.interval).hours.do(self.run_job, job)
-                    logging.getLogger(sm_logger).info("  Loading hourly job: " + job.name)
+                    self.log.info("  Loading hourly job: " + job.name)
             elif job.time_unit.lower() == "minute":
                 if job.interval > -1:
                     schedule.every(job.interval).minutes.do(self.run_job, job)
-                    logging.getLogger(sm_logger).info("  Loading minutes job: " + job.name)
+                    self.log.info("  Loading minutes job: " + job.name)
                 else:
                     schedule.every().minute.do(self.run_job, job)
-                    logging.getLogger(sm_logger).info("  Loading minute job: " + job.name)
+                    self.log.info("  Loading minute job: " + job.name)
             elif job.time_unit.lower() == "second":
                 if job.interval > -1:
                     schedule.every(job.interval).seconds.do(self.run_job, job)
-                    logging.getLogger(sm_logger).info("  Loading seconds job: " + job.name)
+                    self.log.info("  Loading seconds job: " + job.name)
                 else:
                     schedule.every().second.do(self.run_job, job)
-                    logging.getLogger(sm_logger).info("  Loading second job: " + job.name)
+                    self.log.info("  Loading second job: " + job.name)
 
     def run_job(self, job):
         if not self.running or not job.enabled:
@@ -675,24 +536,23 @@ class Scheduler(object):
                 response = eval(job.command)
                 self.smart_module.log_sensor_data(response, True)
             except Exception, excpt:
-                logging.getLogger(sm_logger).exception("Error running job. %s", excpt)
+                self.log.exception("Error running job. %s", excpt)
         else:
             try:
                 if job.sequence != "":
                     print('Running sequence', job.sequence)
-                    conn = sqlite3.connect('hapi_core.db')
-                    c = conn.cursor()
+                    #conn = sqlite3.connect('hapi_core.db')
+                    #c = conn.cursor()
                     command = '''
                         SELECT name, command, step_name, timeout
                         FROM sequence
                         WHERE name=?
                         ORDER BY step ;
                     ''', (job.sequence,)
-                    seq_jobs = c.execute(*command)
+                    seq_jobs = self.dbconn.cursor.execute(*command)
                     #print('len(seq_jobs) =', len(seq_jobs))
                     p = Process(target=self.process_sequence, args=(seq_jobs, job, job_rtu, seq_result,))
                     p.start()
-                    conn.close()
                 else:
                     print('Running command', job.command)
                     # Check pre-defined jobs
@@ -711,7 +571,7 @@ class Scheduler(object):
                     #self.log_command(job, "")
 
             except Exception, excpt:
-                logging.getLogger(sm_logger).exception('Error running job: %s', excpt)
+                self.log.exception('Error running job: %s', excpt)
 
 class DataSync(object):
     @staticmethod
@@ -725,10 +585,10 @@ class DataSync(object):
             for element in data:
                 version = element[0]
             conn.close()
-            logging.getLogger(sm_logger).info("Read database version: %s", version)
+            logging.getLogger(SM_LOGGER).info("Read database version: %s", version)
             return version
         except Exception, excpt:
-            logging.getLogger(sm_logger).info("Error reading database version: %s", excpt)
+            logging.getLogger(SM_LOGGER).info("Error reading database version: %s", excpt)
 
     @staticmethod
     def write_db_version():
@@ -740,9 +600,9 @@ class DataSync(object):
             c.execute(*command)
             conn.commit()
             conn.close()
-            logging.getLogger(sm_logger).info("Wrote database version: %s", version)
+            logging.getLogger(SM_LOGGER).info("Wrote database version: %s", version)
         except Exception, excpt:
-            logging.getLogger(sm_logger).info("Error writing database version: %s", excpt)
+            logging.getLogger(SM_LOGGER).info("Error writing database version: %s", excpt)
 
     @staticmethod
     def publish_core_db(comm):
@@ -754,9 +614,9 @@ class DataSync(object):
             comm.unsubscribe("SYNCHRONIZE/DATA")
             comm.send("SYNCHRONIZE/DATA", byteArray)
             #comm.subscribe("SYNCHRONIZE/DATA")
-            logging.getLogger(sm_logger).info("Published database.")
+            logging.getLogger(SM_LOGGER).info("Published database.")
         except Exception, excpt:
-            logging.getLogger(sm_logger).info("Error publishing database: %s", excpt)
+            logging.getLogger(SM_LOGGER).info("Error publishing database: %s", excpt)
 
     def synchronize_core_db(self, data):
         try:
@@ -765,16 +625,16 @@ class DataSync(object):
 
             subprocess.call('sqlite3 -init incoming.sql hapi_new.db ""', shell=True)
 
-            logging.getLogger(sm_logger).info("Synchronized database.")
+            logging.getLogger(SM_LOGGER).info("Synchronized database.")
         except Exception, excpt:
-            logging.getLogger(sm_logger).info("Error synchronizing database: %s", excpt)
+            logging.getLogger(SM_LOGGER).info("Error synchronizing database: %s", excpt)
 
 def main():
     #max_log_size = 1000000
 
     # Setup Logging
     logger_level = logging.DEBUG
-    logger = logging.getLogger(sm_logger)
+    logger = logging.getLogger(SM_LOGGER)
     logger.setLevel(logger_level)
 
     # create logging file handler
