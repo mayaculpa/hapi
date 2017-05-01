@@ -50,13 +50,11 @@ class AssetImpl(object):
 
     def read_temp_raw(self):
         try:
-            catdata = subprocess.Popen(
-                ['cat', self.device_path],
-                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            out, err = catdata.communicate()
-            out_decode = out.decode('utf-8')
-            lines = out_decode.split('\n')
-            return lines
+            lines = ""
+            with open(self.device_path, "r") as tempfile:
+                for line in tempfile:
+                    lines = lines + line.decode("utf-8")
+            return lines.split("\n")
         except Exception, excpt:
             logging.getLogger(sm_logger).exception("Error reading raw temperature data: %s", excpt)
 
