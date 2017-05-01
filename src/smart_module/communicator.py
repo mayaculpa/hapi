@@ -37,7 +37,7 @@ class Communicator(object):
         self.fallback_broker = ""
         self.influx_address = ""
         self.start_uptime = datetime.datetime.now()
-        self.client = mqtt.Client(clean_session=True, userdata=None, protocol=mqtt.MQTTv31)
+        self.client = mqtt.Client(clean_session=True, userdata=None, protocol=mqtt.MQTTv311)
         self.client.on_connect = self.on_connect
         self.client.on_message = self.on_message
         self.client.on_disconnect = self.on_disconnect
@@ -51,9 +51,7 @@ class Communicator(object):
     def connect(self):
         try:
             self.logger.info("Connecting to " + self.broker_name)
-            self.client.connect("mqttbroker.local", 1883, 5)
-            # Probably testing code?
-            #self.send("ANNOUNCE", "neuromancer.local" + " is online.")
+            self.client.connect(host="mqttbroker.local", port=1883, keepalive=60)
         except Exception, excpt:
             self.logger.exception("Error connecting to broker. %s", excpt)
 
@@ -105,7 +103,6 @@ class Communicator(object):
                 self.smart_module.push_data(self.smart_module.asset.name,
                                             self.smart_module.asset.context,
                                             value, self.smart_module.asset.unit)
-                #print('Asset = ', asset_id, asset_value)
 
         elif "STATUS/QUERY" in msg.topic:
             self.smart_module.last_status = self.smart_module.get_status(self.broker_connections)

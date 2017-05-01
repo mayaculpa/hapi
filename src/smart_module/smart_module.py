@@ -278,8 +278,6 @@ class SmartModule(object):
 
     def get_asset_data(self):
         try:
-            #ai = asset_interface.AssetInterface("mock")
-            #ai = asset_interface.AssetInterface(self.asset.type)
             self.asset.value = str(self.ai.read_value())
         except Exception, excpt:
             self.log.exception("Error getting asset data: %s", excpt)
