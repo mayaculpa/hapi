@@ -38,8 +38,9 @@ sm_logger = "smart_module"
 class AssetImpl(object):
     def __init__(self):
         try:
-            os.system('modprobe w1-gpio')
-            os.system('modprobe w1-therm')
+            # Let's put it as a config/dep on the image and modprobe'd on boot
+            #os.system('modprobe w1-gpio')
+            #os.system('modprobe w1-therm')
             base_dir = '/sys/bus/w1/devices'
             device_dir = glob.glob(os.path.join(base_dir, '28*'))[0]
             self.device_path = os.path.join(device_dir, 'w1_slave')

@@ -25,10 +25,18 @@ import importlib
 import asset_wt
 
 class AssetInterface(object):
-    # def __init__(self, asset_type):
-    #     # determine the correct asset library and import it
-    #     self.asset_lib = importlib.import_module("asset_" + str(asset_type))
-    #     eval('from "asset_" + str(asset_type) import AssetImpl')
+    def __init__(self, asset_type):
+        """Determine the correct asset library and import it."""
+        self.mock = False
+        if asset_type.lower() == "mock":
+            self.mock = True
+        else:
+            self.asset_lib = importlib.import_module("asset_" + str(asset_type))
+        # Not sure why we should use it?
+        #eval('from "asset_" + str(asset_type) import AssetImpl')
 
     def read_value(self):
+        if self.mock:
+            return 39.0
+
         return asset_wt.AssetImpl().read_value()

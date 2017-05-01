@@ -60,28 +60,26 @@ class Alert(object):
         if not self.lower_threshold <= self.current <= self.upper_threshold:
             self.log.info("Alert condition detected: %s :: %s", self.id, str(self.current))
             self.log_alert_condition()
-            self.send_alert_condition(sm_name)
+            self.send_alert_condition()
 
     def log_alert_condition(self):
         """Update database alert log."""
-        now = str(datetime.datetime.now())
         command = '''
             INSERT INTO alert_log (asset_id, value, timestamp)
             VALUES (?, ?, ?)
-        ''', (str(self.id), str(self.current), now)
+        ''', (int(self.id), self.current, str(datetime.datetime.now()))
         db = DatabaseConn(connect=True, dbfile="hapi_history.db")
         db.cursor.execute(*command)
         db.connection.commit()
 
-    def send_alert_condition(self, sm_name):
+    def send_alert_condition(self):
         """Send alert according to 'self.response_type'."""
         message = '''
-            Alert from {name}: {id}
+            Alert from: {id}
             {message}
             Value: {value}
             Timestamp: "{now}"
         '''.format(
-            name=str(sm_name),
             id=self.id,
             message=self.message,
             value=self.current,
