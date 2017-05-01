@@ -64,11 +64,10 @@ class Alert(object):
 
     def log_alert_condition(self):
         """Update database alert log."""
-        now = str(datetime.datetime.now())
         command = '''
             INSERT INTO alert_log (asset_id, value, timestamp)
             VALUES (?, ?, ?)
-        ''', (str(self.id), str(self.current), now)
+        ''', (int(self.id), self.current, str(datetime.datetime.now()))
         db = DatabaseConn(connect=True, dbfile="hapi_history.db")
         db.cursor.execute(*command)
         db.connection.commit()

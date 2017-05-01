@@ -99,10 +99,12 @@ class SmartModule(object):
         self.scheduler = None
         self.hostname = ""
         self.last_status = ""
-        self.influxhost = {"host": "138.197.74.74", "port": 8086, "user": "early",
-                           "pass": "adopter"}
+        #self.influxhost = {"host": "138.197.74.74", "port": 8086, "user": "early",
+        #                   "pass": "adopter"}
+        self.ifconn = InfluxDBClient("138.197.74.74", 8086, "early", "adopter")
         self.dbconn = DatabaseConn(connect=True)
         self.log = logging.getLogger(SM_LOGGER)
+        self.ai = asset_interface.AssetInterface(self.asset.type)
         #logging.getLogger(SM_LOGGER).info("Smart Module initialization complete.")
 
     def discover(self):
@@ -175,9 +177,7 @@ class SmartModule(object):
     def connect_influx(self, asset_context):
         """Connect to InfluxDB server and searches for the database in 'asset_context'.
            Return the connection to the database or create it if necessary."""
-        influxcon = InfluxDBClient(self.influxhost["host"], self.influxhost["port"],
-                                   self.influxhost["user"], self.influxhost["pass"])
-        databases = influxcon.get_list_database()
+        databases = self.ifconn.get_list_database()
         found = False
         for db in databases:
             if asset_context in db:
@@ -185,11 +185,10 @@ class SmartModule(object):
                 break
 
         if found is False:
-            influxcon.query("CREATE DATABASE {0}".format('"' + asset_context + '"'))
+            self.ifconn.create_database(asset_context)
 
-        influxcon = InfluxDBClient(self.influxhost["host"], self.influxhost["port"],
-                                   self.influxhost["user"], self.influxhost["pass"], asset_context)
-        return influxcon
+        self.ifconn.switch_database(asset_context)
+        return self.ifconn
 
     def push_sysinfo(self, asset_context, information):
         """Push System Status (stats) information to InfluxDB server."""
@@ -284,8 +283,8 @@ class SmartModule(object):
     def get_asset_data(self):
         try:
             #ai = asset_interface.AssetInterface("mock")
-            ai = asset_interface.AssetInterface(self.asset.type)
-            self.asset.value = str(ai.read_value())
+            #ai = asset_interface.AssetInterface(self.asset.type)
+            self.asset.value = str(self.ai.read_value())
         except Exception, excpt:
             self.log.exception("Error getting asset data: %s", excpt)
         return self.asset.value
@@ -329,7 +328,6 @@ class SmartModule(object):
                 }
             ]
             conn.write_points(json_body)
-            print(json_body)
             self.log.info("Wrote to analytic database: %s", json_body)
         except Exception, excpt:
             self.log.exception('Error writing to analytic database: %s', excpt)
@@ -481,40 +479,42 @@ class Scheduler(object):
         return jobs
 
     def prepare_jobs(self, jobs):
+        # It still have space for improvements.
         for job in jobs:
-            if job.time_unit.lower() == "month":
-                if job.interval > -1:
-                    #schedule.every(job.interval).months.do(self.run_job, job)
-                    self.log.info("  Loading monthly job: " + job.name)
-            elif job.time_unit.lower() == "week":
-                if job.interval > -1:
-                    schedule.every(job.interval).weeks.do(self.run_job, job)
-                    self.log.info("  Loading weekly job: " + job.name)
-            elif job.time_unit.lower() == "day":
-                if job.interval > -1:
-                    schedule.every(job.interval).days.do(self.run_job, job)
-                    self.log.info("  Loading daily job: " + job.name)
-                else:
-                    schedule.every().day.at(job.at_time).do(self.run_job, job)
-                    self.log.info("  Loading time-based job: " + job.name)
-            elif job.time_unit.lower() == "hour":
-                if job.interval > -1:
-                    schedule.every(job.interval).hours.do(self.run_job, job)
-                    self.log.info("  Loading hourly job: " + job.name)
-            elif job.time_unit.lower() == "minute":
-                if job.interval > -1:
-                    schedule.every(job.interval).minutes.do(self.run_job, job)
-                    self.log.info("  Loading minutes job: " + job.name)
-                else:
-                    schedule.every().minute.do(self.run_job, job)
-                    self.log.info("  Loading minute job: " + job.name)
-            elif job.time_unit.lower() == "second":
-                if job.interval > -1:
-                    schedule.every(job.interval).seconds.do(self.run_job, job)
-                    self.log.info("  Loading seconds job: " + job.name)
-                else:
-                    schedule.every().second.do(self.run_job, job)
-                    self.log.info("  Loading second job: " + job.name)
+            if job.enabled == 1:
+                if job.time_unit.lower() == "month":
+                    if job.interval > -1:
+                        #schedule.every(job.interval).months.do(self.run_job, job)
+                        self.log.info("  Loading monthly job: " + job.name)
+                elif job.time_unit.lower() == "week":
+                    if job.interval > -1:
+                        schedule.every(job.interval).weeks.do(self.run_job, job)
+                        self.log.info("  Loading weekly job: " + job.name)
+                elif job.time_unit.lower() == "day":
+                    if job.interval > -1:
+                        schedule.every(job.interval).days.do(self.run_job, job)
+                        self.log.info("  Loading daily job: " + job.name)
+                    else:
+                        schedule.every().day.at(job.at_time).do(self.run_job, job)
+                        self.log.info("  Loading time-based job: " + job.name)
+                elif job.time_unit.lower() == "hour":
+                    if job.interval > -1:
+                        schedule.every(job.interval).hours.do(self.run_job, job)
+                        self.log.info("  Loading hourly job: " + job.name)
+                elif job.time_unit.lower() == "minute":
+                    if job.interval > -1:
+                        schedule.every(job.interval).minutes.do(self.run_job, job)
+                        self.log.info("  Loading minutes job: " + job.name)
+                    else:
+                        schedule.every().minute.do(self.run_job, job)
+                        self.log.info("  Loading minute job: " + job.name)
+                elif job.time_unit.lower() == "second":
+                    if job.interval > -1:
+                        schedule.every(job.interval).seconds.do(self.run_job, job)
+                        self.log.info("  Loading seconds job: " + job.name)
+                    else:
+                        schedule.every().second.do(self.run_job, job)
+                        self.log.info("  Loading second job: " + job.name)
 
     def run_job(self, job):
         if not self.running or not job.enabled:
@@ -547,7 +547,8 @@ class Scheduler(object):
                     ''', (job.sequence,)
                     seq_jobs = self.dbconn.cursor.execute(*command)
                     #print('len(seq_jobs) =', len(seq_jobs))
-                    p = Process(target=self.process_sequence, args=(seq_jobs, job, job_rtu, seq_result,))
+                    p = Process(target=self.process_sequence, args=(seq_jobs, job, job_rtu,
+                                                                    seq_result,))
                     p.start()
                 else:
                     print('Running command', job.command)

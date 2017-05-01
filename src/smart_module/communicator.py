@@ -50,10 +50,10 @@ class Communicator(object):
 
     def connect(self):
         try:
-            self.logger.info("Connecting to " + self.broker_name + " over standard WiFi.")
+            self.logger.info("Connecting to " + self.broker_name)
             self.client.connect("mqttbroker.local", 1883, 5)
             # Probably testing code?
-            self.send("ANNOUNCE", "neuromancer.local" + " is online.")
+            #self.send("ANNOUNCE", "neuromancer.local" + " is online.")
         except Exception, excpt:
             self.logger.exception("Error connecting to broker. %s", excpt)
 
@@ -92,13 +92,8 @@ class Communicator(object):
             self.smart_module.get_env(msg.payload)
 
         elif "ASSET/QUERY" in msg.topic:
-            #should tell the SM to get it's sensor value and send it as ASSET/RESPONSE
-            # asset_id = msg.topic.split("/")[2].lower()
-            # if self.smart_module.asset.id.lower() == asset_id:
-            #     self.smart_module.comm.send("ASSET/RESPONSE" + asset_id, "QUERY")
-            # print('Asset = ', self.smart_module.asset.name, msg.payload)
-            # self.smart_module.asset_data.update({asset:msg.payload})
-            asset_id = msg.topic.split("/")[2].lower()
+            # should tell the SM to get it's sensor value and send it as ASSET/RESPONSE
+            asset_id = msg.topic.split("/")[2]
             if self.smart_module.asset.id == asset_id:
                 self.send("ASSET/RESPONSE/" + asset_id, self.smart_module.get_asset_data())
 
