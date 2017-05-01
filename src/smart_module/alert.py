@@ -54,7 +54,7 @@ class Alert(object):
         """Check current value with threshold and send alert if necessary."""
         self.current = float(value)
         self.get_alert_params()
-        self.log.info("Checking asset for alert conditions: %s :: %s", self.id, str(self.current))
+        self.log.info("Checking asset for alert conditions: %s :: %s", self.id, value)
         print('Lower Threshold is', self.lower_threshold)
         print('Upper Threshold is', self.upper_threshold)
         if not self.lower_threshold <= self.current <= self.upper_threshold:
