@@ -65,14 +65,6 @@ class Asset(object):
     def __str__(self):
         return str([{"id": self.id, "name": self.name, "value": self.value}])
 
-class AssetInterface(object):
-    def __init__(self, asset_type):
-        # determine the correct asset library and import it
-        self.asset_lib = importlib.import_module("asset_" + str(asset_type))
-
-    def read_value():
-        return AssetImpl().read_value()
-
 class SmartModule(object):
     """Represents a HAPI Smart Module (Implementation).
 
@@ -291,6 +283,7 @@ class SmartModule(object):
 
     def get_asset_data(self):
         try:
+            #ai = asset_interface.AssetInterface("mock")
             ai = asset_interface.AssetInterface(self.asset.type)
             self.asset.value = str(ai.read_value())
         except Exception, excpt:

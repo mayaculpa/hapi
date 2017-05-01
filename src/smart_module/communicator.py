@@ -105,7 +105,7 @@ class Communicator(object):
         elif "ASSET/RESPONSE" in msg.topic:
             # should tell the SM to push data to Influx and check it for alerts
             asset_id = msg.topic.split("/")[2]
-            value = float(msg.payload)
+            value = msg.payload
             self.smart_module.asset.alert.check_alert(value, asset_id)
             self.smart_module.push_data(self.smart_module.asset.name,
                                         self.smart_module.asset.context,
