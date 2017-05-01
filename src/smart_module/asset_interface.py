@@ -23,6 +23,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import importlib
 import asset_wt
+import random
 
 class AssetInterface(object):
     def __init__(self, asset_type):
@@ -37,6 +38,6 @@ class AssetInterface(object):
 
     def read_value(self):
         if self.mock:
-            return 39.0
+            return float(random.randrange(8, 34, 1))
 
         return asset_wt.AssetImpl().read_value()

@@ -50,7 +50,7 @@ class Alert(object):
                      "response": self.response_type
                     }])
 
-    def check_alert(self, value, sm_name):
+    def check_alert(self, value):
         """Check current value with threshold and send alert if necessary."""
         self.current = float(value)
         self.get_alert_params()
@@ -111,18 +111,9 @@ class Alert(object):
         '''.split()
         # Isn't this confusing? Using the field name for a variable called field_names?
         sql = 'SELECT {field_names} FROM alert_params WHERE asset_id={asset};'.format(
-            field_names=', '.join(field_names), asset=self.id)
+            field_names=', '.join(field_names), asset=int(self.id))
         database = DatabaseConn(connect=True)
         row = database.cursor.execute(sql).fetchone()
         self.id, self.lower_threshold, self.upper_threshold, self.message, self.response_type = row
         self.lower_threshold = float(self.lower_threshold)
         self.upper_threshold = float(self.upper_threshold)
-
-if __name__ == "__main__":
-    alert = Alert(1)
-    try:
-        value = sys.argv[1]
-        alert.check_alert(value, "testing")
-        print(alert)
-    except Exception, excpt:
-        print("You should provide a value.")

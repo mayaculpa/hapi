@@ -99,13 +99,13 @@ class Communicator(object):
 
         elif "ASSET/RESPONSE" in msg.topic:
             # should tell the SM to push data to Influx and check it for alerts
-            asset_id = msg.topic.split("/")[2]
-            value = msg.payload
-            self.smart_module.asset.alert.check_alert(value, asset_id)
-            self.smart_module.push_data(self.smart_module.asset.name,
-                                        self.smart_module.asset.context,
-                                        value, self.smart_module.asset.unit)
-            #print('Asset = ', asset_id, asset_value)
+            if self.smart_module.asset.id == msg.topic.split("/")[2]:
+                value = msg.payload
+                self.smart_module.asset.alert.check_alert(value)
+                self.smart_module.push_data(self.smart_module.asset.name,
+                                            self.smart_module.asset.context,
+                                            value, self.smart_module.asset.unit)
+                #print('Asset = ', asset_id, asset_value)
 
         elif "STATUS/QUERY" in msg.topic:
             self.smart_module.last_status = self.smart_module.get_status(self.broker_connections)
