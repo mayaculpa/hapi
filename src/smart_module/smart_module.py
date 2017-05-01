@@ -79,7 +79,6 @@ class SmartModule(object):
     """
 
     def __init__(self):
-        #logging.getLogger(SM_LOGGER).info("Smart Module Initializing.")
         self.comm = communicator.Communicator()
         self.data_sync = DataSync()
         self.comm.smart_module = self
@@ -99,13 +98,10 @@ class SmartModule(object):
         self.scheduler = None
         self.hostname = ""
         self.last_status = ""
-        #self.influxhost = {"host": "138.197.74.74", "port": 8086, "user": "early",
-        #                   "pass": "adopter"}
         self.ifconn = InfluxDBClient("138.197.74.74", 8086, "early", "adopter")
         self.dbconn = DatabaseConn(connect=True)
         self.log = logging.getLogger(SM_LOGGER)
         self.ai = asset_interface.AssetInterface(self.asset.type)
-        #logging.getLogger(SM_LOGGER).info("Smart Module initialization complete.")
 
     def discover(self):
         self.log.info("Performing Discovery...")
