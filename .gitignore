@@ -3,3 +3,4 @@
 *.db
 *.log
 *.pyc
+SDL_DS3231.py

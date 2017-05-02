@@ -149,6 +149,7 @@ int pinDefaults[NUM_DIGITAL+NUM_ANALOG] = {
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   // 54 - 63
   0, 0, 0, 0, 0, 0                // 64 - 69
 };
+
 #endif
 
 
@@ -171,6 +172,7 @@ int pinDefaults[NUM_DIGITAL+NUM_ANALOG] = {
 int pinControl[NUM_DIGITAL+NUM_ANALOG] = {
                                   // DIGITAL
   0, 0, 3, 3, 3, 3, 3, 0, 2, 1, 	//  0 -  9
+
   1, 1, 2, 3,                     // 10 - 13
                                   // ANALOG
   5, 5, 5, 5, 5, 5                // 14 - 20
@@ -334,7 +336,7 @@ void assembleResponse(String &responseString, String varName, String value) {
 
 void writeLine(String response, boolean EOL) {
   // Writes a response line to the network connection
-  
+
   char inChar;
 
   for (int i = 0; i < response.length(); i++)
@@ -402,7 +404,7 @@ float readTemperature(int iDevice) {
     returnValue = h;
     if (metric == false) {
       returnValue = (returnValue * 9.0)/ 5.0 + 32.0; // Convert Celcius to Fahrenheit 
-    }    
+    }
   }
   return returnValue;
 }
@@ -412,7 +414,6 @@ float readWaterTemperature(int iDevice) {
   float returnValue;
   wp_sensors.requestTemperatures();
   returnValue = wp_sensors.getTempCByIndex(0);
-  
   if (isnan(returnValue)) {
     returnValue = -1;
   }
@@ -455,7 +456,7 @@ float readpH(int iDevice) {
   phValue = 3.5 * phValue;                  //convert the millivolt into pH value
   return phValue;
 }
- 
+
 float readThermistorTemp(int iDevice) {
   // Simple code to read a temperature value from a 10k thermistor with a 10k pulldown resistor
   float Temp;
@@ -488,7 +489,7 @@ String getCommand(WiFiClient client) {
   stringComplete = false;
   char inChar;
   inputString = "";
-  
+
 #ifdef RTU_USB
   while ((Serial.available() > 0) && (stringComplete == false)) {
     inChar = (char)Serial.read();  // read the bytes incoming from the client:
@@ -497,11 +498,13 @@ String getCommand(WiFiClient client) {
   while ((Serial.available() > 0) && (stringComplete == false)) {
     inChar = (char)Serial.read();  // read the bytes incoming from the client:
 #endif
+
 #ifdef RTU_ENET    
   while ((client.available() > 0) && (stringComplete == false)) {
     inChar = (char)client.read();  // read the bytes incoming from the client:
 #endif
 #ifdef RTU_ENET    
+
   while ((client.available() > 0) && (stringComplete == false)) {
     inChar = (char)client.read();  // read the bytes incoming from the client:
 #endif
@@ -511,6 +514,7 @@ String getCommand(WiFiClient client) {
     }
     delay(2);                       // small delay to receive any further characters
   }
+    
   Serial.println(inputString);  
   return inputString;
 }
@@ -518,12 +522,10 @@ String getCommand(WiFiClient client) {
 String buildResponse() {
   // Assembles a response with values from pins and custom functions
   // Returns a JSON string  ("pinnumber":value,"custom function abbreviation":value}
-  
   String response = "buildResponse\r\n";
   assembleResponse(response, "name", RTUID);
   assembleResponse(response, "version", HAPI_CLI_VERSION);
 //  assembleResponse(response, "lastcmd", lastCommand);
-  
   //Process digital pins
   for (int x = 0; x < NUM_DIGITAL; x++) {
     if (pinControl[x] > 0) {
@@ -570,14 +572,12 @@ String buildResponse() {
 String getStatus() {
   // Returns the current status of the RTU itself
   // Includes firmware version, MAC address, IP Address, Free RAM and Idle Mode
-  
   String retval = "getStatus\r\n";
   String macstring = (char*)mac;
 
   retval = RTUID + "\r\n";
   retval = retval + "Firmware " + HAPI_CLI_VERSION + "\r\n";
   Serial.println(retval);
-  
 #ifdef RTU_USB
   retval = retval + "Connected on USB\r\n";
 #endif
@@ -619,7 +619,6 @@ String getStatus() {
 
   retval = retval + "Digital= " + String(NUM_DIGITAL) + "\n";
   retval = retval + "Analog= " + String(NUM_ANALOG) + "\n";
-  
   retval = retval + "Free SRAM: " + String(freeRam()) + "k\n";
 
   if (idle_mode == false){

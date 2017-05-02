@@ -37,7 +37,7 @@ class Communicator(object):
         self.fallback_broker = ""
         self.influx_address = ""
         self.start_uptime = datetime.datetime.now()
-        self.client = mqtt.Client(clean_session=True, userdata=None, protocol=mqtt.MQTTv31)
+        self.client = mqtt.Client(clean_session=True, userdata=None, protocol=mqtt.MQTTv311)
         self.client.on_connect = self.on_connect
         self.client.on_message = self.on_message
         self.client.on_disconnect = self.on_disconnect
@@ -50,10 +50,8 @@ class Communicator(object):
 
     def connect(self):
         try:
-            self.logger.info("Connecting to " + self.broker_name + " over standard WiFi.")
-            self.client.connect("mqttbroker.local", 1883, 5)
-            # Probably testing code?
-            self.send("ANNOUNCE", "neuromancer.local" + " is online.")
+            self.logger.info("Connecting to " + self.broker_name)
+            self.client.connect(host="mqttbroker.local", port=1883, keepalive=60)
         except Exception, excpt:
             self.logger.exception("Error connecting to broker. %s", excpt)
 
@@ -65,7 +63,8 @@ class Communicator(object):
     #@staticmethod
     def on_connect(self, client, userdata, flags, rc):
         self.logger.info("Connected with result code " + str(rc))
-        # Subscribing in on_connect() means if we lose connection and reconnect, subscriptions will be renewed.
+        # Subscribing in on_connect() means if we lose connection and reconnect, subscriptions will
+        # be renewed.
         self.is_connected = True
         self.client.subscribe("COMMAND" + "/#")
         #self.client.subscribe("SCHEDULER/LOCATE")
@@ -86,33 +85,31 @@ class Communicator(object):
 
     # The callback when a message is received
     def on_message(self, client, userdata, msg):
-        #if self.ctl_routine is not None:
         print(msg.topic, msg.payload)
         if "ENV/QUERY" in msg.topic:
             self.smart_module.get_env(msg.payload)
 
         elif "ASSET/QUERY" in msg.topic:
-            asset_name = msg.topic.split("/")[2]
-            if self.smart_module.asset.name.lower() == asset_name.lower():
-                self.comm.send("ASSET/RESPONSE" + asset_name.lower().strip(), "QUERY")
-            print('Asset = ', asset, msg.payload)
-            self.smart_module.asset_data.update({asset:msg.payload})
+            # should tell the SM to get it's sensor value and send it as ASSET/RESPONSE
+            asset_id = msg.topic.split("/")[2]
+            if self.smart_module.asset.id == asset_id:
+                self.send("ASSET/RESPONSE/" + asset_id, self.smart_module.get_asset_data())
 
         elif "ASSET/RESPONSE" in msg.topic:
-            if self.smart_module.scheduler:
-                asset_id = msg.topic.split("/")[2]
-                self.smart_module.check_alert(asset_id, float(msg.payload))
-                self.smart_module.check_alert(asset_id, float(msg.payload))
-                print('Asset = ', asset_id, msg.payload)
+            # should tell the SM to push data to Influx and check it for alerts
+            if self.smart_module.asset.id == msg.topic.split("/")[2]:
+                value = msg.payload
+                self.smart_module.asset.alert.check_alert(value)
+                self.smart_module.push_data(self.smart_module.asset.name,
+                                            self.smart_module.asset.context,
+                                            value, self.smart_module.asset.unit)
 
         elif "STATUS/QUERY" in msg.topic:
-            self.smart_module.lastStatus = self.smart_module.get_status(self.broker_connections)
-            self.send("STATUS/RESPONSE", self.smart_module.lastStatus)
+            self.smart_module.last_status = self.smart_module.get_status(self.broker_connections)
+            self.send("STATUS/RESPONSE", str(self.smart_module.last_status))
 
-        # Not sure why System Status should be Scheduled, if we're listen for queries?
         elif "STATUS/RESPONSE" in msg.topic:
-            # Pushing System Status to Influx Server
-            self.smart_module.push_sysinfo("system", self.smart_module.lastStatus)
+            self.smart_module.push_sysinfo("system", self.smart_module.last_status)
 
         # Scheduler messages
         elif "SCHEDULER/RESPONSE" in msg.topic:
