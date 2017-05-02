@@ -1,0 +1,21 @@
+insert into pins (rtuid, name, mode, pin, pos) VALUES ('RTU201', 'RX', 1, '0', 0);
+insert into pins (rtuid, name, mode, pin, pos) VALUES ('RTU201', 'TX', 3, '1', 1);
+insert into pins (rtuid, name, mode, pin, pos) VALUES ('RTU201', '2', 3, '2', 2);
+insert into pins (rtuid, name, mode, pin, pos) VALUES ('RTU201', '3', 3, '3', 3);
+insert into pins (rtuid, name, mode, pin, pos) VALUES ('RTU201', '4', 3, '4', 4);
+insert into pins (rtuid, name, mode, pin, pos) VALUES ('RTU201', '5', 3, '5', 5);
+insert into pins (rtuid, name, mode, pin, pos) VALUES ('RTU201', '6', 3, '6', 6);
+insert into pins (rtuid, name, mode, pin, pos) VALUES ('RTU201', '7', 0, '7', 7);
+insert into pins (rtuid, name, mode, pin, def_value, pos) VALUES ('RTU201', 'ONEWIRE', 2, '8', 1, 8);
+insert into pins (rtuid, name, mode, pin, pos) VALUES ('RTU201', '9', 1, '9', 9);
+insert into pins (rtuid, name, mode, pin, pos) VALUES ('RTU201', '10', 1, '10', 10);
+insert into pins (rtuid, name, mode, pin, pos) VALUES ('RTU201', '11', 1, '11', 11);
+insert into pins (rtuid, name, mode, pin, def_value, pos) VALUES ('RTU201', 'DHT22', 2, '12', 1, 12);
+insert into pins (rtuid, name, mode, pin, pos) VALUES ('RTU201', 'LED', 3, '13', 13);
+insert into pins (rtuid, name, mode, pin, pos) VALUES ('RTU201', 'A0', 5, 'A0', 14);
+insert into pins (rtuid, name, mode, pin, pos) VALUES ('RTU201', 'PH', 5, 'A1', 15);
+insert into pins (rtuid, name, mode, pin, pos) VALUES ('RTU201', 'THERMISTOR', 5, 'A2', 16);
+insert into pins (rtuid, name, mode, pin, pos) VALUES ('RTU201', 'A3', 5, 'A3', 17);
+insert into pins (rtuid, name, mode, pin, pos) VALUES ('RTU201', 'A4', 5, 'A4', 18);
+insert into pins (rtuid, name, mode, pin, pos) VALUES ('RTU201', 'A5', 5, 'A5', 19);
+
