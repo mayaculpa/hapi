@@ -37,7 +37,7 @@ class RTCInterface(object):
             mock (bool): Set to True is a hardware RTC is not connected
         '''
         self.mock = mock
-        if self.mock is False:
+        if not self.mock:
             self.ds3231 = SDL_DS3231.SDL_DS3231(1, 0x68, 0x57)
 
     def get_datetime(self):
@@ -45,7 +45,7 @@ class RTCInterface(object):
         Returns:
             datetime: Current date/time from RTC if mock is False. Current Python datetime if mock is True
         '''
-        if self.mock is True:
+        if self.mock:
             return datatime.datetime.now()
         else:
             return self.ds3231.read_datetime()
@@ -54,7 +54,7 @@ class RTCInterface(object):
         '''
         Sets the RTC date/time to Python date/time if mock is False
         '''
-        if self.mock is False:
+        if not self.mock:
             self.ds3231.write_now()
 
     def get_temp(self):
@@ -62,7 +62,8 @@ class RTCInterface(object):
         Returns:
             float: Current RTC internal temperature sensor value if mock is False. 20.0 if mock is True
         '''
-        if self.mock is True:
+
+        if self.mock:
             return float(random.randrange(8, 34, 1))
         else:
             return self.ds3231.getTemp()
@@ -72,7 +73,7 @@ class RTCInterface(object):
         Returns:
             str: 2-byte Type data as String if mock is False. "WT" if mock is True
         '''
-        if self.mock == True:
+        if self.mock:
             return "WT"
         else:
             byte0 = self.ds3231.read_AT24C32_byte(0)
@@ -84,7 +85,7 @@ class RTCInterface(object):
         Args:
             type_data (str): Sensor Type to write to EEPROM
         '''
-        if self.mock is False:
+        if not self.mock:
             self.ds3231.write_AT24C32_byte(0, ord(type_data[0]))
             self.ds3231.write_AT24C32_byte(1, ord(type_data[1]))
 
@@ -94,7 +95,7 @@ class RTCInterface(object):
             str: 16-byte Smart Module ID if mock is False. "HSM-WT123-MOCK" if mock is True
         '''
 
-        if self.mock == True:
+        if self.mock:
             return "HSM-WT123-MOCK"
         else:
             #Concatenate the 16 byte unique sensor address
