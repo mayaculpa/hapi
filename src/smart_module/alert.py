@@ -109,9 +109,8 @@ class Alert(object):
             message
             response_type
         '''.split()
-        # Isn't this confusing? Using the field name for a variable called field_names?
-        sql = 'SELECT {field_names} FROM alert_params WHERE asset_id={asset};'.format(
-            field_names=', '.join(field_names), asset=int(self.id))
+        sql = 'SELECT {fields} FROM alert_params WHERE asset_id={asset};'.format(
+            fields=', '.join(field_names), asset=int(self.id))
         database = DatabaseConn(connect=True)
         row = database.cursor.execute(sql).fetchone()
         self.id, self.lower_threshold, self.upper_threshold, self.message, self.response_type = row
