@@ -44,6 +44,7 @@ import logging
 from influxdb import InfluxDBClient
 from status import SystemStatus
 import asset_interface
+import rtc_interface
 from alert import Alert
 from utilities import *
 
@@ -79,6 +80,7 @@ class SmartModule(object):
     """
 
     def __init__(self):
+        self.mock = True
         self.comm = communicator.Communicator()
         self.data_sync = DataSync()
         self.comm.smart_module = self
@@ -101,7 +103,8 @@ class SmartModule(object):
         self.ifconn = InfluxDBClient("138.197.74.74", 8086, "early", "adopter")
         self.dbconn = DatabaseConn(connect=True)
         self.log = logging.getLogger(SM_LOGGER)
-        self.ai = asset_interface.AssetInterface(self.asset.type)
+        self.rtc = rtc_interface.RTCInterface(self.mock)
+        self.ai = asset_interface.AssetInterface(rtc.get_type())
 
     def discover(self):
         self.log.info("Performing Discovery...")
@@ -371,7 +374,7 @@ class SmartModule(object):
         minutes, seconds = divmod(uptime.seconds, SECONDS_PER_MINUTE)
         hours, minutes = divmod(minutes, MINUTES_PER_HOUR)
         s = ('''
-            Master Controller Status
+            Smart Module Status
               Software Version v{version}
               Running on: {platform}
               Encoding: {encoding}

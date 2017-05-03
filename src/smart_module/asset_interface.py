@@ -39,5 +39,5 @@ class AssetInterface(object):
     def read_value(self):
         if self.mock:
             return float(random.randrange(8, 34, 1))
-
-        return asset_wt.AssetImpl().read_value()
+        else:
+            return asset_wt.AssetImpl().read_value()

@@ -68,9 +68,12 @@ class Alert(object):
             INSERT INTO alert_log (asset_id, value, timestamp)
             VALUES (?, ?, ?)
         ''', (int(self.id), self.current, str(datetime.datetime.now()))
-        db = DatabaseConn(connect=True, dbfile="hapi_history.db")
+        #db = DatabaseConn(connect=True, dbfile="hapi_history.db")
+
+        db = sqlite3.connect("hapi_history.db")
         db.cursor.execute(*command)
         db.connection.commit()
+        db.close()
 
     def send_alert_condition(self):
         """Send alert according to 'self.response_type'."""
@@ -112,8 +115,12 @@ class Alert(object):
         # Isn't this confusing? Using the field name for a variable called field_names?
         sql = 'SELECT {field_names} FROM alert_params WHERE asset_id={asset};'.format(
             field_names=', '.join(field_names), asset=int(self.id))
-        database = DatabaseConn(connect=True)
-        row = database.cursor.execute(sql).fetchone()
+        #database = DatabaseConn(connect=True)
+        db = sqlite3.connect("hapi_core.db")
+        curs = db.cursor()
+        row = curs.execute(sql).fetchone()
         self.id, self.lower_threshold, self.upper_threshold, self.message, self.response_type = row
         self.lower_threshold = float(self.lower_threshold)
         self.upper_threshold = float(self.upper_threshold)
+        db.close()
+
