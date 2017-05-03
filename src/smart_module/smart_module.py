@@ -160,8 +160,8 @@ class SmartModule(object):
         try:
             #conn = sqlite3.connect('hapi_core.db')
             #c = conn.cursor()
-            sql = 'SELECT {field_names} FROM site LIMIT 1;'.format(
-                field_names=', '.join(field_names))
+            sql = 'SELECT {fields} FROM site LIMIT 1;'.format(
+                fields=', '.join(field_names))
             db_elements = self.dbconn.cursor.execute(sql)
             for row in db_elements:
                 for field_name, field_value in zip(field_names, row):
@@ -458,8 +458,8 @@ class Scheduler(object):
         try:
             #conn = sqlite3.connect('hapi_core.db')
             #c = conn.cursor()
-            sql = 'SELECT {field_names} FROM schedule;'.format(
-                field_names=', '.join(field_names))
+            sql = 'SELECT {fields} FROM schedule;'.format(
+                fields=', '.join(field_names))
             db_jobs = self.dbconn.cursor.execute(sql)
             for row in db_jobs:
                 job = Scheduler.Job()
