@@ -478,40 +478,42 @@ class Scheduler(object):
     def prepare_jobs(self, jobs):
         # It still have space for improvements.
         for job in jobs:
-            if job.enabled == 1:
-                if job.time_unit.lower() == "month":
-                    if job.interval > -1:
-                        #schedule.every(job.interval).months.do(self.run_job, job)
-                        self.log.info("  Loading monthly job: " + job.name)
-                elif job.time_unit.lower() == "week":
-                    if job.interval > -1:
-                        schedule.every(job.interval).weeks.do(self.run_job, job)
-                        self.log.info("  Loading weekly job: " + job.name)
-                elif job.time_unit.lower() == "day":
-                    if job.interval > -1:
-                        schedule.every(job.interval).days.do(self.run_job, job)
-                        self.log.info("  Loading daily job: " + job.name)
-                    else:
-                        schedule.every().day.at(job.at_time).do(self.run_job, job)
-                        self.log.info("  Loading time-based job: " + job.name)
-                elif job.time_unit.lower() == "hour":
-                    if job.interval > -1:
-                        schedule.every(job.interval).hours.do(self.run_job, job)
-                        self.log.info("  Loading hourly job: " + job.name)
-                elif job.time_unit.lower() == "minute":
-                    if job.interval > -1:
-                        schedule.every(job.interval).minutes.do(self.run_job, job)
-                        self.log.info("  Loading minutes job: " + job.name)
-                    else:
-                        schedule.every().minute.do(self.run_job, job)
-                        self.log.info("  Loading minute job: " + job.name)
-                elif job.time_unit.lower() == "second":
-                    if job.interval > -1:
-                        schedule.every(job.interval).seconds.do(self.run_job, job)
-                        self.log.info("  Loading seconds job: " + job.name)
-                    else:
-                        schedule.every().second.do(self.run_job, job)
-                        self.log.info("  Loading second job: " + job.name)
+            if not job.enabled:
+                continue
+
+            if job.time_unit.lower() == "month":
+                if job.interval > -1:
+                    #schedule.every(job.interval).months.do(self.run_job, job)
+                    self.log.info("  Loading monthly job: " + job.name)
+            elif job.time_unit.lower() == "week":
+                if job.interval > -1:
+                    schedule.every(job.interval).weeks.do(self.run_job, job)
+                    self.log.info("  Loading weekly job: " + job.name)
+            elif job.time_unit.lower() == "day":
+                if job.interval > -1:
+                    schedule.every(job.interval).days.do(self.run_job, job)
+                    self.log.info("  Loading daily job: " + job.name)
+                else:
+                    schedule.every().day.at(job.at_time).do(self.run_job, job)
+                    self.log.info("  Loading time-based job: " + job.name)
+            elif job.time_unit.lower() == "hour":
+                if job.interval > -1:
+                    schedule.every(job.interval).hours.do(self.run_job, job)
+                    self.log.info("  Loading hourly job: " + job.name)
+            elif job.time_unit.lower() == "minute":
+                if job.interval > -1:
+                    schedule.every(job.interval).minutes.do(self.run_job, job)
+                    self.log.info("  Loading minutes job: " + job.name)
+                else:
+                    schedule.every().minute.do(self.run_job, job)
+                    self.log.info("  Loading minute job: " + job.name)
+            elif job.time_unit.lower() == "second":
+                if job.interval > -1:
+                    schedule.every(job.interval).seconds.do(self.run_job, job)
+                    self.log.info("  Loading seconds job: " + job.name)
+                else:
+                    schedule.every().second.do(self.run_job, job)
+                    self.log.info("  Loading second job: " + job.name)
 
     def run_job(self, job):
         if not self.running or not job.enabled:
