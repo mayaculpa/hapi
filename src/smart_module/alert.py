@@ -112,15 +112,13 @@ class Alert(object):
             message
             response_type
         '''.split()
-        # Isn't this confusing? Using the field name for a variable called field_names?
-        sql = 'SELECT {field_names} FROM alert_params WHERE asset_id={asset};'.format(
-            field_names=', '.join(field_names), asset=int(self.id))
         #database = DatabaseConn(connect=True)
         db = sqlite3.connect("hapi_core.db")
         curs = db.cursor()
+        sql = 'SELECT {fields} FROM alert_params WHERE asset_id={asset};'.format(
+            fields=', '.join(field_names), asset=int(self.id))
         row = curs.execute(sql).fetchone()
         self.id, self.lower_threshold, self.upper_threshold, self.message, self.response_type = row
         self.lower_threshold = float(self.lower_threshold)
         self.upper_threshold = float(self.upper_threshold)
         db.close()
-
