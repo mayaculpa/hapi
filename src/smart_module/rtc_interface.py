@@ -28,9 +28,12 @@ import logging
 
 SM_LOGGER = "smart_module"
 
-LEN_ID = 16
-LEN_CONTEXT = 16
-LEN_TYPE = 2
+TYPE_ADDRESS = 0
+TYPE_LEN = 2
+ID_ADDRESS = TYPE_ADDRESS + TYPE_LEN
+ID_LEN = 16
+CONTEXT_ADDRESS = ID_ADDRESS + ID_LEN
+CONTEXT_LEN = 16
 
 class RTCInterface(object):
     '''Interface for DS3231 Real-time Clock with internal temp sensor and AT24C32 EEPROM
@@ -129,7 +132,7 @@ class RTCInterface(object):
             else:
                 #Concatenate the 16 byte module ID
                 id_data = ""
-                for x in range(LEN_TYPE, LEN_TYPE + LEN_ID):
+                for x in range(ID_ADDRESS, ID_ADDRESS + ID_LEN):
                     id_data = id_data + chr(self.ds3231.read_AT24C32_byte(x))
                 return str(id_data).strip()
         except Exception, excpt:
@@ -146,13 +149,13 @@ class RTCInterface(object):
         try:
             if not self.mock:
                 #Concatenate the 16 byte module ID
-                for x in range(0, LEN_ID):
+                for x in range(ID_LEN):
                     if len(id_data) < x + 1:
                         ch = " "
                     else:
                         ch = id_data[x]
 
-                    self.ds3231.write_AT24C32_byte(x + LEN_TYPE, ord(ch))
+                    self.ds3231.write_AT24C32_byte(ID_ADDRESS + x, ord(ch))
         except Exception, excpt:
             self.logger.exception("Error writing Module ID to EEPROM. %s", excpt)
 
@@ -169,7 +172,7 @@ class RTCInterface(object):
             else:
                 #Read the 16 byte asset context
                 context = ""
-                for x in range(LEN_ID + LEN_TYPE,  LEN_ID + LEN_TYPE + LEN_CONTEXT):
+                for x in range(CONTEXT_ADDRESS, CONTEXT_ADDRESS + CONTEXT_LEN):
                     context = context + chr(self.ds3231.read_AT24C32_byte(x))
                 return str(context).strip()
         except Exception, excpt:
@@ -186,12 +189,12 @@ class RTCInterface(object):
         try:
             if not self.mock:
                 #Write the 16 byte sensor context
-                for x in range(0,LEN_CONTEXT):
+                for x in range(CONTEXT_LEN):
                     if len(context) < x + 1:
                         ch = " "
                     else:
                         ch = context[x]
 
-                    self.ds3231.write_AT24C32_byte(LEN_TYPE + LEN_ID + x, ord(ch))
+                    self.ds3231.write_AT24C32_byte(CONTEXT_ADDRESS + x, ord(ch))
         except Exception, excpt:
             self.logger.exception("Error writing Module context to EEPROM. %s", excpt)
