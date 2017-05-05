@@ -31,6 +31,10 @@ sm_logger = "smart_module"
 class RTCInterface(object):
     '''Interface for DS3231 Real-time Clock with AT24C32 EEPROM and internal temp sensor
     '''
+
+    ID_ADDRESS = 2
+    ID_LEN = 16
+
     def __init__(self, mock):
         '''
         Args:
@@ -106,18 +110,17 @@ class RTCInterface(object):
 
     def set_id(self, id):
         '''
+        Write id to EEPROM.
         Returns:
             None
         '''
-        if self.mock is False:
-            #Concatenate the 16 byte unique sensor address
-            for x in range(0,16):
-                if len(id) < x:
-                    ch = ""
-                else:
-                    ch = id[x]
+        if self.mock:
+            return
 
-                self.ds3231.write_AT24C32_byte(x + 2, ord(ch))
+        id = id.ljust(ID_LEN)  # Pad with spaces.
+	id = id[:ID_LEN]  # Limit to correct length.
+        for i, c in enumerate(id):
+            self.ds3231.write_AT24C32_byte(ID_ADDRESS + i, ord(c))
 
     def get_context(self):
         '''
