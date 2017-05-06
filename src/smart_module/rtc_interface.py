@@ -63,22 +63,28 @@ class RTCInterface(object):
 
         self.logger = logging.getLogger(SM_LOGGER)
 
+        if self.mock:
+            return
+
+        GPIO.setmode(GPIO.BOARD)
+        GPIO.setup(RTC_VCC, GPIO.OUT)
         try:
-            if not self.mock:
-                GPIO.setmode(GPIO.BOARD)
-                GPIO.setup(RTC_VCC, GPIO.OUT)
-                self.ds3231 = SDL_DS3231.SDL_DS3231(1, 0x68, 0x57)
+            self.ds3231 = SDL_DS3231.SDL_DS3231(1, 0x68, 0x57)
         except Exception, excpt:
             self.logger.exception("Error initializing RTC. %s", excpt)
 
     def power_on_rtc(self):
-        if not self.mock:
-            GPIO.output(RTC_VCC, GPIO.HIGH)
-            time.sleep(0.5)
+        if self.mock:
+            return
+
+        GPIO.output(RTC_VCC, GPIO.HIGH)
+        time.sleep(0.5)
 
     def power_off_rtc(self):
-        if not self.mock:
-            GPIO.output(RTC_VCC, GPIO.LOW)
+        if self.mock:
+            return
+
+        GPIO.output(RTC_VCC, GPIO.LOW)
 
     def get_datetime(self):
         '''Gets the current date/time from the attached RTC
