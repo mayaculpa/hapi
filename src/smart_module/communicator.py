@@ -95,6 +95,7 @@ class Communicator(object):
         elif "ASSET/RESPONSE" in msg.topic:
             if self.smart_module.asset.id == msg.topic.split("/")[2]:
                 value = msg.payload
+                self.smart_module.asset.alert.update_alert()
                 self.smart_module.asset.alert.check_alert(value)
                 self.smart_module.push_data(self.smart_module.asset.name,
                                             self.smart_module.asset.context,
