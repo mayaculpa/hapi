@@ -95,40 +95,52 @@ class RTCInterface(object):
         except Exception, excpt:
             self.logger.exception("Error getting the temperature from the RTC. %s", excpt)
 
-    def get_type(self):
-        '''Gets the modules sensor type from the EEPROM
-        Returns:
-            str: 2-byte Type data as String if mock is False. "wt" if mock is True
+    def read_eeprom(self, address, n, name, mock_value):
+        '''Return string of n bytes from EEPROM starting at address.
+        Strips leading and trailing spaces.
+        If self.mock, return mock value instead.
         '''
 
         if self.mock:
-            return "wt"
+            return mock_value
 
         try:
-            byte0 = self.ds3231.read_AT24C32_byte(0)
-            byte1 = self.ds3231.read_AT24C32_byte(1)
-            return str(chr(byte0) + chr(byte1)).strip()
+            bytes_ = (
+                self.ds3231.read_AT24C32_byte(address + i)
+                for i in range(n)
+            )
         except Exception, excpt:
-            self.logger.exception("Error reading type from EEPROM. %s", excpt)
+            self.logger.exception("Error reading %s from EEPROM. %s", name, excpt)
 
-    def write_eeprom(self, s, address, length, name):
-        '''Write length bytes of s to EEPROM
+        s = ''.join(chr(c) for c in bytes_)
+        return s.strip()
+
+    def write_eeprom(self, s, address, n, name):
+        '''Write n bytes of s to EEPROM
         starting at EEPROM address.
-        s is padded with spaces if shorter than length.
+        s is padded with spaces if shorter than n.
         If exception, cites name.
         '''
 
         if self.mock:
             return
 
-        s = s[:length]  # Trim to maximum length.
-        s = s.ljust(length)  # Pad to correct length.
+        s = s[:n]  # Trim to maximum length.
+        s = s.ljust(n)  # Pad to correct length.
         for i, c in enumerate(s):
             try:
                 self.ds3231.write_AT24C32_byte(address + i, ord(c))
             except Exception, excpt:
                 self.logger.exception("Error writing %s to EEPROM. %s", name, excpt)
                 return
+
+    def get_type(self):
+        '''Gets the modules sensor type from the EEPROM
+        Returns:
+            str: 2-byte Type data as String if mock is False. "wt" if mock is True
+        '''
+
+        return self.read_eeprom(self, TYPE_ADDRESS, TYPE_LEN, 'type', 'wt')
 
     def set_type(self, type_):
         '''Writes the modules %s-byte sensor type to EEPROM
@@ -141,20 +153,11 @@ class RTCInterface(object):
     def get_id(self):
         '''Gets the Smart Module ID from the attached EEPROM
         Returns:
-            str: 16-byte module ID if mock is False. "HSM-WT123-MOCK" if mock is True
-        '''
+            str: %s-byte module ID if mock is False. "HSM-WT123-MOCK" if mock is True
+        ''' % ID_LEN
 
-        if self.mock:
-            return "HSM-WT123-MOCK"
-
-        try:
-            #Concatenate the 16 byte module ID
-            id_data = ""
-            for x in range(ID_ADDRESS, ID_ADDRESS + ID_LEN):
-                id_data = id_data + chr(self.ds3231.read_AT24C32_byte(x))
-            return str(id_data).strip()
-        except Exception, excpt:
-            self.logger.exception("Error reading Module ID from EEPROM. %s", excpt)
+        return self.read_eeprom(
+            self, ID_ADDRESS, ID_LEN, 'Module ID', 'HSM-WT123-MOCK')
 
     def set_id(self, id_):
         '''Writes the module id to EEPROM
@@ -169,20 +172,12 @@ class RTCInterface(object):
     def get_context(self):
         '''Gets the module context from the attached EEPROM
         Returns:
-            str: 16-byte sensor context if mock is False. "Environment" if mock is True
-        '''
+            str: %s-byte sensor context if mock is False. "Environment" if mock is True
+        ''' % CONTEXT_LEN
 
-        if self.mock:
-            return "Environment"
-
-        try:
-            #Read the 16 byte asset context
-            context = ""
-            for x in range(CONTEXT_ADDRESS, CONTEXT_ADDRESS + CONTEXT_LEN):
-                context = context + chr(self.ds3231.read_AT24C32_byte(x))
-            return str(context).strip()
-        except Exception, excpt:
-            self.logger.exception("Error reading Module context from EEPROM. %s", excpt)
+        return self.read_eeprom(
+            self,
+            CONTEXT_ADDRESS, CONTEXT_LEN, 'Module context', 'Environment')
 
     def set_context(self, context):
         '''Writes the modules sensor context to the attached EEPROM
