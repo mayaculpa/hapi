@@ -35,7 +35,7 @@ ID_LEN = 16
 CONTEXT_ADDRESS = ID_ADDRESS + ID_LEN
 CONTEXT_LEN = 16
 
-RTC_VCC = 15
+RTC_VCC_GPIO_PIN = 15
 
 class RTCInterface(object):
     '''Interface for DS3231 Real-time Clock with internal temp sensor and AT24C32 EEPROM
@@ -67,7 +67,7 @@ class RTCInterface(object):
             return
 
         GPIO.setmode(GPIO.BOARD)
-        GPIO.setup(RTC_VCC, GPIO.OUT)
+        GPIO.setup(RTC_VCC_GPIO_PIN, GPIO.OUT)
         try:
             self.ds3231 = SDL_DS3231.SDL_DS3231(1, 0x68, 0x57)
         except Exception, excpt:
@@ -77,14 +77,14 @@ class RTCInterface(object):
         if self.mock:
             return
 
-        GPIO.output(RTC_VCC, GPIO.HIGH)
+        GPIO.output(RTC_VCC_GPIO_PIN, GPIO.HIGH)
         time.sleep(0.5)
 
     def power_off_rtc(self):
         if self.mock:
             return
 
-        GPIO.output(RTC_VCC, GPIO.LOW)
+        GPIO.output(RTC_VCC_GPIO_PIN, GPIO.LOW)
 
     def get_datetime(self):
         '''Gets the current date/time from the attached RTC
