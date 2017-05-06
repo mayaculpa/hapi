@@ -26,6 +26,17 @@ import datetime
 import logging
 import time
 
+some_import_failed = False
+try:
+    import SDL_DS3231
+except ImportError:
+    some_import_failed = True
+
+try:
+    import RPi.GPIO as GPIO
+except ImportError:
+    some_import_failed = True
+
 SM_LOGGER = "smart_module"
 
 TYPE_ADDRESS = 0
@@ -46,20 +57,8 @@ class RTCInterface(object):
 
     def __init__(self):
         '''
-        Args:
-            mock (bool): Pass as True if a hardware RTC is not connected
         '''
-        self.mock = False
-
-        try:
-            import SDL_DS3231
-        except ImportError:
-            self.mock = True
-
-        try:
-            import RPi.GPIO as GPIO
-        except ImportError:
-            self.mock = True
+        self.mock = some_import_failed
 
         self.logger = logging.getLogger(SM_LOGGER)
 
