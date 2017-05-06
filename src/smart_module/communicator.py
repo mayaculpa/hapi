@@ -30,7 +30,7 @@ import paho.mqtt.client as mqtt
 import datetime
 
 class Communicator(object):
-    def __init__(self):
+    def __init__(self, sm):
         self.rtuid = ""
         self.name = ""
         self.broker_name = "mqttbroker.local"
@@ -41,7 +41,7 @@ class Communicator(object):
         self.client.on_connect = self.on_connect
         self.client.on_message = self.on_message
         self.client.on_disconnect = self.on_disconnect
-        self.smart_module = None
+        self.smart_module = sm
         self.is_connected = False
         self.scheduler_found = False
         self.logger = logging.getLogger("smart_module")
@@ -91,9 +91,9 @@ class Communicator(object):
 
         elif "ASSET/QUERY" in msg.topic:
             # should tell the SM to get it's sensor value and send it as ASSET/RESPONSE
-            asset_id = msg.topic.split("/")[2]
-            if self.smart_module.asset.id == asset_id:
-                self.send("ASSET/RESPONSE/" + asset_id, self.smart_module.get_asset_data())
+            #asset_id = msg.topic.split("/")[2]
+            #if self.smart_module.asset.id == asset_id:
+            self.send("ASSET/RESPONSE/" + self.smart_module.asset.id, self.smart_module.get_asset_data())
 
         elif "ASSET/RESPONSE" in msg.topic:
             # should tell the SM to push data to Influx and check it for alerts

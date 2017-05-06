@@ -26,9 +26,9 @@ import asset_wt
 import random
 
 class AssetInterface(object):
-    def __init__(self, asset_type):
+    def __init__(self, asset_type, mock):
         """Determine the correct asset library and import it."""
-        self.mock = False
+        self.mock = mock
         if asset_type.lower() == "mock":
             self.mock = True
         else:

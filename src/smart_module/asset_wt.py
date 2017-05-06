@@ -33,7 +33,7 @@ import logging
 import subprocess
 
 version = "3.0 Alpha"
-sm_logger = "smart_module"
+sm_logger = "SMART_MODULE"
 
 class AssetImpl(object):
     def __init__(self):
@@ -59,19 +59,19 @@ class AssetImpl(object):
             logging.getLogger(sm_logger).exception("Error reading raw temperature data: %s", excpt)
 
     def read_value(self):
+        temp_c = -50
         try:
-            temp_c = -50
             lines = self.read_temp_raw()
-            print(lines)
             while not lines[0].strip().endswith('YES'):
                 time.sleep(0.2)
                 lines = self.read_temp_raw()
-                print(lines)
+
             equals_pos = lines[1].find('t=')
             if equals_pos != -1:
                 temp_string = lines[1][equals_pos+2:]
                 temp_c = float(temp_string) / 1000.0
 
-            return temp_c
         except Exception, excpt:
             logging.getLogger(sm_logger).exception("Error getting converted sensor data: %s", excpt)
+
+        return temp_c

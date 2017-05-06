@@ -71,8 +71,8 @@ class Alert(object):
         #db = DatabaseConn(connect=True, dbfile="hapi_history.db")
 
         db = sqlite3.connect("hapi_history.db")
-        db.cursor.execute(*command)
-        db.connection.commit()
+        db.cursor().execute(*command)
+        db.commit()
         db.close()
 
     def send_alert_condition(self):

@@ -49,6 +49,7 @@ from alert import Alert
 from utilities import *
 
 reload(sys)
+SM_LOGGER = "smart_module"
 
 class Asset(object):
     def __init__(self):
@@ -81,9 +82,8 @@ class SmartModule(object):
 
     def __init__(self):
         self.mock = True
-        self.comm = communicator.Communicator()
+        self.comm = communicator.Communicator(self)
         self.data_sync = DataSync()
-        self.comm.smart_module = self
         self.id = ""
         self.name = ""
         self.wunder_key = ""
@@ -95,18 +95,33 @@ class SmartModule(object):
         self.latitude = ""
         self.twilio_acct_sid = ""
         self.twilio_auth_token = ""
-        self.launch_time = datetime.datetime.now()
-        self.asset = Asset()
+        
         self.scheduler = None
         self.hostname = ""
         self.last_status = ""
         self.ifconn = InfluxDBClient("138.197.74.74", 8086, "early", "adopter")
-        self.dbconn = DatabaseConn(connect=True)
+        #self.dbconn = DatabaseConn(connect=True)
         self.log = logging.getLogger(SM_LOGGER)
-        self.rtc = rtc_interface.RTCInterface(self.mock)
-        self.ai = asset_interface.AssetInterface(rtc.get_type())
+        
+        self.rtc = rtc_interface.RTCInterface()
+        self.rtc.power_on_rtc()
+        self.launch_time = self.rtc.get_datetime()
+        self.asset = Asset()
+        self.asset.id = self.rtc.get_id()
+        self.asset.context = self.rtc.get_context()
+        self.asset.type = self.rtc.get_type()
+        self.ai = asset_interface.AssetInterface(self.asset.type, self.rtc.mock)
+        
+
+        self.rtc.power_off_rtc()
 
     def discover(self):
+
+        if self.rtc.mock:
+            print("Mock Smart Module hosting asset", self.asset.id, self.asset.type, self.asset.context)
+        else:
+            print("Real Smart Module hosting asset", self.asset.id, self.asset.type, self.asset.context)
+
         self.log.info("Performing Discovery...")
         subprocess.call("sudo ./host-hapi.sh", shell=True)
         self.comm.smart_module = self
@@ -165,10 +180,17 @@ class SmartModule(object):
             #c = conn.cursor()
             sql = 'SELECT {fields} FROM site LIMIT 1;'.format(
                 fields=', '.join(field_names))
-            db_elements = self.dbconn.cursor.execute(sql)
+
+            db = sqlite3.connect('hapi_core.db')
+            curs = db.cursor()
+
+            #db_elements = self.dbconn.cursor.execute(sql)
+            db_elements = curs.execute(sql)
+
             for row in db_elements:
                 for field_name, field_value in zip(field_names, row):
                     setattr(self, field_name, field_value)
+            db.close()
             self.log.info("Site data loaded.")
         except Exception, excpt:
             self.log.exception("Error loading site data: %s", excpt)
@@ -280,11 +302,12 @@ class SmartModule(object):
         self.comm.send("ASSET/QUERY/" + self.asset.id, "Is it warm here?")
 
     def get_asset_data(self):
+        value = -1000
         try:
-            self.asset.value = str(self.ai.read_value())
+            value = str(self.ai.read_value())
         except Exception, excpt:
             self.log.exception("Error getting asset data: %s", excpt)
-        return self.asset.value
+        return value
 
     def log_sensor_data(self, data, virtual):
         if not virtual:
@@ -339,7 +362,7 @@ class SmartModule(object):
             lat=self.latitude,
             lon=self.longitude,
         )
-        print(url)
+        
         try:
             f = urllib2.urlopen(url)
             json_string = f.read()
@@ -347,7 +370,6 @@ class SmartModule(object):
             response = parsed_json['current_observation']
             f.close()
         except Exception, excpt:
-            print('Error getting weather data.', excpt)
             self.log.exception('Error getting weather data: %s', excpt)
         return response
 
@@ -463,12 +485,20 @@ class Scheduler(object):
             #c = conn.cursor()
             sql = 'SELECT {fields} FROM schedule;'.format(
                 fields=', '.join(field_names))
-            db_jobs = self.dbconn.cursor.execute(sql)
+
+            db = sqlite3.connect("hapi_core.db")
+            curs = db.cursor()
+            db_jobs = curs.execute(sql)
+
+            #db_jobs = self.dbconn.cursor.execute(sql)
+
             for row in db_jobs:
                 job = Scheduler.Job()
                 for field_name, field_value in zip(field_names, row):
                     setattr(job, field_name, field_value)
                 jobs.append(job)
+            db.close()
+
             self.log.info("Schedule Data Loaded.")
         except Exception, excpt:
             self.log.exception("Error loading schedule. %s", excpt)
@@ -536,19 +566,22 @@ class Scheduler(object):
             try:
                 if job.sequence != "":
                     print('Running sequence', job.sequence)
-                    #conn = sqlite3.connect('hapi_core.db')
-                    #c = conn.cursor()
                     command = '''
                         SELECT name, command, step_name, timeout
                         FROM sequence
                         WHERE name=?
                         ORDER BY step ;
                     ''', (job.sequence,)
-                    seq_jobs = self.dbconn.cursor.execute(*command)
+                    db = sqlite3.connect('hapi_core.db')
+                    curs = db.cursor()
+
+                    #seq_jobs = self.dbconn.cursor.execute(*command)
+                    seq_jobs = curs.execute(*command)
                     #print('len(seq_jobs) =', len(seq_jobs))
                     p = Process(target=self.process_sequence, args=(seq_jobs, job, job_rtu,
                                                                     seq_result,))
                     p.start()
+                    db.close()
                 else:
                     print('Running command', job.command)
                     # Check pre-defined jobs
