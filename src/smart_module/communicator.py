@@ -23,11 +23,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 from __future__ import print_function
-
-import time
+import datetime
 import logging
 import paho.mqtt.client as mqtt
-import datetime
+from utilities import SM_LOGGER
 
 class Communicator(object):
     def __init__(self, sm):
@@ -44,14 +43,14 @@ class Communicator(object):
         self.smart_module = sm
         self.is_connected = False
         self.scheduler_found = False
-        self.logger = logging.getLogger("smart_module")
-        self.logger.info("Communicator initialized")
         self.broker_connections = -1
+        self.logger = logging.getLogger(SM_LOGGER)
+        self.logger.info("Communicator initialized")
 
     def connect(self):
         try:
             self.logger.info("Connecting to " + self.broker_name)
-            self.client.connect(host="mqttbroker.local", port=1883, keepalive=60)
+            self.client.connect(host=self.broker_name, port=1883, keepalive=60)
         except Exception, excpt:
             self.logger.exception("Error connecting to broker. %s", excpt)
 
@@ -90,13 +89,10 @@ class Communicator(object):
             self.smart_module.get_env(msg.payload)
 
         elif "ASSET/QUERY" in msg.topic:
-            # should tell the SM to get it's sensor value and send it as ASSET/RESPONSE
-            #asset_id = msg.topic.split("/")[2]
-            #if self.smart_module.asset.id == asset_id:
-            self.send("ASSET/RESPONSE/" + self.smart_module.asset.id, self.smart_module.get_asset_data())
+            self.send("ASSET/RESPONSE/" + self.smart_module.asset.id,
+                      self.smart_module.get_asset_data())
 
         elif "ASSET/RESPONSE" in msg.topic:
-            # should tell the SM to push data to Influx and check it for alerts
             if self.smart_module.asset.id == msg.topic.split("/")[2]:
                 value = msg.payload
                 self.smart_module.asset.alert.check_alert(value)
@@ -120,7 +116,6 @@ class Communicator(object):
             if self.smart_module.scheduler:
                 self.send("SCHEDULER/RESPONSE", self.smart_module.hostname)
                 self.logger.info("Sent SCHEDULER/RESPONSE")
-                #self.site.asset_data.update({asset:msg.payload})
 
         # Database synchronization messages
         elif "SYNCHRONIZE/VERSION" in msg.topic:

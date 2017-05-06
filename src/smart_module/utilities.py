@@ -24,14 +24,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import print_function
 import sys
-import datetime
 import logging
 import sqlite3
 
 VERSION = "3.0 Alpha"
 SM_LOGGER = "smart_module"
-SECONDS_PER_MINUTE = 60
-MINUTES_PER_HOUR = 60
 
 def trim(docstring):
     """Trim docstring."""
@@ -60,7 +57,8 @@ def trim(docstring):
     # Return a single string:
     return '\n'.join(trimmed)
 
-class DatabaseConn(object):
+# We should probably kill this class.
+class DatabaseConnection(object):
     """Hold necessary information to connect and perform operations on SQLite3 database."""
     def __init__(self, connect=False, dbfile="hapi_core.db"):
         """Create object to hold and connect to SQLite3."""

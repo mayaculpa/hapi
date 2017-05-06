@@ -23,11 +23,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 from __future__ import print_function
-import sys
 import datetime
 import logging
 import sqlite3
-from utilities import *
+from utilities import trim, SM_LOGGER
 
 class Alert(object):
     """Hold information about current alert status about a given asset."""
@@ -64,16 +63,17 @@ class Alert(object):
 
     def log_alert_condition(self):
         """Update database alert log."""
-        command = '''
-            INSERT INTO alert_log (asset_id, value, timestamp)
-            VALUES (?, ?, ?)
-        ''', (int(self.id), self.current, str(datetime.datetime.now()))
-        #db = DatabaseConn(connect=True, dbfile="hapi_history.db")
-
-        db = sqlite3.connect("hapi_history.db")
-        db.cursor().execute(*command)
-        db.commit()
-        db.close()
+        try:
+            command = '''
+                INSERT INTO alert_log (asset_id, value, timestamp)
+                VALUES (?, ?, ?)
+            ''', (int(self.id), self.current, str(datetime.datetime.now()))
+            database = sqlite3.connect("hapi_history.db")
+            database.cursor().execute(*command)
+            database.commit()
+            database.close()
+        except Exception, excpt:
+            self.log.exception("Error trying to log alert conditions: %s", excpt)
 
     def send_alert_condition(self):
         """Send alert according to 'self.response_type'."""
@@ -104,21 +104,22 @@ class Alert(object):
 
     def get_alert_params(self):
         """Update the object to hold its alert information."""
-        self.log.info("Fetching alert parameters.")
-        field_names = '''
-            asset_id
-            lower_threshold
-            upper_threshold
-            message
-            response_type
-        '''.split()
-        #database = DatabaseConn(connect=True)
-        db = sqlite3.connect("hapi_core.db")
-        curs = db.cursor()
-        sql = 'SELECT {fields} FROM alert_params WHERE asset_id={asset};'.format(
-            fields=', '.join(field_names), asset=int(self.id))
-        row = curs.execute(sql).fetchone()
-        self.id, self.lower_threshold, self.upper_threshold, self.message, self.response_type = row
-        self.lower_threshold = float(self.lower_threshold)
-        self.upper_threshold = float(self.upper_threshold)
-        db.close()
+        try:
+            self.log.info("Fetching alert parameters.")
+            field_names = '''
+                lower_threshold
+                upper_threshold
+                message
+                response_type
+            '''.split()
+            database = sqlite3.connect("hapi_core.db")
+            sql = 'SELECT {fields} FROM alert_params WHERE asset_id={asset};'.format(
+                fields=', '.join(field_names), asset=int(self.id))
+            row = database.cursor().execute(sql).fetchone()
+            for key, value in zip(field_names, row):
+                setattr(self, key, value)
+            self.lower_threshold = float(self.lower_threshold)
+            self.upper_threshold = float(self.upper_threshold)
+            database.close()
+        except Exception, excpt:
+            self.log.exception("Error trying to get alert parameters: %s", excpt)

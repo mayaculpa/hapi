@@ -23,35 +23,34 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 from __future__ import print_function
-
-import sqlite3                                      # https://www.sqlite.org/index.html
 import sys
 import time
-import schedule                                     # sudo pip install schedule
 import datetime
-#import dateutil.parser
-import urllib2
-import json
 import subprocess
-import communicator
 import socket
-import psutil
-import importlib
 import codecs
 from multiprocessing import Process
+import urllib2
+import json
+import sqlite3                                      # https://www.sqlite.org/index.html
 import logging
-#from twilio.rest import TwilioRestClient            # sudo pip install twilio
+import schedule                                     # sudo pip install schedule
+import communicator
 from influxdb import InfluxDBClient
 from status import SystemStatus
 import asset_interface
 import rtc_interface
 from alert import Alert
-from utilities import *
+from utilities import SM_LOGGER, VERSION
+from utilities import trim, DatabaseConnection
 
 reload(sys)
-SM_LOGGER = "smart_module"
+
+SECONDS_PER_MINUTE = 60
+MINUTES_PER_HOUR = 60
 
 class Asset(object):
+    """Hold Asset (sensor) information."""
     def __init__(self):
         self.id = "1"
         self.name = "Indoor Temperature"
@@ -65,6 +64,7 @@ class Asset(object):
         self.alert = Alert(self.id)
 
     def __str__(self):
+        """Return Asset information in JSON."""
         return str([{"id": self.id, "name": self.name, "value": self.value}])
 
 class SmartModule(object):
@@ -95,14 +95,11 @@ class SmartModule(object):
         self.latitude = ""
         self.twilio_acct_sid = ""
         self.twilio_auth_token = ""
-        
         self.scheduler = None
         self.hostname = ""
         self.last_status = ""
         self.ifconn = InfluxDBClient("138.197.74.74", 8086, "early", "adopter")
-        #self.dbconn = DatabaseConn(connect=True)
         self.log = logging.getLogger(SM_LOGGER)
-        
         self.rtc = rtc_interface.RTCInterface()
         self.rtc.power_on_rtc()
         self.launch_time = self.rtc.get_datetime()
@@ -111,16 +108,15 @@ class SmartModule(object):
         self.asset.context = self.rtc.get_context()
         self.asset.type = self.rtc.get_type()
         self.ai = asset_interface.AssetInterface(self.asset.type, self.rtc.mock)
-        
-
         self.rtc.power_off_rtc()
 
     def discover(self):
-
         if self.rtc.mock:
-            print("Mock Smart Module hosting asset", self.asset.id, self.asset.type, self.asset.context)
+            print("Mock Smart Module hosting asset ", self.asset.id, self.asset.type,
+                  self.asset.context)
         else:
-            print("Real Smart Module hosting asset", self.asset.id, self.asset.type, self.asset.context)
+            print("Real Smart Module hosting asset ", self.asset.id, self.asset.type,
+                  self.asset.context)
 
         self.log.info("Performing Discovery...")
         subprocess.call("sudo ./host-hapi.sh", shell=True)
@@ -176,21 +172,14 @@ class SmartModule(object):
             twilio_auth_token
         '''.split()
         try:
-            #conn = sqlite3.connect('hapi_core.db')
-            #c = conn.cursor()
             sql = 'SELECT {fields} FROM site LIMIT 1;'.format(
                 fields=', '.join(field_names))
-
-            db = sqlite3.connect('hapi_core.db')
-            curs = db.cursor()
-
-            #db_elements = self.dbconn.cursor.execute(sql)
-            db_elements = curs.execute(sql)
-
+            database = sqlite3.connect('hapi_core.db')
+            db_elements = database.cursor().execute(sql)
             for row in db_elements:
                 for field_name, field_value in zip(field_names, row):
                     setattr(self, field_name, field_value)
-            db.close()
+            database.close()
             self.log.info("Site data loaded.")
         except Exception, excpt:
             self.log.exception("Error loading site data: %s", excpt)
@@ -213,74 +202,49 @@ class SmartModule(object):
 
     def push_sysinfo(self, asset_context, information):
         """Push System Status (stats) information to InfluxDB server."""
-        # We should consider, somehow, a better approach
         timestamp = datetime.datetime.now()
         conn = self.connect_influx(asset_context)
-        cpuinfo = [{"measurement": "cpu",
-                    "tags": {
-                        "asset": self.name
-                    },
-                    "time": timestamp,
+        cpuinfo = [{"measurement": "cpu", "tags": {"asset": self.name}, "time": timestamp,
                     "fields": {
                         "unit": "percentage",
                         "load": information.cpu["percentage"]
                     }
-                  }]
-        meminfo = [{"measurement": "memory",
-                    "tags": {
-                        "asset": self.name
-                    },
-                    "time": timestamp,
+                   }]
+        meminfo = [{"measurement": "memory", "tags": {"asset": self.name}, "time": timestamp,
                     "fields": {
                         "unit": "bytes",
                         "free": information.memory["free"],
                         "used": information.memory["used"],
                         "cached": information.memory["cached"]
                     }
-                  }]
-        netinfo = [{"measurement": "network",
-                    "tags": {
-                        "asset": self.name
-                    },
-                    "time": timestamp,
+                   }]
+        netinfo = [{"measurement": "network", "tags": {"asset": self.name}, "time": timestamp,
                     "fields": {
                         "unit": "packets",
                         "packet_recv": information.network["packet_recv"],
                         "packet_sent": information.network["packet_sent"]
                     }
-                  }]
-        botinfo = [{"measurement": "boot",
-                    "tags": {
-                        "asset": self.name
-                    },
-                    "time": timestamp,
+                   }]
+        botinfo = [{"measurement": "boot", "tags": {"asset": self.name}, "time": timestamp,
                     "fields": {
                         "unit": "timestamp",
                         "date": information.boot
                     }
-                  }]
-        diskinf = [{"measurement": "disk",
-                    "tags": {
-                        "asset": self.name
-                    },
-                    "time": timestamp,
+                   }]
+        diskinf = [{"measurement": "disk", "tags": {"asset": self.name}, "time": timestamp,
                     "fields": {
                         "unit": "bytes",
                         "total": information.disk["total"],
                         "free": information.disk["free"],
                         "used": information.disk["used"]
                     }
-                  }]
-        ctsinfo = [{"measurement": "clients",
-                    "tags": {
-                        "asset": self.name
-                    },
-                    "time": timestamp,
+                   }]
+        ctsinfo = [{"measurement": "clients", "tags": {"asset": self.name}, "time": timestamp,
                     "fields": {
                         "unit": "integer",
                         "clients": information.clients
                     }
-                  }]
+                   }]
         json = cpuinfo + meminfo + netinfo + botinfo + diskinf + ctsinfo
         conn.write_points(json)
 
@@ -312,7 +276,8 @@ class SmartModule(object):
     def log_sensor_data(self, data, virtual):
         if not virtual:
             try:
-                self.push_data(self.asset.name, self.asset.context, value, asset.unit)
+                self.push_data(self.asset.name, self.asset.context, self.asset.value,
+                               self.asset.unit)
             except Exception, excpt:
                 self.log.exception("Error logging sensor data: %s", excpt)
         else:
@@ -362,7 +327,7 @@ class SmartModule(object):
             lat=self.latitude,
             lon=self.longitude,
         )
-        
+
         try:
             f = urllib2.urlopen(url)
             json_string = f.read()
@@ -381,11 +346,10 @@ class SmartModule(object):
                 VALUES (?, ?, ?)
             ''', (now, job.name, result)
             self.log.info("Executed %s", job.name)
-            conn = sqlite3.connect('hapi_history.db')
-            c = conn.cursor()
-            c.execute(*command)
-            conn.commit()
-            conn.close()
+            database = sqlite3.connect('hapi_history.db')
+            database.cursor().execute(*command)
+            database.commit()
+            database.close()
         except Exception, excpt:
             self.log.exception("Error logging command: %s", excpt)
 
@@ -409,7 +373,7 @@ class SmartModule(object):
                   '''{days} days, {hours} hours and {minutes} minutes.
             ###
         ''').format(
-            version=version,
+            version=VERSION,
             platform=sys.platform,
             encoding=sys.getdefaultencoding(),
             executable=sys.executable,
@@ -430,7 +394,7 @@ class Scheduler(object):
         self.running = True
         self.smart_module = None
         self.processes = []
-        self.dbconn = DatabaseConn(connect=True)
+        self.database = DatabaseConnection(connect=True)
         self.log = logging.getLogger(SM_LOGGER)
 
     class Job(object):
@@ -481,24 +445,16 @@ class Scheduler(object):
             virtual
         '''.split()
         try:
-            #conn = sqlite3.connect('hapi_core.db')
-            #c = conn.cursor()
             sql = 'SELECT {fields} FROM schedule;'.format(
                 fields=', '.join(field_names))
-
-            db = sqlite3.connect("hapi_core.db")
-            curs = db.cursor()
-            db_jobs = curs.execute(sql)
-
-            #db_jobs = self.dbconn.cursor.execute(sql)
-
+            database = sqlite3.connect("hapi_core.db")
+            db_jobs = database.cursor().execute(sql)
             for row in db_jobs:
                 job = Scheduler.Job()
                 for field_name, field_value in zip(field_names, row):
                     setattr(job, field_name, field_value)
                 jobs.append(job)
-            db.close()
-
+            database.close()
             self.log.info("Schedule Data Loaded.")
         except Exception, excpt:
             self.log.exception("Error loading schedule. %s", excpt)
@@ -572,16 +528,13 @@ class Scheduler(object):
                         WHERE name=?
                         ORDER BY step ;
                     ''', (job.sequence,)
-                    db = sqlite3.connect('hapi_core.db')
-                    curs = db.cursor()
-
-                    #seq_jobs = self.dbconn.cursor.execute(*command)
-                    seq_jobs = curs.execute(*command)
+                    database = sqlite3.connect('hapi_core.db')
+                    seq_jobs = self.database.cursor().execute(*command)
                     #print('len(seq_jobs) =', len(seq_jobs))
                     p = Process(target=self.process_sequence, args=(seq_jobs, job, job_rtu,
                                                                     seq_result,))
                     p.start()
-                    db.close()
+                    database.close()
                 else:
                     print('Running command', job.command)
                     # Check pre-defined jobs
