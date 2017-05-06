@@ -42,7 +42,7 @@ import asset_interface
 import rtc_interface
 from alert import Alert
 from utilities import SM_LOGGER, VERSION
-from utilities import trim, DatabaseConnection
+from utilities import trim
 
 reload(sys)
 
@@ -394,7 +394,6 @@ class Scheduler(object):
         self.running = True
         self.smart_module = None
         self.processes = []
-        self.database = DatabaseConnection(connect=True)
         self.log = logging.getLogger(SM_LOGGER)
 
     class Job(object):
@@ -560,13 +559,12 @@ class DataSync(object):
     def read_db_version():
         version = ""
         try:
-            conn = sqlite3.connect('hapi_core.db')
-            c = conn.cursor()
+            database = sqlite3.connect('hapi_core.db')
             sql = "SELECT data_version FROM db_info;"
-            data = c.execute(sql)
+            data = database.cursor().execute(sql)
             for element in data:
                 version = element[0]
-            conn.close()
+            database.close()
             logging.getLogger(SM_LOGGER).info("Read database version: %s", version)
             return version
         except Exception, excpt:
@@ -577,11 +575,10 @@ class DataSync(object):
         try:
             version = datetime.datetime.now().isoformat()
             command = 'UPDATE db_info SET data_version = ?;', (version,)
-            conn = sqlite3.connect('hapi_core.db')
-            c = conn.cursor()
-            c.execute(*command)
-            conn.commit()
-            conn.close()
+            database = sqlite3.connect('hapi_core.db')
+            database.cursor().execute(*command)
+            database.commit()
+            database.close()
             logging.getLogger(SM_LOGGER).info("Wrote database version: %s", version)
         except Exception, excpt:
             logging.getLogger(SM_LOGGER).info("Error writing database version: %s", excpt)

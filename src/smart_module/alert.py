@@ -58,7 +58,7 @@ class Alert(object):
         print('Upper Threshold is', self.upper_threshold)
         if not self.lower_threshold <= self.current <= self.upper_threshold:
             self.log.info("Alert condition detected: %s :: %s", self.id, str(self.current))
-            self.log_alert_condition()
+            #self.log_alert_condition()
             self.send_alert_condition()
 
     def log_alert_condition(self):
