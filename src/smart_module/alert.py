@@ -23,102 +23,54 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 from __future__ import print_function
-import sys
-import datetime
 import logging
 import sqlite3
-from utilities import *
+from utilities import SM_LOGGER
 
 class Alert(object):
-    """Hold information about current alert status about a given asset."""
+    """Hold Alert information fetched from database and check for alerts."""
     def __init__(self, asset_id):
-        self.id = asset_id
+        """Create object with null values."""
+        self.alert_id = asset_id
         self.lower_threshold = 0.0
         self.upper_threshold = 0.0
-        self.current = 0.0
         self.message = ""
         self.response_type = ""
-        self.log = logging.getLogger(SM_LOGGER)
 
     def __str__(self):
         """Use to pass Alert information in JSON."""
-        return str([{"id": self.id,
+        return str([{"id": self.alert_id,
                      "lower": self.lower_threshold,
                      "upper": self.upper_threshold,
-                     "current": self.current,
                      "message": self.message,
                      "response": self.response_type
                     }])
 
-    def check_alert(self, value):
-        """Check current value with threshold and send alert if necessary."""
-        self.current = float(value)
-        self.get_alert_params()
-        self.log.info("Checking asset for alert conditions: %s :: %s", self.id, value)
-        print('Lower Threshold is', self.lower_threshold)
-        print('Upper Threshold is', self.upper_threshold)
-        if not self.lower_threshold <= self.current <= self.upper_threshold:
-            self.log.info("Alert condition detected: %s :: %s", self.id, str(self.current))
-            self.log_alert_condition()
-            self.send_alert_condition()
+    def update_alert(self):
+        """Fetch alert parameters from database."""
+        try:
+            logging.getLogger(SM_LOGGER).info("Fetching alert param. from database")
+            field_names = '''
+                lower_threshold
+                upper_threshold
+                message
+                response_type
+            '''.split()
+            sql = 'SELECT {fields} FROM alert_params WHERE asset_id={asset};'.format(
+                fields=', '.join(field_names), asset=int(self.alert_id))
+            database = sqlite3.connect("hapi_core.db")
+            row = database.cursor().execute(sql).fetchone()
+            for key, value in zip(field_names, row):
+                setattr(self, key, value)
+            self.lower_threshold = float(self.lower_threshold)
+            self.upper_threshold = float(self.upper_threshold)
+            database.close()
+        except Exception, excpt:
+            logging.getLogger(SM_LOGGER).exception("Error fetching alert param. from database: %s",
+                                                   excpt)
 
-    def log_alert_condition(self):
-        """Update database alert log."""
-        command = '''
-            INSERT INTO alert_log (asset_id, value, timestamp)
-            VALUES (?, ?, ?)
-        ''', (int(self.id), self.current, str(datetime.datetime.now()))
-        #db = DatabaseConn(connect=True, dbfile="hapi_history.db")
-
-        db = sqlite3.connect("hapi_history.db")
-        db.cursor().execute(*command)
-        db.commit()
-        db.close()
-
-    def send_alert_condition(self):
-        """Send alert according to 'self.response_type'."""
-        message = '''
-            Alert from: {id}
-            {message}
-            Value: {value}
-            Timestamp: "{now}"
-        '''.format(
-            id=self.id,
-            message=self.message,
-            value=self.current,
-            now=datetime.datetime.now(),
-        )
-        if self.response_type.lower() == "sms":
-            # message = trim(message) + '\n'
-            # message = message.replace('\n', '\r\n')  #??? ugly! necessary? write place?
-            # if (self.twilio_acct_sid is not "") and (self.twilio_auth_token is not ""):
-            # client = TwilioRestClient(self.twilio_acct_sid, self.twilio_auth_token)
-            # client.messages.create(to="+receiving number", from_="+sending number",
-            #                        body=message)
-            print("sms sent (testing): ", trim(message))
-
-        if self.response_type.lower() == "email":
-            print("email sent (testing): ", trim(message))
-
-        self.log.info("Alert condition sent.")
-
-    def get_alert_params(self):
-        """Update the object to hold its alert information."""
-        self.log.info("Fetching alert parameters.")
-        field_names = '''
-            asset_id
-            lower_threshold
-            upper_threshold
-            message
-            response_type
-        '''.split()
-        #database = DatabaseConn(connect=True)
-        db = sqlite3.connect("hapi_core.db")
-        curs = db.cursor()
-        sql = 'SELECT {fields} FROM alert_params WHERE asset_id={asset};'.format(
-            fields=', '.join(field_names), asset=int(self.id))
-        row = curs.execute(sql).fetchone()
-        self.id, self.lower_threshold, self.upper_threshold, self.message, self.response_type = row
-        self.lower_threshold = float(self.lower_threshold)
-        self.upper_threshold = float(self.upper_threshold)
-        db.close()
+    def check_alert(self, current_value):
+        """Check for alert."""
+        if not self.lower_threshold <= float(current_value) <= self.upper_threshold:
+            print("Alert detected.")
+            print("Value: ", current_value)

@@ -21,12 +21,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 '''
 #https://github.com/switchdoclabs/RTC_SDL_DS3231/blob/master/SDL_DS3231.py
 
-import sys
 import datetime
 import logging
 import time
+from utilities import SM_LOGGER
 #import RPi.GPIO
-SM_LOGGER = "smart_module"
 
 LEN_ID = 16
 LEN_CONTEXT = 16
@@ -42,10 +41,6 @@ class RTCInterface(object):
     '''
 
     def __init__(self):
-        '''
-        Args:
-            mock (bool): Pass as True if a hardware RTC is not connected
-        '''
         self.mock = False
 
         try:
@@ -83,13 +78,14 @@ class RTCInterface(object):
     def get_datetime(self):
         '''Gets the current date/time from the attached RTC
         Returns:
-            datetime: Current date/time from RTC if mock is False. Current Python datetime if mock is True
+            datetime: Current date/time from RTC if mock is False. Current Python datetime if mock
+            is True
         '''
         try:
             if self.mock:
                 return datetime.datetime.now()
-            else:
-                return self.ds3231.read_datetime()
+
+            return self.ds3231.read_datetime()
         except Exception, excpt:
             self.logger.exception("Error getting RTC date/time. %s", excpt)
 
@@ -106,14 +102,15 @@ class RTCInterface(object):
     def get_temp(self):
         '''Gets the internal temperature from the RTC component
         Returns:
-            float: Current RTC internal temperature sensor value if mock is False. 20.0 if mock is True
+            float: Current RTC internal temperature sensor value if mock is False. 20.0 if mock
+            is True
         '''
 
         try:
             if self.mock:
                 return float(random.randrange(8, 34, 1))
-            else:
-                return self.ds3231.getTemp()
+
+            return self.ds3231.getTemp()
         except Exception, excpt:
             self.logger.exception("Error getting the temperature from the RTC. %s", excpt)
 
@@ -126,10 +123,10 @@ class RTCInterface(object):
         try:
             if self.mock:
                 return "wt"
-            else:
-                byte0 = self.ds3231.read_AT24C32_byte(0)
-                byte1 = self.ds3231.read_AT24C32_byte(1)
-                return str(chr(byte0) + chr(byte1)).strip()
+
+            byte0 = self.ds3231.read_AT24C32_byte(0)
+            byte1 = self.ds3231.read_AT24C32_byte(1)
+            return str(chr(byte0) + chr(byte1)).strip()
         except Exception, excpt:
             self.logger.exception("Error reading type from EEPROM. %s", excpt)
 
@@ -155,19 +152,19 @@ class RTCInterface(object):
         try:
             if self.mock:
                 return "HSM-WT123-MOCK"
-            else:
-                #Concatenate the 16 byte module ID
-                id_data = ""
-                for x in range(LEN_TYPE, LEN_TYPE + LEN_ID):
-                    id_data = id_data + chr(self.ds3231.read_AT24C32_byte(x))
-                return str(id_data).strip()
+
+            #Concatenate the 16 byte module ID
+            id_data = ""
+            for x in range(LEN_TYPE, LEN_TYPE + LEN_ID):
+                id_data = id_data + chr(self.ds3231.read_AT24C32_byte(x))
+            return str(id_data).strip()
         except Exception, excpt:
             self.logger.exception("Error reading Module ID from EEPROM. %s", excpt)
 
     def set_id(self, id_data):
         '''Writes the module id to EEPROM
         Args:
-            id_data (str): The ID of the Smart Module to write to EEPROM      
+            id_data (str): The ID of the Smart Module to write to EEPROM
         Returns:
             None
         '''
@@ -195,12 +192,12 @@ class RTCInterface(object):
         try:
             if self.mock:
                 return "Environment"
-            else:
-                #Read the 16 byte asset context
-                context = ""
-                for x in range(LEN_ID + LEN_TYPE,  LEN_ID + LEN_TYPE + LEN_CONTEXT):
-                    context = context + chr(self.ds3231.read_AT24C32_byte(x))
-                return str(context).strip()
+
+            #Read the 16 byte asset context
+            context = ""
+            for x in range(LEN_ID + LEN_TYPE, LEN_ID + LEN_TYPE + LEN_CONTEXT):
+                context = context + chr(self.ds3231.read_AT24C32_byte(x))
+            return str(context).strip()
         except Exception, excpt:
             self.logger.exception("Error reading Module context from EEPROM. %s", excpt)
 
@@ -215,7 +212,7 @@ class RTCInterface(object):
         try:
             if not self.mock:
                 #Write the 16 byte sensor context
-                for x in range(0,LEN_CONTEXT):
+                for x in range(0, LEN_CONTEXT):
                     if len(context) < x + 1:
                         ch = " "
                     else:

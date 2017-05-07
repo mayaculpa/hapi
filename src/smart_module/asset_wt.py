@@ -23,17 +23,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 '''
 
 from __future__ import print_function
-
-import asset_interface
-import w1thermsensor    #pip install w1thermsensor
 import os
 import glob
 import time
 import logging
-import subprocess
-
-version = "3.0 Alpha"
-sm_logger = "SMART_MODULE"
+from utilities import SM_LOGGER
 
 class AssetImpl(object):
     def __init__(self):
@@ -46,7 +40,7 @@ class AssetImpl(object):
             self.device_path = os.path.join(device_dir, 'w1_slave')
             print('Device file:', self.device_path)
         except Exception, excpt:
-            logging.getLogger(sm_logger).exception("Error initializing sensor interface: %s", excpt)
+            logging.getLogger(SM_LOGGER).exception("Error initializing sensor interface: %s", excpt)
 
     def read_temp_raw(self):
         try:
@@ -56,7 +50,7 @@ class AssetImpl(object):
                     lines = lines + line.decode("utf-8")
             return lines.split("\n")
         except Exception, excpt:
-            logging.getLogger(sm_logger).exception("Error reading raw temperature data: %s", excpt)
+            logging.getLogger(SM_LOGGER).exception("Error reading raw temperature data: %s", excpt)
 
     def read_value(self):
         temp_c = -50
@@ -72,6 +66,6 @@ class AssetImpl(object):
                 temp_c = float(temp_string) / 1000.0
 
         except Exception, excpt:
-            logging.getLogger(sm_logger).exception("Error getting converted sensor data: %s", excpt)
+            logging.getLogger(SM_LOGGER).exception("Error getting converted sensor data: %s", excpt)
 
         return temp_c
