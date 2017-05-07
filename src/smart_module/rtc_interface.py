@@ -25,13 +25,14 @@ import sys
 import datetime
 import logging
 import time
-
+#import RPi.GPIO
 SM_LOGGER = "smart_module"
 
 LEN_ID = 16
 LEN_CONTEXT = 16
 LEN_TYPE = 2
 RTC_VCC = 15
+GPIO = None
 
 class RTCInterface(object):
     '''Interface for DS3231 Real-time Clock with internal temp sensor and AT24C32 EEPROM
@@ -48,11 +49,13 @@ class RTCInterface(object):
         self.mock = False
 
         try:
+            global SDL_DS3231
             import SDL_DS3231
         except ImportError:
             self.mock = True
 
         try:
+            global GPIO
             import RPi.GPIO as GPIO
         except ImportError:
             self.mock = True
@@ -61,6 +64,7 @@ class RTCInterface(object):
 
         try:
             if not self.mock:
+                GPIO.setwarnings(False)
                 GPIO.setmode(GPIO.BOARD)
                 GPIO.setup(RTC_VCC, GPIO.OUT)
                 self.ds3231 = SDL_DS3231.SDL_DS3231(1, 0x68, 0x57)
