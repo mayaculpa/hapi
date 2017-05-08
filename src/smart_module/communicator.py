@@ -55,8 +55,14 @@ class Communicator(object):
             self.logger.exception("Error connecting to broker. %s", excpt)
 
     def on_disconnect(self, client, userdata, rc):
-        print(mqtt.error_string(rc))
-        self.logger.info("Disconnected")
+        #print(mqtt.error_string(rc))
+        attempt = 0
+        self.is_connected = False
+        self.logger.info("Disconnected: %s.", mqtt.error_string(rc))
+        while not self.is_connected and attempt < 3:
+            self.logger.info("Attempting to reconnect: %s.", str(attempt))
+            attempt = attempt + 1
+            self.smart_module.discover()
 
     # The callback for when the client receives a CONNACK response from the server.
     #@staticmethod

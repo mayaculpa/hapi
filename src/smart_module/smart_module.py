@@ -98,7 +98,8 @@ class SmartModule(object):
         self.scheduler = None
         self.hostname = ""
         self.last_status = ""
-        self.ifconn = InfluxDBClient("138.197.74.74", 8086, "early", "adopter")
+        #self.ifconn = InfluxDBClient("138.197.74.74", 8086, "early", "adopter")
+        self.ifconn = InfluxDBClient("127.0.0.1", 8086, "root", "root")
         self.log = logging.getLogger(SM_LOGGER)
         self.rtc = rtc_interface.RTCInterface()
         self.rtc.power_on_rtc()
