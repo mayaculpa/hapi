@@ -135,10 +135,10 @@ class RTCInterface(object):
             return mock_value
 
         try:
-            bytes_ = (
+            bytes_ = [
                 self.ds3231.read_AT24C32_byte(address + i)
                 for i in range(n)
-            )
+            ]
         except Exception, excpt:
             self.logger.exception("Error reading %s from EEPROM. %s", name, excpt)
 
