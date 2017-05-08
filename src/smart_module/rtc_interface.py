@@ -21,6 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 '''
 #https://github.com/switchdoclabs/RTC_SDL_DS3231/blob/master/SDL_DS3231.py
 
+import random
 import datetime
 import logging
 import time
