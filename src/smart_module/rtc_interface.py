@@ -87,8 +87,8 @@ class RTCInterface(object):
     def get_datetime(self):
         '''Gets the current date/time from the attached RTC
         Returns:
-            datetime: Current date/time from RTC if not mock;
-            Current Python datetime if mock
+            datetime.datetime: Current date/time from RTC if not mock;
+            current Python datetime if mock.
         '''
         if self.mock:
             return datetime.datetime.now()
@@ -113,8 +113,8 @@ class RTCInterface(object):
     def get_temp(self):
         '''Gets the internal temperature from the RTC component
         Returns:
-            float: Current RTC internal temperature sensor value if not mock.
-            20.0 if mock
+            float: Current RTC internal temperature sensor value if not mock;
+            20.0 if mock.
         '''
 
         if self.mock:
@@ -167,8 +167,7 @@ class RTCInterface(object):
     def get_type(self):
         '''Gets the modules sensor type from the EEPROM
         Returns:
-            str: %s-byte Type data as String if mock is False.
-            "wt" if mock is True
+            str: %s-byte Type data as String if not mock; 'wt' if mock.
         ''' % TYPE_LEN
 
         return self.read_eeprom(self, TYPE_ADDRESS, TYPE_LEN, 'type', 'wt')
@@ -184,8 +183,7 @@ class RTCInterface(object):
     def get_id(self):
         '''Gets the Smart Module ID from the attached EEPROM
         Returns:
-            str: %s-byte module ID if mock is False.
-            "HSM-WT123-MOCK" if mock is True
+            str: %s-byte module ID if not mock; 'HSM-WT123-MOCK' if mock.
         ''' % ID_LEN
 
         return self.read_eeprom(
@@ -204,7 +202,7 @@ class RTCInterface(object):
     def get_context(self):
         '''Gets the module context from the attached EEPROM
         Returns:
-            str: %s-byte sensor context if mock is False. "Environment" if mock is True
+            str: %s-byte sensor context if not mock; 'Environment' if mock.
         ''' % CONTEXT_LEN
 
         return self.read_eeprom(
