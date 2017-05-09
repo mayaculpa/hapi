@@ -32,7 +32,8 @@ class Communicator(object):
     def __init__(self, sm):
         self.rtuid = ""
         self.name = ""
-        self.broker_name = "mqttbroker.local"
+        self.broker_name = None
+        self.broker_ip = None
         self.fallback_broker = ""
         self.influx_address = ""
         self.start_uptime = datetime.datetime.now()
@@ -49,8 +50,9 @@ class Communicator(object):
 
     def connect(self):
         try:
-            self.logger.info("Connecting to " + self.broker_name)
-            self.client.connect(host=self.broker_name, port=1883, keepalive=60)
+            self.logger.info("Connecting to %s at %s.", self.broker_name, self.broker_ip)
+            #self.client.connect(host=self.broker_name, port=1883, keepalive=60)
+            self.client.connect(host=self.broker_ip, port=1883, keepalive=60)
         except Exception, excpt:
             self.logger.exception("Error connecting to broker. %s", excpt)
 
@@ -59,10 +61,10 @@ class Communicator(object):
         attempt = 0
         self.is_connected = False
         self.logger.info("Disconnected: %s.", mqtt.error_string(rc))
-        while not self.is_connected and attempt < 3:
-            self.logger.info("Attempting to reconnect: %s.", str(attempt))
-            attempt = attempt + 1
-            self.smart_module.discover()
+        # while not self.is_connected and attempt < 3:
+        #     self.logger.info("Attempting to reconnect: %s.", str(attempt))
+        #     attempt = attempt + 1
+        #     self.smart_module.discover()
 
     # The callback for when the client receives a CONNACK response from the server.
     #@staticmethod

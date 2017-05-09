@@ -23,6 +23,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 from __future__ import print_function
+import os
 import sys
 import time
 import datetime
@@ -43,6 +44,7 @@ import rtc_interface
 from alert import Alert
 from utilities import SM_LOGGER, VERSION
 from utilities import trim
+from zeroconf import ServiceBrowser, ServiceStateChange, Zeroconf
 
 reload(sys)
 
@@ -98,8 +100,7 @@ class SmartModule(object):
         self.scheduler = None
         self.hostname = ""
         self.last_status = ""
-        #self.ifconn = InfluxDBClient("138.197.74.74", 8086, "early", "adopter")
-        self.ifconn = InfluxDBClient("127.0.0.1", 8086, "root", "root")
+        self.ifconn = InfluxDBClient("138.197.74.74", 8086, "early", "adopter")
         self.log = logging.getLogger(SM_LOGGER)
         self.rtc = rtc_interface.RTCInterface()
         self.rtc.power_on_rtc()
@@ -110,6 +111,40 @@ class SmartModule(object):
         self.asset.type = self.rtc.get_type()
         self.ai = asset_interface.AssetInterface(self.asset.type, self.rtc.mock)
         self.rtc.power_off_rtc()
+        self.zeroconf = Zeroconf()
+
+    def __del__(self):
+        try:
+            if self.zeroconf:
+                self.zeroconf.close()
+        except Exception, excpt:
+            self.log.exception("Error trying to close Zeroconf: %s.", excpt)
+
+    def become_broker(self):
+        """If no broker found. SM performs operation to become the broker."""
+        try:
+            # Completely dependent on avahi configured to publish the mosquitto.
+            # We'll implement it on every image. We could dev. a way to register the service though.
+            os.system("sudo systemctl start avahi-daemon.service")
+            return
+        except Exception, excpt:
+            self.log.info("Error trying to become the Broker: %s.", excpt)
+
+    def find_service(self, zeroconf, service_type, name, state_change):
+        """Check for published MQTT. If it finds port 1883 of type '_mqtt', update broker name."""
+        if state_change is not ServiceStateChange.Added:
+            return
+        # Get the service we want (port 1883 and type '_mqtt._tcp.local.'
+        info = zeroconf.get_service_info(service_type, name)
+        if info.port == 1883 and service_type == "_mqtt._tcp.local.":
+            # If this is our service, update mqtt broker name and ip on self.comm (Communicator)
+            self.comm.broker_name = info.server
+            self.comm.broker_ip = str(socket.inet_ntoa(info.address))
+            return
+
+    def find_broker(self):
+        """Create zeroconf object, if needed, and browser for services."""
+        browser = ServiceBrowser(self.zeroconf, "_mqtt._tcp.local.", handlers=[self.find_service])
 
     def discover(self):
         if self.rtc.mock:
@@ -119,17 +154,29 @@ class SmartModule(object):
             print("Real Smart Module hosting asset ", self.asset.id, self.asset.type,
                   self.asset.context)
 
-        self.log.info("Performing Discovery...")
-        subprocess.call("sudo ./host-hapi.sh", shell=True)
+        attempt = 1
+        while self.comm.broker_name is None and attempt <= 5: # or?
+            self.log.info("Performing Discovery...")
+            self.find_broker()
+            self.log.info("Waiting Broker information on attempt: %d.", attempt)
+            if self.comm.broker_name is None:
+                self.become_broker()
+                time.sleep(0.5)
+            attempt = attempt + 1
+
+        self.log.info("MQTT Broker: %s. IP: %s.", self.comm.broker_name, self.comm.broker_ip)
         self.comm.smart_module = self
         self.comm.client.loop_start()
         self.comm.connect()
+        self.zeroconf.close()
         t_end = time.time() + 10
         while (time.time() < t_end) and not self.comm.is_connected:
             time.sleep(1)
 
         self.comm.subscribe("SCHEDULER/RESPONSE")
         self.comm.send("SCHEDULER/QUERY", "Where are you?")
+        # Just wait for reply...
+        time.sleep(2)
 
         self.hostname = socket.gethostname()
         self.comm.send("ANNOUNCE", self.hostname + " is online.")
@@ -144,8 +191,6 @@ class SmartModule(object):
                 self.log.info("No Scheduler found. Becoming the Scheduler.")
                 self.scheduler = Scheduler()
                 self.scheduler.smart_module = self
-                # running is always True after object creation. Should we remove it?
-                # self.scheduler.running = True
                 self.scheduler.prepare_jobs(self.scheduler.load_schedule())
                 self.comm.scheduler_found = True
                 self.comm.subscribe("SCHEDULER/QUERY")
