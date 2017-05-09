@@ -26,7 +26,7 @@ Sketch Date: May 2nd 2017
 Sketch Version: v3.0.0
 Implement of MQTT-based HAPInode (HN) for use in Monitoring and Control
 Implements mDNS discovery of MQTT broker
-Implements definitions for 
+Implements definitions for
   ESP-NodeMCU
   ESP8266
   WROOM32
@@ -52,7 +52,7 @@ void setupSensors(void){
         digitalWrite(x, LOW);
       }
       else{
-        digitalWrite(x, HIGH);        
+        digitalWrite(x, HIGH);
       }
     }
     if (pinControl[x] == 4) {
@@ -61,15 +61,15 @@ void setupSensors(void){
   }
 
 // Start the DHT-22
-  dht1.begin(); 
+  dht1.begin();
   /*for (int x = 0; x < NUM_DHTS; x++) {
     dhts[x].begin();
   }*/
-  
+
 // Start the DS18B20
   wp_sensors.begin();
-  
-// Start the flow sensor  
+
+// Start the flow sensor
   pinMode(FLOW_SENSORPIN, INPUT);
   flowrate.attach(FLOW_SENSORPIN);
   flowrate.interval(5);
@@ -119,8 +119,8 @@ float readTemperatured(int iDevice) {
   else {
     returnValue = h;
     if (metric == false) {
-      returnValue = (returnValue * 9.0)/ 5.0 + 32.0; // Convert Celcius to Fahrenheit 
-    }    
+      returnValue = (returnValue * 9.0)/ 5.0 + 32.0; // Convert Celsius to Fahrenheit
+    }
   }
   return returnValue;
 }
@@ -130,14 +130,14 @@ float read1WireTemperature(int iDevice) {
   float returnValue;
   wp_sensors.requestTemperatures();
   returnValue = wp_sensors.getTempCByIndex(0);
-  
+
   if (isnan(returnValue)) {
     returnValue = -1;
   }
   else
-  {  
+  {
     if (metric == false) {
-      returnValue = (returnValue * 9.0)/ 5.0 + 32.0; // Convert Celcius to Fahrenheit 
+      returnValue = (returnValue * 9.0)/ 5.0 + 32.0; // Convert Celsius to Fahrenheit
     }
   }
   return returnValue;
@@ -173,7 +173,7 @@ float readpH(int iDevice) {
   phValue = 3.5 * phValue;                  //convert the millivolt into pH value
   return phValue;
 }
- 
+
 float readTDS(int iDevice) {
   // readTDS - Reads pH from an analog TDS sensor
   unsigned long int avgValue;  //Store the average value of the sensor feedback
@@ -204,7 +204,7 @@ float readTDS(int iDevice) {
 
   //TODO: Need temperature compensation for TDS
   TDSValue = 1.0 * TDSValue;                  //convert the millivolt into TDS value
-  
+
   return TDSValue;
 }
 
@@ -220,7 +220,7 @@ float readLightSensorTemp(int iDevice) {
   // Simple code to read a Light value from a CDS sensor, with 10k to ground
   float Lux;
   int RawADC = analogRead(iDevice);
-//TODO 
+//TODO
   Lux = (float)RawADC; // Need to do some processing to get lux from CDS reading
 
   return Lux;
