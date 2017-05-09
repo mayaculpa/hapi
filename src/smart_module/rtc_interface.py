@@ -170,7 +170,7 @@ class RTCInterface(object):
             str: %s-byte Type data as String if not mock; 'wt' if mock.
         ''' % TYPE_LEN
 
-        return self.read_eeprom(self, TYPE_ADDRESS, TYPE_LEN, 'type', 'wt')
+        return self.read_eeprom(TYPE_ADDRESS, TYPE_LEN, 'type', 'wt')
 
     def set_type(self, type_):
         '''Writes the modules %s-byte sensor type to EEPROM
@@ -187,12 +187,12 @@ class RTCInterface(object):
         ''' % ID_LEN
 
         return self.read_eeprom(
-            self, ID_ADDRESS, ID_LEN, 'Module ID', 'HSM-WT123-MOCK')
+            ID_ADDRESS, ID_LEN, 'Module ID', 'HSM-WT123-MOCK')
 
     def set_id(self, id_):
         '''Writes the module id to EEPROM
         Args:
-            id_ (str): The ID of the Smart Module to write to EEPROM      
+            id_ (str): The ID of the Smart Module to write to EEPROM
         Returns:
             None
         '''
@@ -206,7 +206,6 @@ class RTCInterface(object):
         ''' % CONTEXT_LEN
 
         return self.read_eeprom(
-            self,
             CONTEXT_ADDRESS, CONTEXT_LEN, 'Module context', 'Environment')
 
     def set_context(self, context):
