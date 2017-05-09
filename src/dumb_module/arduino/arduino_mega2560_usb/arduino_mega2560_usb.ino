@@ -159,7 +159,7 @@ void assembleResponse(String &responseString, String varName, String value) {
 
 void writeLine(String response, boolean EOL) {
   // Writes a response line to the network connection
-  
+
   char inChar;
 
   for (int i = 0; i < response.length(); i++)
@@ -204,8 +204,8 @@ float readTemperature(int iDevice) {
   else {
     returnValue = h;
     if (metric == false) {
-      returnValue = (returnValue * 9.0)/ 5.0 + 32.0; // Convert Celcius to Fahrenheit 
-    }    
+      returnValue = (returnValue * 9.0)/ 5.0 + 32.0; // Convert Celsius to Fahrenheit
+    }
   }
   return returnValue;
 }
@@ -215,14 +215,14 @@ float readWaterTemperature(int iDevice) {
   float returnValue;
   wp_sensors.requestTemperatures();
   returnValue = wp_sensors.getTempCByIndex(0);
-  
+
   if (isnan(returnValue)) {
     returnValue = -1;
   }
   else
-  {  
+  {
     if (metric == false) {
-      returnValue = (returnValue * 9.0)/ 5.0 + 32.0; // Convert Celcius to Fahrenheit 
+      returnValue = (returnValue * 9.0)/ 5.0 + 32.0; // Convert Celsius to Fahrenheit
     }
   }
   return returnValue;
@@ -258,19 +258,19 @@ float readpH(int iDevice) {
   phValue = 3.5 * phValue;                  //convert the millivolt into pH value
   return phValue;
 }
- 
+
 float readThermistorTemp(int iDevice) {
   // Simple code to read a temperature value from a 10k thermistor with a 10k pulldown resistor
   float Temp;
   int RawADC = analogRead(iDevice);
- 
-  Temp = log(10000.0*((1024.0/RawADC-1))); 
+
+  Temp = log(10000.0*((1024.0/RawADC-1)));
   Temp = 1 / (0.001129148 + (0.000234125 + (0.0000000876741 * Temp * Temp ))* Temp );
-  Temp = Temp - 273.15;            // Convert Kelvin to Celcius
+  Temp = Temp - 273.15;            // Convert Kelvin to Celsius
   if (metric == false) {
-     Temp = (Temp * 9.0)/ 5.0 + 32.0; // Convert Celcius to Fahrenheit 
+     Temp = (Temp * 9.0)/ 5.0 + 32.0; // Convert Celsius to Fahrenheit
   }
- 
+
   return Temp;
 }
 
@@ -282,13 +282,13 @@ String getCommand() {
 //  if (Serial.available() > 0){
 //    inputString = Serial.readString();
 //  }
-  
+
   while ((Serial.available() > 0) && (stringComplete == false)) {
     inChar = (char)Serial.read();  // read the bytes incoming from the client:
     if (inChar == '\n') {
       stringComplete = true;
     }else{
-      inputString += inChar;  
+      inputString += inChar;
     }
     delay(2);
   }
@@ -298,7 +298,7 @@ String getCommand() {
 String buildResponse() {
   // Assembles a response with values from pins and custom functions
   // Returns a JSON string  ("pinnumber":value,"custom function abbreviation":value}
-  
+
   String response = "";
   assembleResponse(response, "name", RTUID);
   assembleResponse(response, "version", HAPI_CLI_VERSION);
@@ -309,7 +309,7 @@ String buildResponse() {
       if (pinControl[x] < 5) {
         assembleResponse(response, (String)x, (String)digitalRead(x));
       }
-    } // END OF if pinControl>0 -  
+    } // END OF if pinControl>0 -
   }   // Next x
 
   //Process analog pins
@@ -349,7 +349,7 @@ String buildResponse() {
 String getStatus() {
   // Returns the current status of the Arduino itself
   // Includes firmware version, MAC address, IP Address, Free RAM and Idle Mode
-  
+
   String retval = "";
 
   retval = RTUID + "\r\n";
@@ -371,7 +371,7 @@ String getStatus() {
 
 int freeRam (){
   // Gets free ram on the Arduino board
-  
+
   extern int __heap_start, *__brkval;
   int v;
   return (int) &v - (__brkval == 0 ? (int) &__heap_start : (int) __brkval);
@@ -393,7 +393,7 @@ void setup() {
         digitalWrite(x, LOW);
       }
       else{
-        digitalWrite(x, HIGH);        
+        digitalWrite(x, HIGH);
       }
     }
     if (pinControl[x] == 4) {

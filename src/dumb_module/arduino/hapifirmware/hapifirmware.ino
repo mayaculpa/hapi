@@ -403,7 +403,7 @@ float readTemperature(int iDevice) {
   else {
     returnValue = h;
     if (metric == false) {
-      returnValue = (returnValue * 9.0)/ 5.0 + 32.0; // Convert Celcius to Fahrenheit 
+      returnValue = (returnValue * 9.0)/ 5.0 + 32.0; // Convert Celsius to Fahrenheit
     }
   }
   return returnValue;
@@ -418,9 +418,9 @@ float readWaterTemperature(int iDevice) {
     returnValue = -1;
   }
   else
-  {  
+  {
     if (metric == false) {
-      returnValue = (returnValue * 9.0)/ 5.0 + 32.0; // Convert Celcius to Fahrenheit 
+      returnValue = (returnValue * 9.0)/ 5.0 + 32.0; // Convert Celsius to Fahrenheit
     }
   }
   return returnValue;
@@ -461,14 +461,14 @@ float readThermistorTemp(int iDevice) {
   // Simple code to read a temperature value from a 10k thermistor with a 10k pulldown resistor
   float Temp;
   int RawADC = analogRead(iDevice);
- 
-  Temp = log(10000.0*((1024.0/RawADC-1))); 
+
+  Temp = log(10000.0*((1024.0/RawADC-1)));
   Temp = 1 / (0.001129148 + (0.000234125 + (0.0000000876741 * Temp * Temp ))* Temp );
-  Temp = Temp - 273.15;            // Convert Kelvin to Celcius
+  Temp = Temp - 273.15;            // Convert Kelvin to Celsius
   if (metric == false) {
-     Temp = (Temp * 9.0)/ 5.0 + 32.0; // Convert Celcius to Fahrenheit 
+     Temp = (Temp * 9.0)/ 5.0 + 32.0; // Convert Celsius to Fahrenheit
   }
- 
+
   return Temp;
 }
 
@@ -499,11 +499,11 @@ String getCommand(WiFiClient client) {
     inChar = (char)Serial.read();  // read the bytes incoming from the client:
 #endif
 
-#ifdef RTU_ENET    
+#ifdef RTU_ENET
   while ((client.available() > 0) && (stringComplete == false)) {
     inChar = (char)client.read();  // read the bytes incoming from the client:
 #endif
-#ifdef RTU_ENET    
+#ifdef RTU_ENET
 
   while ((client.available() > 0) && (stringComplete == false)) {
     inChar = (char)client.read();  // read the bytes incoming from the client:
@@ -514,8 +514,8 @@ String getCommand(WiFiClient client) {
     }
     delay(2);                       // small delay to receive any further characters
   }
-    
-  Serial.println(inputString);  
+
+  Serial.println(inputString);
   return inputString;
 }
 
@@ -532,7 +532,7 @@ String buildResponse() {
       if (pinControl[x] < 5) {
         assembleResponse(response, (String)x, (String)digitalRead(x));
       }
-    } // END OF if pinControl>0 -  
+    } // END OF if pinControl>0 -
   }   // Next x
 
   //Process analog pins
@@ -660,7 +660,7 @@ void setup() {
         digitalWrite(x, LOW);
       }
       else{
-        digitalWrite(x, HIGH);        
+        digitalWrite(x, HIGH);
       }
     }
     if (pinControl[x] == 4) {
@@ -676,9 +676,9 @@ void setup() {
   wp_sensors.begin(); // Start the DS18B20
 
   inputString.reserve(200);  // reserve 200 bytes for the inputString:
-  
+
   Serial.begin(115200);
-  
+
 #ifdef RTU_ENET
   Serial.println("Initializing network....");
   if (Ethernet.begin(mac) == 0) {
@@ -689,7 +689,7 @@ void setup() {
     Serial.println(Ethernet.localIP());
   }
   rtuServer.begin();
-#endif  
+#endif
 #ifdef RTU_ESP
   Serial.println("Initializing WiFi network....");
   WiFiStatus = WiFi.begin(ssid, password);
@@ -703,7 +703,7 @@ void setup() {
     rtuServer.begin();
 #endif
 
-  Serial.println("Starting communications  ...");  
+  Serial.println("Starting communications  ...");
   Serial.println(getStatus()); //Send Status (incl. IP Address) to the Serial Monitor
   Serial.println("Setup Complete. Listening for connections.");
 
