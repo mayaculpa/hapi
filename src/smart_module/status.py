@@ -27,7 +27,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 from __future__ import print_function
-
+import socket
 import time
 import datetime
 import psutil
@@ -42,14 +42,15 @@ class SystemStatus(object):
         self.memory = {"used": 0, "free": 0, "cached": 0}
         self.network = {"packet_sent": 0, "packet_recv": 0}
         self.disk = {"total": 0, "used": 0, "free": 0}
+        self.hostname = ""
         self.timestamp = 0
         self.clients = -1
         if update:
             self.update()
 
     def __str__(self):
-        return str([{"time": self.timestamp, "memory": self.memory, "cpu": self.cpu,
-                     "boot": self.boot, "network": self.network, "disk": self.disk,
+        return str([{"hostname": self.hostname, "time": self.timestamp, "memory": self.memory,
+                     "cpu": self.cpu, "boot": self.boot, "network": self.network, "disk": self.disk,
                      "clients": self.clients}])
 
     def update(self):
@@ -72,6 +73,7 @@ class SystemStatus(object):
         self.disk["used"] = disk_usage.used
         self.disk["free"] = disk_usage.free
         self.timestamp = time.time()
+        self.hostname = socket.gethostname()
 
 if __name__ == "__main__":
     sysinfo = SystemStatus(update=True)
