@@ -188,6 +188,7 @@ class RTCInterface(object):
 
         return self.read_eeprom(ID_ADDRESS, ID_LEN, 'Module ID', 'HSM-WT123-MOCK')
 
+
     def set_id(self, id_):
         '''Writes the module id to EEPROM
         Args:
