@@ -39,9 +39,12 @@ Communications Method
 
 // Board Type
 // ==========
+// Arduino
+#define HN_2560         // Must have WiFi shield
+
 //**ESP Based
 // Board Type
-#define HN_ESP8266
+//#define HN_ESP8266
 //#define HN_ESP32
 
 // Connection Type
@@ -58,8 +61,13 @@ Communications Method
 #include <DHT.h>
 #include <SPI.h>
 #ifdef HN_WiFi
+#ifdef HN_ESP8266
 #include <ESP8266WiFi.h>
 #include <ESP8266mDNS.h>        // for avahi
+#endif
+#ifdef HN_2560
+#include <WiFi.h>
+#endif
 #include <WiFiUdp.h>            // For ntp
 #endif
 #ifdef HN_ENET
@@ -82,8 +90,14 @@ Communications Method
 #include "nodeboard.h"      // Node default pin allocations
 
 //**** Begin Main Variable Definition Section ****
-int loopcount;
+int loopcount;                      // Count of times through main loop (for LED etc)
+unsigned long mscount;              // millisecond counter
+unsigned long epoch;                // UTC seconds
+
 String HAPI_FW_VERSION = "v3.0";    // The version of the firmware the HN is running
+#ifdef HN_2560
+String HN_base = "HN2";             // Prefix for mac address
+#endif
 #ifdef HN_ESP8266
 String HN_base = "HN3";             // Prefix for mac address
 #endif
@@ -129,7 +143,7 @@ const int NTP_PACKET_SIZE = 48;       // NTP time stamp is in the first 48 bytes
 byte packetBuffer[ NTP_PACKET_SIZE];  //buffer to hold incoming and outgoing packets
 unsigned int localPort = UDP_port;    // local port to listen for UDP packets
 WiFiUDP udp;                          // A UDP instance to let us send and receive packets over UDP
-unsigned long epoch;
+
 
 #endif
 //**** End Communications Section ****
@@ -159,16 +173,18 @@ JsonObject& exception_topic = hn_topic_exception.createObject();
 // Definitions related to sensor operations
 #define SENSORID_DIO 0    // DIGITAL I/O
 #define SENSORID_AIO 1    // ANALOG I/O
-#define SENSORID_FN 2     // FUNCTION I/O
+#define SENSORID_FN 2     // SENSOR FUNCTION I/O
+#define CONTROLID_FN 3    // CONTROL FUNCTION I/O
 
-// Initialise the Pushbutton Bouncer object
+// TEST
 const int ledPin = 2; // This code uses the built-in led for visual feedback that the button has been pressed
 const int buttonPin = 5; // Connect your button to pin #gpio13
 int ledflash = 0;
-Bounce bouncer = Bounce();
+Bounce bouncer = Bounce();  // Initialise the Pushbutton Bouncer object
+// end TEST
 
-// Use bouncer object to measure flow rate
-Bounce flowrate = Bounce();
+// Flow meter devices
+Bounce flowrate = Bounce();   // Use bouncer object to measure flow rate
 int WaterFlowRate = 0;
 
 //LIGHT Devices
@@ -181,9 +197,10 @@ DallasTemperature wp_sensors(&oneWire);
 #define NUM_DHTS 1        //total number of DHTs on this device
 #define DHTTYPE DHT22     // Sets DHT type
 
-DHT dht1(DHT_SENSORPIN, DHT22);  //For each DHT, create a new variable given the pin and Type
-DHT dhts[1] = {dht1};     //add the DHT device to the array of DHTs
+DHT dht1(DHT_SENSORPIN, DHT22);   //For each DHT, create a new variable given the pin and Type
+DHT dhts[1] = {dht1};             //add the DHT device to the array of DHTs
 
+// Custom function devices
 //Custom functions are special functions for reading sensors or controlling devices. They are
 //used when setting or a reading a pin isn't enough, as in the instance of library calls.
 typedef float (* GenericFP)(int); //generic pointer to a function that takes an int and returns a float
@@ -195,20 +212,23 @@ struct FuncDef {   //define a structure to associate a Name to generic function 
   GenericFP fPtr;
 };
 
+#define SENSOR_FUNCTIONS 7          //The number of custom sensor functions supported on this HN
+// Create a FuncDef for each custom function
+// Format: abbreviation, context, pin, function
+FuncDef sfunc1 = {"tmp", "dht", "C", -1, &readTemperatured};
+FuncDef sfunc2 = {"hum", "dht", "%", -1, &readHumidity};
+FuncDef sfunc3 = {"lux", "light", "lux", LIGHT_SENSORPIN, &readLightSensorTemp};
+FuncDef sfunc4 = {"tmp1", "DS18B20", "C", ONE_WIRE_BUS, &read1WireTemperature};
+FuncDef sfunc5 = {"ph", "pH Sensor", "pH", PH_SENSORPIN, &readpH};
+FuncDef sfunc6 = {"tds", "TDS Sensor", "ppm", TDS_SENSORPIN, &readTDS};
+FuncDef sfunc7 = {"flow", "FlowRate Sensor", "lpm", FLOW_SENSORPIN, &readFlow};
+FuncDef HapisFunctions[SENSOR_FUNCTIONS] = {sfunc1, sfunc2, sfunc3, sfunc4, sfunc5, sfunc6, sfunc7};
 
-//The number of custom functions supported on this HN
-#define CUSTOM_FUNCTIONS 7
-//Create a FuncDef for each custom function
-//Format: abbreviation, context, pin, function
-FuncDef func1 = {"tmp", "dht", "C", -1, &readTemperatured};
-FuncDef func2 = {"hum", "dht", "%", -1, &readHumidity};
-
-FuncDef func3 = {"lux", "light", "lux", LIGHT_SENSORPIN, &readLightSensorTemp};
-FuncDef func4 = {"tmp1", "DS18B20", "C", ONE_WIRE_BUS, &read1WireTemperature};
-FuncDef func5 = {"ph", "pH Sensor", "pH", PH_SENSORPIN, &readpH};
-FuncDef func6 = {"tds", "TDS Sensor", "ppm", TDS_SENSORPIN, &readTDS};
-FuncDef func7 = {"flow", "Flow Rate Sensor", "lpm", FLOW_SENSORPIN, &readFlow};
-FuncDef HapiFunctions[CUSTOM_FUNCTIONS] = {func1, func2, func3, func4, func5, func6, func7};
+#define CONTROL_FUNCTIONS 1          //The number of custom sensor functions supported on this HN
+// Create a FuncDef for each custom function
+// Format: abbreviation, context, pin, function
+FuncDef cfunc7 = {"pump", "Pump Control", "lpm", -1, &controlPumps};
+FuncDef HapicFunctions[CONTROL_FUNCTIONS] = {cfunc7};
 
 //**** End Sensors Section ****
 
@@ -293,10 +313,15 @@ void setup() {
   Serial.print("IP  address: ");
   Serial.println(WiFi.localIP());
   Serial.print("Hostname   : ");
+#ifdef HN_2560
+  Serial.println(hostString);
+#endif
+#ifdef HN_ESP8266
   Serial.println(WiFi.hostname());
   Serial.println(WiFi.hostname(hostString));
   Serial.print("NewHostname: ");
   Serial.println(WiFi.hostname());
+#endif
   
 // Start mDNS support
 // ==================
@@ -305,7 +330,8 @@ void setup() {
   Serial.println(HN_id);
   Serial.print("hostString: ");
   Serial.println(hostString);
-
+  
+#ifdef HN_ESP8266
  if (!MDNS.begin(hostString)) {
     Serial.println("Error setting up MDNS responder!");
   }
@@ -336,17 +362,24 @@ void setup() {
   }
   Serial.println();
 #endif
+#endif
 
 // Start NTP support
 // =================
   Serial.println("Starting UDP");                 // Start UDP
   udp.begin(localPort);
   Serial.print("Local port: ");
+#ifdef HN_ESP8266
   Serial.println(udp.localPort());
+#endif
+#ifdef HN_2560
+  Serial.println(udp.remoteIP());
+#endif
   WiFi.hostByName(ntpServerName, timeServerIP);   // Get mqttbroker's IP address
   Serial.print("Local IP:   ");
   Serial.println(timeServerIP);
   getNTPTime();
+  mscount = millis();         // initialize the millisecond counter
 
 // Start MQTT support
 // ==================
@@ -400,6 +433,8 @@ void loop() {
   // Fake this event with a push-button
   // Update button state
   // This needs to be called so that the Bouncer object can check if the button has been pressed
+  if (mscount < millis()) epoch += (millis() - mscount)/10;     // Update local copy until ntp sync
+  mscount = millis();
   bouncer.update();
   if (bouncer.rose()) {
     // Turn light on when button is pressed down
@@ -416,11 +451,13 @@ void loop() {
   }
 
   MQTTClient.loop();
-  if (loopcount++ > 100) {
+  if ((loopcount++ % 100) == 0) {
     if (digitalRead(ledPin) == HIGH) digitalWrite(ledPin, LOW);
     else digitalWrite(ledPin, HIGH);
-    loopcount = 0;
+  }
+  if ((loopcount++ % 3600) == 0) {
     getNTPTime();
+    loopcount = 0;
   }
   delay(100);
 }
