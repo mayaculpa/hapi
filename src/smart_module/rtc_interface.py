@@ -165,54 +165,62 @@ class RTCInterface(object):
                 return
 
     def get_type(self):
-        '''Gets the modules sensor type from the EEPROM
-        Returns:
-            str: %s-byte Type data as String if not mock; 'wt' if mock.
-        ''' % TYPE_LEN
+        '''Return the module's sensor type. (string)
+
+        Read from the EEPROM if not mock; 'wt' if mock.
+        Leading and trailing whitespace are removed.
+        '''
 
         return self.read_eeprom(TYPE_ADDRESS, TYPE_LEN, 'type', 'wt')
 
     def set_type(self, type_):
-        '''Writes the modules %s-byte sensor type to EEPROM
-        Args:
-            type_ (str): Sensor Type to write to EEPROM
-        ''' % TYPE_LEN
+        '''Write the module's sensor type to the EEPROM.
+
+        type_ will be trimmed and padded with spaces to be TYPE_LEN long.
+        arguments:
+            type_: string, the module's sensor type
+        Return: None
+        '''
 
         self.write_eeprom(type_, TYPE_ADDRESS, TYPE_LEN, 'Sensor Type')
 
     def get_id(self):
-        '''Gets the Smart Module ID from the attached EEPROM
-        Returns:
-            str: %s-byte module ID if not mock; 'HSM-WT123-MOCK' if mock.
-        ''' % ID_LEN
+        '''Return the smart module ID. (string)
+
+        Read from the EEPROM if not mock; 'HSM-WT123-MOCK' if mock.
+        Leading and trailing whitespace are removed.
+        '''
 
         return self.read_eeprom(ID_ADDRESS, ID_LEN, 'Module ID', 'HSM-WT123-MOCK')
 
-
     def set_id(self, id_):
-        '''Writes the module id to EEPROM
-        Args:
-            id_ (str): The ID of the Smart Module to write to EEPROM
-        Returns:
-            None
+        '''Write the module id to the EEPROM.
+
+        id_ will be trimmed and padded with spaces to be ID_LEN long.
+        arguments:
+            id_: string, the module id
+        Return: None
         '''
 
         self.write_eeprom(id_, ID_ADDRESS, ID_LEN, 'Module ID')
 
     def get_context(self):
-        '''Gets the module context from the attached EEPROM
-        Returns:
-            str: %s-byte sensor context if not mock; 'Environment' if mock.
-        ''' % CONTEXT_LEN
+        '''Return the module context. (string)
+
+        Read from the EEPROM if not mock; 'Environment' if mock.
+        Leading and trailing whitespace are removed.
+        '''
 
         return self.read_eeprom(CONTEXT_ADDRESS, CONTEXT_LEN, 'Module context', 'Environment')
 
     def set_context(self, context):
-        '''Writes the modules sensor context to the attached EEPROM
-        Args:
-            context (str): The context of the Smart Modules sensor (Water, Light, etc)
-        Returns:
-            None
+        '''Write the module's sensor context to the EEPROM.
+
+        context will be trimmed and padded with spaces to be CONTEXT_LEN long.
+        arguments:
+            context: string, the module's sensor context
+                examples: Water and Light
+        Return: None
         '''
 
         self.write_eeprom(context, CONTEXT_ADDRESS, CONTEXT_LEN, 'Module context')
