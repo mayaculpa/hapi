@@ -44,6 +44,9 @@ Communications Method
 #define MQTT_broker_address "mqttbroker"    // IP address of mqtt broker
 #define MQTT_broker_username "mqttuser"      // Required if broker security is enabled
 #define MQTT_broker_password "mqttpass"
+#define MQTT_port 1883
+
+#define UDP_port 2390
 
 #ifdef HN_WiFi
 #define HAPI_SSID "HAPInet"
