@@ -507,44 +507,37 @@ class Scheduler(object):
         return jobs
 
     def prepare_jobs(self, jobs):
-        # It still have space for improvements.
+        # It still has space for improvements.
+        suffixed_names = {
+            'year': 'yearly',
+            'month': 'monthly',
+            'week': 'weekly',
+            'day': 'daily',
+            'hour': 'hourly',
+            'minute': 'minutes',  # What would be better? Need to change log string also?
+            'second': 'seconds',  # What would be better? Need to change log string also?
+        }
         for job in jobs:
             if not job.enabled:
                 continue
 
-            if job.time_unit.lower() == "month":
-                if job.interval > -1:
-                    #schedule.every(job.interval).months.do(self.run_job, job)
-                    self.log.info("  Loading monthly job: " + job.name)
-            elif job.time_unit.lower() == "week":
-                if job.interval > -1:
-                    schedule.every(job.interval).weeks.do(self.run_job, job)
-                    self.log.info("  Loading weekly job: " + job.name)
-            elif job.time_unit.lower() == "day":
-                if job.interval > -1:
-                    schedule.every(job.interval).days.do(self.run_job, job)
-                    self.log.info("  Loading daily job: " + job.name)
-                else:
-                    schedule.every().day.at(job.at_time).do(self.run_job, job)
-                    self.log.info("  Loading time-based job: " + job.name)
-            elif job.time_unit.lower() == "hour":
-                if job.interval > -1:
-                    schedule.every(job.interval).hours.do(self.run_job, job)
-                    self.log.info("  Loading hourly job: " + job.name)
-            elif job.time_unit.lower() == "minute":
-                if job.interval > -1:
-                    schedule.every(job.interval).minutes.do(self.run_job, job)
-                    self.log.info("  Loading minutes job: " + job.name)
-                else:
-                    schedule.every().minute.do(self.run_job, job)
-                    self.log.info("  Loading minute job: " + job.name)
-            elif job.time_unit.lower() == "second":
-                if job.interval > -1:
-                    schedule.every(job.interval).seconds.do(self.run_job, job)
-                    self.log.info("  Loading seconds job: " + job.name)
-                else:
-                    schedule.every().second.do(self.run_job, job)
-                    self.log.info("  Loading second job: " + job.name)
+            interval_name = job.time_unit.lower()
+            if job.interval > -1:  # What does -1 mean?
+                plural_interval_name = interval_name + 's'
+                d = getattr(schedule.every(job.interval), plural_interval_name)
+                d.do(self.run_job, job)
+                self.log.info(
+                    '  Loading %s job: %s',
+                    suffixed_names[interval_name],
+                    job.name,
+                )
+            elif interval_name == 'day':
+                schedule.every().day.at(job.at_time).do(self.run_job, job)
+                self.log.info('  Loading time-based job: ' + job.name)
+            else:
+                d = getattr(schedule.every(), interval_name)
+                d.do(self.run_job, job)
+                self.log.info('  Loading %s job: %s', interval_name, job.name)
 
     def run_job(self, job):
         if not self.running or not job.enabled:
