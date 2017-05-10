@@ -37,16 +37,57 @@ Communications Method
 #ifndef HAPIBOARD_H
 #define HAPIBOARD_H
 
+#ifdef HN_ESP8266
+#define NUM_DIGITAL 17    // Number of digital I/O pins
+#define NUM_ANALOG  1     // Number of analog I/O pins
+#define PIN_MAP_SIZE NUM_DIGITAL*2   // Array size for default state data
+                                     // 2 bytes per digital I/O pin, 1st byte = State, 2nd byte = Value
+
+// Default pin allocation
+#define PUMP1_PIN 1       // Reserved pin for a pump control
+#define PUMP2_PIN 3       // Reserved pin for a pump control
+#define LIGHT_SENSORPIN 2 // Reserved pin for a Light sensor
+#define FLOW_SENSORPIN 4  // Reserved pin for a flow sensor
+#define DHT_SENSORPIN 12  // Reserved pin for DHT-22 sensor
+#define ONE_WIRE_BUS 13   // Reserved pin for 1-Wire bus
+#define PH_SENSORPIN 14   // Reserved pin for pH probe
+#define TDS_SENSORPIN 15  // Reserved pin for TDS probe
+
+// Default pin modes
+// 0 not used or reserved;  1 digital input; 2 digital input_pullup; 3 digital output; 4 analog output; 5 analog input;
+// Analog input pins are assumed to be used as analog input pins
+int pinControl[NUM_DIGITAL+NUM_ANALOG] = {
+  3, 3, 3, 1, 3, 3, 0, 0,   //  0 -  7  // Digital i/o
+  0, 0, 0, 0, 3, 3, 3, 3,   //  8 - 15
+  3,                        // 16
+  5                         // A0       //Analog Input
+};
+
+// Default pin states
+// Defaults determine the value of output pins with the HN initializes
+// 0 = LOW, 1 = HIGH
+int pinDefaults[NUM_DIGITAL+NUM_ANALOG] = {
+  1, 1, 1, 1, 1, 1, 0, 0,   //  0 -  7  // Digital i/o
+  0, 0, 0, 0, 1, 1, 1, 1,   //  8 - 15
+  1,                        // 16
+  5                         // A0       //Analog Input
+};
+#endif
+
 #ifdef HN_ESP32
 #define NUM_DIGITAL 54    // Number of digital I/O pins
 #define NUM_ANALOG  16    // Number of analog I/O pins
 #define PIN_MAP_SIZE NUM_DIGITAL*2   // Array size for default digital state data
                                      // 2 bytes per digital I/O pin, 1st byte = State, 2nd byte = Value
 // Default pin allocation
-#define ONE_WIRE_BUS 8   // Reserved pin for 1-Wire bus
-#define PH_SENSORPIN A1  // Reserved pin for pH probe
-#define DHTTYPE DHT22    // Sets DHT type
-#define DHTPIN 12        // Reserved pin for DHT-22 sensor
+#define PUMP1_PIN 1       // Reserved pin for a pump control
+#define PUMP2_PIN 3       // Reserved pin for a pump control
+#define LIGHT_SENSORPIN 2 // Reserved pin for a Light sensor
+#define FLOW_SENSORPIN 4  // Reserved pin for a flow sensor
+#define DHT_SENSORPIN 12  // Reserved pin for DHT-22 sensor
+#define ONE_WIRE_BUS 13   // Reserved pin for 1-Wire bus
+#define PH_SENSORPIN 14   // Reserved pin for pH probe
+#define TDS_SENSORPIN 15  // Reserved pin for TDS probe
 
 // Default pin modes
 // 0 not used or reserved;  1 digital input; 2 digital input_pullup; 3 digital output; 4 analog output; 5 analog input;
@@ -78,40 +119,6 @@ int pinDefaults[NUM_DIGITAL+NUM_ANALOG] = {
                                   // ANALOG
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   // 54 - 63
   0, 0, 0, 0, 0, 0                // 64 - 69
-};
-#endif
-
-#ifdef HN_ESP8266
-#define NUM_DIGITAL 17    // Number of digital I/O pins
-#define NUM_ANALOG  1     // Number of analog I/O pins
-#define PIN_MAP_SIZE NUM_DIGITAL*2   // Array size for default state data
-                                     // 2 bytes per digital I/O pin, 1st byte = State, 2nd byte = Value
-
-// Default pin allocation
-#define ONE_WIRE_BUS 13   // Reserved pin for 1-Wire bus
-#define PH_SENSORPIN 14   // Reserved pin for pH probe
-#define TDS_SENSORPIN 15  // Reserved pin for TDS probe
-#define DHTTYPE DHT22     // Sets DHT type
-#define DHTPIN 12         // Reserved pin for DHT-22 sensor
-
-// Default pin modes
-// 0 not used or reserved;  1 digital input; 2 digital input_pullup; 3 digital output; 4 analog output; 5 analog input;
-// Analog input pins are assumed to be used as analog input pins
-int pinControl[NUM_DIGITAL+NUM_ANALOG] = {
-  3, 3, 3, 1, 3, 3, 0, 0,   //  0 -  7  // Digital i/o
-  0, 0, 0, 0, 3, 3, 3, 3,   //  8 - 15
-  3,                        // 16
-  5                         // A0       //Analog Input
-};
-
-// Default pin states
-// Defaults determine the value of output pins with the HN initializes
-// 0 = LOW, 1 = HIGH
-int pinDefaults[NUM_DIGITAL+NUM_ANALOG] = {
-  1, 1, 1, 1, 1, 1, 0, 0,   //  0 -  7  // Digital i/o
-  0, 0, 0, 0, 1, 1, 1, 1,   //  8 - 15
-  1,                        // 16
-  5                         // A0       //Analog Input
 };
 #endif
 

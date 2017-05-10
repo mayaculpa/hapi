@@ -1,5 +1,3 @@
-#include <Arduino.h>
-
 /*
 #*********************************************************************
 #Copyright 2016 Maya Culpa, LLC
@@ -41,23 +39,25 @@ void(* resetFunc) (void) = 0; //declare reset function @ address
 boolean sendMQTTStatus(void){
 
   StaticJsonBuffer<128> hn_topic_status;                   // Status data for this HN
-  JsonObject& status_topic = hn_topic_status.createObject();
+  JsonObject& status_message = hn_topic_status.createObject();
 
 // Publish current status
   // Identify HAPInode 
-  status_topic["AssetId"] = HN_id;
+  status_message["AssetId"] = HN_id;
   // Returns the current status of the HN itself
   // Includes firmware version, MAC address, IP Address, Free RAM and Idle Mode
-  status_topic["FW"] = HAPI_FW_VERSION;
-  status_topic["DIO"] = String(NUM_DIGITAL);
-  status_topic["AIO"] = String(NUM_ANALOG);
-  status_topic["Free SRAM"] = String(freeRam()) + "k";
+  status_message["FW"] = HAPI_FW_VERSION;
+  status_message["time"] = epoch;
+  status_message["DIO"] = String(NUM_DIGITAL);
+  status_message["AIO"] = String(NUM_ANALOG);
+  status_message["Free SRAM"] = String(freeRam()) + "k";
   if (idle_mode == false){
-    status_topic["Idle"] = "False";
+    status_message["Idle"] = false;
   }else{
-    status_topic["Idle"] = "True";
+    status_message["Idle"] = true;
   }
-  status_topic.printTo(MQTTOutput, 128);          // MQTT JSON string is max 96 bytes
+
+  status_message.printTo(MQTTOutput, 128);          // MQTT JSON string is max 96 bytes
   Serial.println(MQTTOutput);
 
     // PUBLISH to the MQTT Broker
@@ -90,13 +90,13 @@ boolean sendAllMQTTAssets(void) {
   for (int x = 0; x < NUM_DIGITAL; x++) {
     if (pinControl[x] > 0) {
       if (pinControl[x] < 5) {
-        while (!(sendMQTTAsset(SENSORID_D_PIN, x)));  // Until it is sent
+        while (!(sendMQTTAsset(SENSORID_DIO, x)));  // Until it is sent
       }
     }
   }
 //Process analog pins
   for (int x = 0; x < NUM_ANALOG; x++) {
-    while (!(sendMQTTAsset(SENSORID_A_PIN, x+NUM_DIGITAL)));  // Until it is sent
+    while (!(sendMQTTAsset(SENSORID_AIO, x+NUM_DIGITAL)));  // Until it is sent
   }
 // Process Custom Functions
   for (int x = 0; x < CUSTOM_FUNCTIONS; x++) {
@@ -106,75 +106,91 @@ boolean sendAllMQTTAssets(void) {
 }
 
 boolean sendMQTTAsset(int SensorIdx, int Number) {
+  createAssetJSON(SensorIdx, Number);
+  publishJSON(mqtt_topic_asset);
+}
+
+boolean sendMQTTException(int SensorIdx, int Number) {
+  createAssetJSON(SensorIdx, Number);
+  publishJSON(mqtt_topic_exception);
+}
+  
+boolean createAssetJSON(int SensorIdx, int Number) {
   //For custom functions
   FuncDef f;
-  float funcVal = -1.0;
-  StaticJsonBuffer<128> hn_topic_asset;                   // Sensor data for this HN
-  JsonObject& asset_topic = hn_topic_asset.createObject();
-  asset_topic["AssetId"] = HN_id;
+  int pinValue;
+  float funcVal = -9.99;
+  StaticJsonBuffer<256> hn_asset;                   // Sensor data for this HN
+  JsonObject& asset_message = hn_asset.createObject();
 
-  // Assembles a response with values from pins and custom functions
+// Set the AssetId
+  asset_message["AssetId"] = HN_id;
+  
+  // Assembles a message with values from pins and custom functions
   // Returns a JSON string  ("pinnumber":value,"custom function abbreviation":value}
 
-//  if ((SensorIdx == SENSORID_D_PIN) || (SensorIdx == SENSORID_A_PIN)) {
-    asset_topic["SId"] = String(SensorIdx) + "." + String(Number);
-//  }
-//  else {
-//    asset_topic["SId"] = String(SensorIdx);
-//  }
+  JsonArray& SId = asset_message.createNestedArray("SId");  // create the SId array
+  SId.add(SensorIdx);                                       //  add sensor type
+  SId.add(Number);                                          //  add sensor number
+
+  asset_message["time"] = epoch;                            // UTC time
 
   switch(SensorIdx) {
-    case SENSORID_D_PIN:
-      asset_topic["name"] =  "DIO";
-      asset_topic["unit"] =  "";
-//      asset_topic["virtual"] =  "0";
-//      asset_topic["context"] =  "Sensor";
-//      asset_topic["system"] =  "node";
-//      asset_topic["enabled"] =  "1";
-      asset_topic["data"] =  (String)digitalRead(Number);
+    case SENSORID_DIO:
+      asset_message["name"] =  "DIO";
+      asset_message["unit"] =  "";
+//      asset_message["virtual"] =  "0";
+//      asset_message["context"] =  "Sensor";
+//      asset_message["system"] =  "node";
+//      asset_message["enabled"] =  "1";
+      pinValue = digitalRead(Number);
+      asset_message["data"] = pinValue; 
       break;
-    case SENSORID_A_PIN:
-      asset_topic["name"] =  "AIO";
-      asset_topic["unit"] =  "";
-//      asset_topic["virtual"] =  "0";
-//      asset_topic["context"] =  "Sensor";
-//      asset_topic["system"] =  "node";
-//      asset_topic["enabled"] =  "1";
-      asset_topic["data_field"] =  (String)analogRead(Number);
+    case SENSORID_AIO:
+      asset_message["name"] =  "AIO";
+      asset_message["unit"] =  "";
+//      asset_message["virtual"] =  "0";
+//      asset_message["context"] =  "Sensor";
+//      asset_message["system"] =  "node";
+//      asset_message["enabled"] =  "1";
+      pinValue = analogRead(Number);
+      asset_message["data"] = pinValue; 
       break;
     case SENSORID_FN:
       f = HapiFunctions[Number];
-      asset_topic["name"] =  (String)f.fName;
-      asset_topic["unit"] =  (String)f.fUnit;
-//      asset_topic["virtual"] =  "0";
-//      asset_topic["context"] =  "Sensor";
-//      asset_topic["system"] =  "node";
-//      asset_topic["enabled"] =  "1";
+      asset_message["name"] =  (String)f.fName;
+      asset_message["unit"] =  (String)f.fUnit;
+//      asset_message["virtual"] =  "0";
+//      asset_message["context"] =  "Sensor";
+//      asset_message["system"] =  "node";
+//      asset_message["enabled"] =  "1";
       funcVal = f.fPtr(Number);
-      asset_topic["data"] =  String((int)funcVal);
+      asset_message["data"] =  funcVal;     // Two decimal points
       break;
     default:
       break;
   }
 
-  asset_topic.printTo(MQTTOutput, 128);          // MQTT JSON string is max 96 bytes
+  asset_message.printTo(MQTTOutput, 128);          // MQTT JSON string is max 96 bytes
   Serial.println(MQTTOutput);
+}
 
+boolean publishJSON(const char* topic) {
 // PUBLISH to the MQTT Broker
-  if (MQTTClient.publish(mqtt_topic_asset, MQTTOutput)) {
+  if (MQTTClient.publish(topic, MQTTOutput)) {
     return true;
   }
 // If the message failed to send, try again, as the connection may have broken.
   else {
-    Serial.println("Send Asset Message failed. Reconnecting to MQTT Broker and trying again .. ");
+    Serial.println("Send Message failed. Reconnecting to MQTT Broker and trying again .. ");
     if (MQTTClient.connect(clientID, MQTT_broker_username, MQTT_broker_password)) {
       Serial.println("reconnected to MQTT Broker!");
       delay(100); // This delay ensures that client.publish doesn't clash with the client.connect call
-      if (MQTTClient.publish(mqtt_topic_asset, MQTTOutput)) {
+      if (MQTTClient.publish(topic, MQTTOutput)) {
         return true;
       }
       else {
-        Serial.println("Send Asset Message failed after one retry.");
+        Serial.println("Send Message failed after one retry.");
         return false;        
       }
     }
@@ -182,37 +198,35 @@ boolean sendMQTTAsset(int SensorIdx, int Number) {
       Serial.println("Connection to MQTT Broker failed...");
       return false;
     }
-  }
+  }  
 }
 
 void MQTTcallback(char* topic, byte* payload, unsigned int length) {
 
-  int i, j, k;
-  const char* AssetId = "WrongId";
-  const char* Command = "NoCommand";
+  int i;
+  const char* AssetId;    // AssetId for target HAPInode
+  const char* Command;    // Command to execute
+  int SensorIdx;          // Target Sensor Index
+  int Number;             // Target pin# or function#
+  int data;               // Data for output
+  
   StaticJsonBuffer<200> hn_topic_command;            // Parsing buffer
 
-  Serial.print("Topic: ");
-  Serial.print(topic);
-  Serial.print(" Length: ");
-  Serial.println(length);
-  Serial.print("Raw payload: ");
+// Copy topic to char* buffer
   for(i = 0; i < length; i++){
-    Serial.print((char)payload[i]);
     MQTTInput[i] = (char)payload[i];
+    Serial.print(MQTTInput[i]);
   }
   MQTTInput[i] = 0x00;
-  Serial.print(" buffer: ");  
-  Serial.print(MQTTInput);
   Serial.println();
 
-  //Parse the topic data
+//Parse the topic data
   JsonObject& command_topic = hn_topic_command.parseObject(MQTTInput);
   if (!command_topic.success())
   {
-    Serial.println("parseObject() failed");
     return;
-  } else {
+  }
+  else {
     Serial.println("Parsing .. ");
     for (JsonObject::iterator it=command_topic.begin(); it!=command_topic.end(); ++it)
     {
@@ -220,34 +234,107 @@ void MQTTcallback(char* topic, byte* payload, unsigned int length) {
       Serial.print(":");
       Serial.println(it->value.asString());
     }
-       
-    if (command_topic.containsKey("AssetId")) {
+    
+// Check correct AssetId       
+    if (command_topic.containsKey("AssetId")) { // AssetId is required
       AssetId = command_topic["AssetId"];
     }
-
-    if (command_topic.containsKey("Cmnd")) {
-      Command = command_topic["Cmnd"];
-    }
- 
-    if (strcmp(AssetId, hostString) == 0) {
+    else return;
+          
+// Main MQTT Command processing
+    if ((strcmp(AssetId, hostString) == 0) || (strcmp(AssetId, "*") == 0)) { // Handle wildcard
       if (strcmp(topic, "COMMAND/") == 0) {
-        if (strcmp(Command, "assets") == 0) sendAllMQTTAssets();
-        if (strcmp(Command, "status") == 0) sendMQTTStatus();
-      }
-      else if (strcmp(topic, "EXCEPTION/") == 0) {
-      }
-    /* 
-    else if (strcmp(topic, "STATUS/QUERY") == 0) {
-      if (strcmp(AssetId, hostString) == 0) sendMQTTStatus();
-      Serial.print("Found STATUS/QUERY = ");
-      Serial.println(AssetId);
-    }
-    else if (strcmp(topic, "ASSET/QUERY") == 0) {
-      if (strcmp(AssetId, hostString) == 0) sendAllMQTTAssets();
-      Serial.print("Found ASSET/QUERY = ");
-      Serial.println(AssetId);
-    }
-    */
-    }
-  }
+        if (command_topic.containsKey("Cmnd")) {  // Cmnd is required
+          Command = command_topic["Cmnd"];
+        }
+        else return;
+
+// Commands that do not require a Sensor ID
+// ----------------------------------------
+        if (strcmp(Command, "assets") == 0) {
+          sendAllMQTTAssets();
+          return;
+        }
+        if (strcmp(Command, "status") == 0) {
+          sendMQTTStatus();
+          return;
+        }
+
+// Commands that do require a Sensor ID
+// ------------------------------------
+        if (command_topic.containsKey("SId")) {     // SensorID is required
+          SensorIdx = command_topic["SId"][0];      // Get SensorID
+          Number = command_topic["SId"][1];         // Get pin or function #
+        }
+        else return;
+
+        if (SensorIdx == SENSORID_DIO) {
+          if (command_topic.containsKey("name")) {   // name - required
+            if (!(strcmp(command_topic["name"], "DIO") == 0)) return;
+          }
+          else return;
+            
+          if (strcmp(Command, "dout") == 0) {
+            if (command_topic.containsKey("data")) {  // Data - required
+            data = command_topic["data"];
+            }
+            else return;          
+            digitalWrite(Number, data);               // Set the digital pin
+            return;
+          }
+          if (strcmp(Command, "din") == 0) {
+            sendMQTTAsset(SensorIdx, Number);         // Publish digital data
+            return;
+          }
+        }
+        if (SensorIdx == SENSORID_AIO) {
+          if (command_topic.containsKey("name")) {   // name - required
+            if (!(strcmp(command_topic["name"], "AIO") == 0)) return;
+          }
+          else return;
+
+          if (strcmp(Command, "aout") == 0) {
+            if (command_topic.containsKey("data")) {  // Data - required
+              data = command_topic["data"];
+            }
+            else return;          
+            analogWrite(Number, data);              // Set the analog pin
+            return;
+          }
+          if (strcmp(Command, "ain") == 0) {    
+            sendMQTTAsset(SensorIdx, Number);       // Publish analog data
+            return;
+          }
+        }
+
+// Commands that execute a Sensor function
+// ---------------------------------------
+        if (SensorIdx == SENSORID_FN) {
+          if ((Number >=0) && (Number < CUSTOM_FUNCTIONS)) {
+            if (strcmp(Command, "fnout") == 0) {
+              return;
+            }
+            if (strcmp(Command, "fnin") == 0) {
+              sendMQTTAsset(SensorIdx, Number);       // Publish function data
+            return;
+            }
+          }
+          else return;
+        }
+      } // End (strcmp COMMAND/ topic
+      
+      if (strcmp(topic, "STATUS/QUERY") == 0) {
+          sendMQTTStatus();
+          return;
+        }
+      if (strcmp(topic, "ASSET/QUERY") == 0) {
+          sendAllMQTTAssets();
+          return;
+        }
+              
+// Other topics go here
+// ====================
+      
+    }   // end (strcmp AssetId
+  }     // end Valid JSON object
 }

@@ -1,5 +1,3 @@
-#include <Arduino.h>
-
 /*
 #*********************************************************************
 #Copyright 2016 Maya Culpa, LLC
@@ -73,7 +71,6 @@ void setupSensors(void){
   pinMode(FLOW_SENSORPIN, INPUT);
   flowrate.attach(FLOW_SENSORPIN);
   flowrate.interval(5);
-
 }
 
 String getPinArray() {
@@ -103,7 +100,8 @@ float readHumidity(int iDevice) {
   else {
     returnValue = h;
   }
-  return returnValue;
+  Serial.print("DHT Humidity: ");
+  Serial.println(returnValue);  return returnValue;
 }
 
 float readTemperatured(int iDevice) {
@@ -122,6 +120,8 @@ float readTemperatured(int iDevice) {
       returnValue = (returnValue * 9.0)/ 5.0 + 32.0; // Convert Celsius to Fahrenheit
     }
   }
+  Serial.print("DHT Temperature: ");
+  Serial.println(returnValue);
   return returnValue;
 }
 
@@ -137,9 +137,11 @@ float read1WireTemperature(int iDevice) {
   else
   {
     if (metric == false) {
-      returnValue = (returnValue * 9.0)/ 5.0 + 32.0; // Convert Celsius to Fahrenheit
+      returnValue = (returnValue * 9.0)/ 5.0 + 32.0; // Convert Celsius to Fahrenheit 
     }
   }
+  Serial.print("18B20 Temperature: ");
+  Serial.println(returnValue);
   return returnValue;
 }
 
@@ -171,6 +173,8 @@ float readpH(int iDevice) {
     avgValue += buf[i];
   float phValue = (float)avgValue * 5.0 / 1024 / 6; //convert the analog into millivolt
   phValue = 3.5 * phValue;                  //convert the millivolt into pH value
+  Serial.print("pH: ");
+  Serial.println(phValue);
   return phValue;
 }
 
@@ -204,7 +208,8 @@ float readTDS(int iDevice) {
 
   //TODO: Need temperature compensation for TDS
   TDSValue = 1.0 * TDSValue;                  //convert the millivolt into TDS value
-
+  Serial.print("TDS: ");
+  Serial.println(TDSValue); 
   return TDSValue;
 }
 
@@ -225,8 +230,6 @@ float readLightSensorTemp(int iDevice) {
 
   return Lux;
 }
-
-
 
 float readFlow(int iDevice) {
   // readWaterFlowRAte  - Uses an input pulse that creates an average flow rate

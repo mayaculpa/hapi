@@ -1,5 +1,3 @@
-#include <Arduino.h>
-
 /*
 #*********************************************************************
 #Copyright 2016 Maya Culpa, LLC
@@ -61,7 +59,8 @@ Communications Method
 #include <SPI.h>
 #ifdef HN_WiFi
 #include <ESP8266WiFi.h>
-#include <ESP8266mDNS.h>
+#include <ESP8266mDNS.h>        // for avahi
+#include <WiFiUdp.h>            // For ntp
 #endif
 #ifdef HN_ENET
 #include <Ethernet.h>
@@ -79,10 +78,11 @@ Communications Method
 // =====================================================================
 // Make sure to update these files for your own WiFi and/or MQTT Broker!
 // =====================================================================
-#include "nodewifi.h"       // WiFi and MQTT
-#include "nodeboard.h"      // Node pin allocations
+#include "nodewifi.h"       // WiFi and MQTT setup
+#include "nodeboard.h"      // Node default pin allocations
 
 //**** Begin Main Variable Definition Section ****
+int loopcount;
 String HAPI_FW_VERSION = "v3.0";    // The version of the firmware the HN is running
 #ifdef HN_ESP8266
 String HN_base = "HN3";             // Prefix for mac address
@@ -116,17 +116,28 @@ EthernetClient HNClient;
 #endif
 
 #ifdef HN_WiFi
+// Local wifi network parameters (set in nodewifi.h)
 const char* ssid = HAPI_SSID;
 const char* password = HAPI_PWD;
+// WiFi config
 int WiFiStatus = 0;
 WiFiClient HNClient;
+// ntp config
+IPAddress timeServerIP;               // Place to store IP address of mqttbroker.local
+const char* ntpServerName = "mqttbroker";
+const int NTP_PACKET_SIZE = 48;       // NTP time stamp is in the first 48 bytes of the message
+byte packetBuffer[ NTP_PACKET_SIZE];  //buffer to hold incoming and outgoing packets
+unsigned int localPort = UDP_port;    // local port to listen for UDP packets
+WiFiUDP udp;                          // A UDP instance to let us send and receive packets over UDP
+unsigned long epoch;
+
 #endif
 //**** End Communications Section ****
 
 //**** Begin MQTT Section ****
 const char* clientID = "HAPInode";
-const char* mqtt_topic_status = "STATUS/QUERY";         // General Status topic
-const char* mqtt_topic_asset = "ASSET/QUERY";           // Genral Asset topic
+const char* mqtt_topic_status = "STATUS/RESPONSE";         // General Status topic
+const char* mqtt_topic_asset = "ASSET/RESPONSE";           // Genral Asset topic
 char mqtt_topic_command[256] = "COMMAND/";              // Command topic for this HN
 const char* mqtt_topic_exception = "EXCEPTION/";        // General Exception topic
 
@@ -146,23 +157,21 @@ JsonObject& exception_topic = hn_topic_exception.createObject();
 
 //**** Begin Sensors Section ****
 // Definitions related to sensor operations
+#define SENSORID_DIO 0    // DIGITAL I/O
+#define SENSORID_AIO 1    // ANALOG I/O
+#define SENSORID_FN 2     // FUNCTION I/O
 
 // Initialise the Pushbutton Bouncer object
 const int ledPin = 2; // This code uses the built-in led for visual feedback that the button has been pressed
-const int buttonPin = 13; // Connect your button to pin #gpio13
+const int buttonPin = 5; // Connect your button to pin #gpio13
 int ledflash = 0;
 Bounce bouncer = Bounce();
 
 // Use bouncer object to measure flow rate
-const int FLOW_SENSORPIN = 13; // Input pin for a flow sensor device
 Bounce flowrate = Bounce();
 int WaterFlowRate = 0;
 
-#define SENSORID_D_PIN 0
-#define SENSORID_A_PIN 1
-
 //LIGHT Devices
-#define LIGHTSENSOR_PIN 2
 
 //oneWire Devices
 OneWire oneWire(ONE_WIRE_BUS);
@@ -170,7 +179,9 @@ DallasTemperature wp_sensors(&oneWire);
 
 //Define DHT devices and allocate resources
 #define NUM_DHTS 1        //total number of DHTs on this device
-DHT dht1(DHTPIN, DHT22);  //For each DHT, create a new variable given the pin and Type
+#define DHTTYPE DHT22     // Sets DHT type
+
+DHT dht1(DHT_SENSORPIN, DHT22);  //For each DHT, create a new variable given the pin and Type
 DHT dhts[1] = {dht1};     //add the DHT device to the array of DHTs
 
 //Custom functions are special functions for reading sensors or controlling devices. They are
@@ -184,14 +195,15 @@ struct FuncDef {   //define a structure to associate a Name to generic function 
   GenericFP fPtr;
 };
 
-#define SENSORID_FN 2
+
 //The number of custom functions supported on this HN
 #define CUSTOM_FUNCTIONS 7
 //Create a FuncDef for each custom function
 //Format: abbreviation, context, pin, function
 FuncDef func1 = {"tmp", "dht", "C", -1, &readTemperatured};
 FuncDef func2 = {"hum", "dht", "%", -1, &readHumidity};
-FuncDef func3 = {"lux", "light", "lux", LIGHTSENSOR_PIN, &readLightSensorTemp};
+
+FuncDef func3 = {"lux", "light", "lux", LIGHT_SENSORPIN, &readLightSensorTemp};
 FuncDef func4 = {"tmp1", "DS18B20", "C", ONE_WIRE_BUS, &read1WireTemperature};
 FuncDef func5 = {"ph", "pH Sensor", "pH", PH_SENSORPIN, &readpH};
 FuncDef func6 = {"tds", "TDS Sensor", "ppm", TDS_SENSORPIN, &readTDS};
@@ -236,13 +248,15 @@ void setup() {
   pinMode(ledPin, OUTPUT);
   digitalWrite(ledPin, HIGH);
 
-//TESTING
+// TESTING
 // Setup pushbutton Bouncer object
   pinMode(buttonPin, INPUT);
   bouncer.attach(buttonPin);
   bouncer.interval(5);
-// TESTING
+// end TESTING
 
+// Start Debug port and sensors
+// ============================
   setupSensors();             // Initialize I/O and start devices
   inputString.reserve(200);   // reserve 200 bytes for the inputString
   Serial.begin(115200);       // Debug port
@@ -269,15 +283,24 @@ void setup() {
     Serial.print(".");
   }
   WiFi.macAddress(mac);
-    Serial.print("IP  address: ");
-    Serial.println(WiFi.localIP());
 
-// mDNS support
-// ===============
-//convert mac to ASCII value for unique station ID
-  b2c(&mac[3], &mac_str[0], 3);
+
+  b2c(&mac[3], &mac_str[0], 3);         //convert mac to ASCII value for unique station ID
   HN_id = HN_base + String(mac_str);
   HN_id.toCharArray(hostString,(HN_id.length()+1));
+  
+  Serial.println();
+  Serial.print("IP  address: ");
+  Serial.println(WiFi.localIP());
+  Serial.print("Hostname   : ");
+  Serial.println(WiFi.hostname());
+  Serial.println(WiFi.hostname(hostString));
+  Serial.print("NewHostname: ");
+  Serial.println(WiFi.hostname());
+  
+// Start mDNS support
+// ==================
+
   Serial.print("HN_id:      ");
   Serial.println(HN_id);
   Serial.print("hostString: ");
@@ -314,7 +337,20 @@ void setup() {
   Serial.println();
 #endif
 
-  MQTTClient.setServer(MQTT_broker_address, 1883);
+// Start NTP support
+// =================
+  Serial.println("Starting UDP");                 // Start UDP
+  udp.begin(localPort);
+  Serial.print("Local port: ");
+  Serial.println(udp.localPort());
+  WiFi.hostByName(ntpServerName, timeServerIP);   // Get mqttbroker's IP address
+  Serial.print("Local IP:   ");
+  Serial.println(timeServerIP);
+  getNTPTime();
+
+// Start MQTT support
+// ==================
+  MQTTClient.setServer(MQTT_broker_address, MQTT_port);
   MQTTClient.setCallback(MQTTcallback);
 
   exception_topic["AssetId"] = HN_id;
@@ -329,29 +365,37 @@ void setup() {
     }
   } while (mqtt_broker_connected == false);
 
-  // Subscribe to the TOPICs
-/*  while (!(MQTTClient.subscribe("STATUS/QUERY"))) {
+// Subscribe to the TOPICs
+
+  while (!(MQTTClient.subscribe("STATUS/QUERY"))) {
     Serial.println(" .. subscribing to STATUS/QUERY");
+    MQTTClient.loop();
     delay(100);
   }
   while (!(MQTTClient.subscribe("ASSET/QUERY"))) {
+    MQTTClient.loop();
     Serial.println(" .. subscribing to ASSET/QUERY");
     delay(100);
   }
-*/  while (!(MQTTClient.subscribe("COMMAND/"))) {
+  while (!(MQTTClient.subscribe("CONFIG/QUERY"))) {
+    MQTTClient.loop();
+    Serial.println(" .. subscribing to CONFIG/QUERY");
+    delay(100);
+  }
+  while (!(MQTTClient.subscribe("COMMAND/"))) {
+    MQTTClient.loop();
     Serial.println(" .. subscribing to COMMAND/");
     delay(100);
   }
   while (!(MQTTClient.subscribe("EXCEPTION/"))) {
+    MQTTClient.loop();
     Serial.println(" .. subscribing to EXCEPTION/");
     delay(100);
   }
-  
   Serial.println("Setup Complete. Listening for topics ..");
 }
 
 void loop() {
-
   // Wait for a new event, publish topic
   // Fake this event with a push-button
   // Update button state
@@ -370,18 +414,15 @@ void loop() {
     // i.e. if state goes from high (1) to low (0) (pressed to not pressed)
     digitalWrite(ledPin, HIGH);
   }
-  flashled();
+
   MQTTClient.loop();
+  if (loopcount++ > 100) {
+    if (digitalRead(ledPin) == HIGH) digitalWrite(ledPin, LOW);
+    else digitalWrite(ledPin, HIGH);
+    loopcount = 0;
+    getNTPTime();
+  }
   delay(100);
 }
 
-void flashled(void) {
-  if (ledflash == 0) {
-    digitalWrite(ledPin, LOW);
-  }
-  else if (ledflash == 1600) {
-    digitalWrite(ledPin, HIGH);
-  }
-  ledflash += 1;
-  if (ledflash > 64000) ledflash = 0;
-}
+
