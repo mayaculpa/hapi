@@ -1,7 +1,7 @@
 ![HAPI Project](/readme/hapi.png?raw=true "HAPI Project")
 
-# Under heavily development
-We're currently under heavily development.
+# Under heavy development
+We're currently under heavy development.
 We would love to have you participate! Drop us a note and we'll add you into our product development Slack server so you can keep up with the latest.
 
 # HAPI
