@@ -509,8 +509,8 @@ class Scheduler(object):
     def prepare_jobs(self, jobs):
         # It still has space for improvements.
         suffixed_names = {
-            'year': 'yearly',
-            'month': 'monthly',
+            # 'year': 'yearly',  # Not supported by schedule library.
+            # 'month': 'monthly',  # Not supported by schedule library.
             'week': 'weekly',
             'day': 'daily',
             'hour': 'hourly',
