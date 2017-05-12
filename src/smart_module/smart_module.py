@@ -234,13 +234,10 @@ class SmartModule(object):
         """Connect to InfluxDB server and searches for the database in 'asset_context'.
            Return the connection to the database or create it if necessary."""
         databases = self.ifconn.get_list_database()
-        found = False
         for db in databases:
             if asset_context in db:
-                found = True
                 break
-
-        if not found:
+        else:
             self.ifconn.create_database(asset_context)
 
         self.ifconn.switch_database(asset_context)
