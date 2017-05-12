@@ -240,7 +240,7 @@ class SmartModule(object):
                 found = True
                 break
 
-        if found is False:
+        if not found:
             self.ifconn.create_database(asset_context)
 
         self.ifconn.switch_database(asset_context)
