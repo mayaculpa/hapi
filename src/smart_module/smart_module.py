@@ -38,6 +38,7 @@ import logging
 import schedule                                     # sudo pip install schedule
 import communicator
 from influxdb import InfluxDBClient
+from influxdb.exceptions import InfluxDBClientError
 from status import SystemStatus
 import asset_interface
 import rtc_interface
@@ -235,14 +236,11 @@ class SmartModule(object):
         Create database if it does not already exist.
         Return the connection to the database."""
 
-        databases = self.ifconn.get_list_database()
-        for db in databases:
-            if database_name in db.values():
-                break
-        else:
+        try:
+            self.ifconn.switch_database(database_name)
+        except InfluxDBClientError:
             self.ifconn.create_database(database_name)
-
-        self.ifconn.switch_database(database_name)
+            self.ifconn.switch_database(database_name)
         return self.ifconn
 
     def push_sysinfo(self, asset_context, information):
