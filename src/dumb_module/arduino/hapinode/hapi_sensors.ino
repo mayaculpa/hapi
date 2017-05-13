@@ -100,8 +100,9 @@ float readHumidity(int iDevice) {
   else {
     returnValue = h;
   }
-  Serial.print("DHT Humidity: ");
-  Serial.println(returnValue);  return returnValue;
+//  Serial.print("DHT Humidity: ");
+//  Serial.println(returnValue);
+  return returnValue;
 }
 
 float readTemperatured(int iDevice) {
@@ -120,8 +121,8 @@ float readTemperatured(int iDevice) {
       returnValue = (returnValue * 9.0)/ 5.0 + 32.0; // Convert Celsius to Fahrenheit
     }
   }
-  Serial.print("DHT Temperature: ");
-  Serial.println(returnValue);
+//  Serial.print("DHT Temperature: ");
+//  Serial.println(returnValue);
   return returnValue;
 }
 
@@ -140,8 +141,8 @@ float read1WireTemperature(int iDevice) {
       returnValue = (returnValue * 9.0)/ 5.0 + 32.0; // Convert Celsius to Fahrenheit 
     }
   }
-  Serial.print("18B20 Temperature: ");
-  Serial.println(returnValue);
+//  Serial.print("18B20 Temperature: ");
+//  Serial.println(returnValue);
   return returnValue;
 }
 
@@ -173,8 +174,8 @@ float readpH(int iDevice) {
     avgValue += buf[i];
   float phValue = (float)avgValue * 5.0 / 1024 / 6; //convert the analog into millivolt
   phValue = 3.5 * phValue;                  //convert the millivolt into pH value
-  Serial.print("pH: ");
-  Serial.println(phValue);
+//  Serial.print("pH: ");
+//  Serial.println(phValue);
   return phValue;
 }
 
@@ -206,10 +207,10 @@ float readTDS(int iDevice) {
     avgValue += buf[i];
   float TDSValue = (float)avgValue * 5.0 / 1024 / 6; //convert the analog into millivolt
 
-  //TODO: Need temperature compensation for TDS
+//TODO Need temperature compensation for TDS
   TDSValue = 1.0 * TDSValue;                  //convert the millivolt into TDS value
-  Serial.print("TDS: ");
-  Serial.println(TDSValue); 
+//  Serial.print("TDS: ");
+//  Serial.println(TDSValue); 
   return TDSValue;
 }
 
@@ -221,19 +222,25 @@ float readTDS(int iDevice) {
 //  Dark overcast day   Bright room 100 lux   1.5 KΩ
 //  Overcast day        1000 lux              300 Ω
 
-float readLightSensorTemp(int iDevice) {
+float readLightSensor(int iDevice) {
   // Simple code to read a Light value from a CDS sensor, with 10k to ground
   float Lux;
   int RawADC = analogRead(iDevice);
 //TODO
   Lux = (float)RawADC; // Need to do some processing to get lux from CDS reading
-
   return Lux;
 }
 
 float readFlow(int iDevice) {
   // readWaterFlowRAte  - Uses an input pulse that creates an average flow rate
   //                      The averaging is done in software and stores a 30second rolling count
-  return (float)WaterFlowRate;
+//TODO
+return (float)WaterFlowRate;
+}
+
+float readSensorPin(int iDevice) {
+   float pinData;
+//TODO
+return pinData;
 }
 
