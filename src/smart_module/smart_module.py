@@ -230,17 +230,19 @@ class SmartModule(object):
         except Exception, excpt:
             self.log.exception("Error loading site data: %s", excpt)
 
-    def connect_influx(self, asset_context):
-        """Connect to InfluxDB server and searches for the database in 'asset_context'.
-           Return the connection to the database or create it if necessary."""
+    def connect_influx(self, database_name):
+        """Connect to database named database_name on InfluxDB server.
+        Create database if it does not already exist.
+        Return the connection to the database."""
+
         databases = self.ifconn.get_list_database()
         for db in databases:
-            if asset_context in db.values():
+            if database_name in db.values():
                 break
         else:
-            self.ifconn.create_database(asset_context)
+            self.ifconn.create_database(database_name)
 
-        self.ifconn.switch_database(asset_context)
+        self.ifconn.switch_database(database_name)
         return self.ifconn
 
     def push_sysinfo(self, asset_context, information):
