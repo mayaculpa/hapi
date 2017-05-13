@@ -235,7 +235,7 @@ class SmartModule(object):
            Return the connection to the database or create it if necessary."""
         databases = self.ifconn.get_list_database()
         for db in databases:
-            if asset_context in db:
+            if asset_context in db.values():
                 break
         else:
             self.ifconn.create_database(asset_context)
