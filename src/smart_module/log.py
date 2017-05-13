@@ -52,12 +52,12 @@ class Log(object):
         """Append INFORMATION in information to file. Accepts a single string."""
         string = self.build_string("INFO", information)
         with open(self.log_file, "a") as log:
-            log.write(string)
+            log.write(string + "\n")
         print(string)
 
     def exception(self, information):
         """Append EXCEPTION in information to file. Accepts a single string."""
         string = self.build_string("EXCEPTION", information)
         with open(self.log_file, "a") as log:
-            log.write(string)
+            log.write(string + "\n")
         print(string)
