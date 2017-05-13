@@ -39,12 +39,11 @@ Communications Method
 
 // Board Type
 // ==========
-// Arduino
-#define HN_2560         // Must have WiFi shield
+// Arduinodefine HN_2560         // Must have WiFi shield
 
 //**ESP Based
 // Board Type
-//#define HN_ESP8266
+#define HN_ESP8266
 //#define HN_ESP32
 
 // Connection Type
@@ -155,6 +154,19 @@ const char* mqtt_topic_asset = "ASSET/RESPONSE";           // Genral Asset topic
 char mqtt_topic_command[256] = "COMMAND/";              // Command topic for this HN
 const char* mqtt_topic_exception = "EXCEPTION/";        // General Exception topic
 
+#define MAXTOPICS 5
+#define STATUSSTART 0
+#define ASSETSTART 1
+#define CONFIGSTART 4
+char* mqtt_topic_array[MAXTOPICS] = {
+  "STATUS/QUERY",
+  "ASSET/QUERY",
+  "ASSET/QUERY/",
+  "ASSET/QUERY/*",
+  "CONFIG/QUERY/"  
+};
+
+
 StaticJsonBuffer<128> hn_topic_exception;               // Exception data for this HN
 char MQTTOutput[256];                                   // String storage for the JSON data
 char MQTTInput[256];                                    // String storage for the JSON data
@@ -175,6 +187,8 @@ JsonObject& exception_topic = hn_topic_exception.createObject();
 #define SENSORID_AIO 1    // ANALOG I/O
 #define SENSORID_FN 2     // SENSOR FUNCTION I/O
 #define CONTROLID_FN 3    // CONTROL FUNCTION I/O
+#define CONTROLDATA1_FN 4  // CONTROL FUNCTION TIME DATA
+#define CONTROLDATA2_FN 5  // CONTROL FUNCTION VALUE DATA
 
 // TEST
 const int ledPin = 2; // This code uses the built-in led for visual feedback that the button has been pressed
@@ -205,30 +219,69 @@ DHT dhts[1] = {dht1};             //add the DHT device to the array of DHTs
 //used when setting or a reading a pin isn't enough, as in the instance of library calls.
 typedef float (* GenericFP)(int); //generic pointer to a function that takes an int and returns a float
 struct FuncDef {   //define a structure to associate a Name to generic function pointer.
-  String fName;
-  String fType;
-  String fUnit;
+  char* fName;
+  const char* fType;
+  const char* fUnit;
   int fPin;
   GenericFP fPtr;
 };
 
 #define SENSOR_FUNCTIONS 7          //The number of custom sensor functions supported on this HN
 // Create a FuncDef for each custom function
-// Format: abbreviation, context, pin, function
-FuncDef sfunc1 = {"tmp", "dht", "C", -1, &readTemperatured};
-FuncDef sfunc2 = {"hum", "dht", "%", -1, &readHumidity};
-FuncDef sfunc3 = {"lux", "light", "lux", LIGHT_SENSORPIN, &readLightSensorTemp};
-FuncDef sfunc4 = {"tmp1", "DS18B20", "C", ONE_WIRE_BUS, &read1WireTemperature};
-FuncDef sfunc5 = {"ph", "pH Sensor", "pH", PH_SENSORPIN, &readpH};
-FuncDef sfunc6 = {"tds", "TDS Sensor", "ppm", TDS_SENSORPIN, &readTDS};
-FuncDef sfunc7 = {"flow", "FlowRate Sensor", "lpm", FLOW_SENSORPIN, &readFlow};
+// Format: abbreviation, context, pin, data function
+FuncDef sfunc1 = {"tmp", "Env", "C", -1, &readTemperatured};
+FuncDef sfunc2 = {"hum", "Env", "%", -1, &readHumidity};
+FuncDef sfunc3 = {"lux", "Env", "lux", LIGHT_SENSORPIN, &readLightSensor};
+FuncDef sfunc4 = {"tmw", "Water", "C", ONE_WIRE_BUS, &read1WireTemperature};
+FuncDef sfunc5 = {"phv", "Water", "pH", PH_SENSORPIN, &readpH};
+FuncDef sfunc6 = {"tds", "Water", "ppm", TDS_SENSORPIN, &readTDS};
+FuncDef sfunc7 = {"flo", "Water", "lpm", FLOW_SENSORPIN, &readFlow};
 FuncDef HapisFunctions[SENSOR_FUNCTIONS] = {sfunc1, sfunc2, sfunc3, sfunc4, sfunc5, sfunc6, sfunc7};
 
-#define CONTROL_FUNCTIONS 1          //The number of custom sensor functions supported on this HN
-// Create a FuncDef for each custom function
-// Format: abbreviation, context, pin, function
-FuncDef cfunc7 = {"pump", "Pump Control", "lpm", -1, &controlPumps};
-FuncDef HapicFunctions[CONTROL_FUNCTIONS] = {cfunc7};
+// Custom control devices
+//Custom functions are special functions for reading sensors or controlling devices. They are
+//used when setting or a reading a pin isn't enough, as in the instance of library calls.
+typedef float (* GenericFP)(int); //generic pointer to a function that takes an int and returns a float
+struct CFuncDef {   //define a structure to associate a Name to generic control pointer.
+  const char* fName;
+  const char* fType;
+  const char* fUnit;
+  int fPin;
+  GenericFP oPtr;
+  GenericFP iPtr;
+};
+
+#define CONTROL_FUNCTIONS 6          //The number of custom control functions supported on this HN
+// Create a FuncDef for each custom control function
+// Format: abbreviation, context, Control data index, control function, data function
+CFuncDef cfunc1 = {"ppw", "Pump", "lpm", 1, &controlPumps, &readSensorPin};
+CFuncDef cfunc2 = {"ppf", "Pump", "lpm", 2, &controlPumps, &readSensorPin};
+CFuncDef cfunc3 = {"ppn", "Pump", "lpm", 3, &controlPumps, &readTDS};
+CFuncDef cfunc4 = {"pHU", "Pump", "lpm", 4, &controlPumps, &readpH};
+CFuncDef cfunc5 = {"pHD", "Pump", "lpm", 5, &controlPumps, &readpH};
+CFuncDef cfunc6 = {"lmp", "Lamp", "lpm", 6, &controlLamps, &readLightSensor};
+CFuncDef HapicFunctions[CONTROL_FUNCTIONS] = {cfunc1, cfunc2, cfunc3, cfunc4, cfunc5, cfunc6};
+
+struct ControlData {
+  const char* hc_name;              // abbreviation
+  int hc_controlpin;
+  boolean hc_polarity;              // Active low control output
+  unsigned long hc_start;           // Start time (unix time)
+  unsigned long hc_end;             // End time (unix time)
+  unsigned long hc_repeat;          // Repeat interval (seconds)
+  boolean hc_running;               // Pump running or not, Lamp on or off
+  int hcs_sensepin;                 // Pin used for iPtr function control
+  int hcs_onValue;                  // Sensor value at which control turns On
+  int hcs_offValue;                 // Sensor value at which control turns Off
+};
+
+ControlData ccontrol1 = {"ppw", cWatr_PIN, true, 0, 0, 0, false, sWatr_PIN, 0, 0};          // Water
+ControlData ccontrol2 = {"ppf", cFill_PIN, true, 0, 0, 0, false, sFill_PIN, 0, 0};          // Fill
+ControlData ccontrol3 = {"ppn", cNutr_PIN, true, 0, 0, 0, false, sNutr_PIN, 0, 0};          // Nutrient
+ControlData ccontrol4 = {"pHU", cpHUp_PIN, true, 0, 0, 0, false, spHUp_PIN, 0, 0};          // pHUp
+ControlData ccontrol5 = {"pHD", cpHDn_PIN, true, 0, 0, 0, false, spHDn_PIN, 0, 0};          // pHDown
+ControlData ccontrol6 = {"lmp", cLamp_PIN, true, 0, 0, 0, false, sLamp_PIN, 0, 0};          // Lamp
+ControlData HapicData[CONTROL_FUNCTIONS] = {ccontrol1, ccontrol2, ccontrol3, ccontrol4, ccontrol5, ccontrol6};  
 
 //**** End Sensors Section ****
 
@@ -386,7 +439,7 @@ void setup() {
   MQTTClient.setServer(MQTT_broker_address, MQTT_port);
   MQTTClient.setCallback(MQTTcallback);
 
-  exception_topic["AssetId"] = HN_id;
+  exception_topic["AId"] = HN_id;
 
   // Wait until connected to MQTT Broker
   // client.connect returns a boolean value
@@ -400,21 +453,8 @@ void setup() {
 
 // Subscribe to the TOPICs
 
-  while (!(MQTTClient.subscribe("STATUS/QUERY"))) {
-    Serial.println(" .. subscribing to STATUS/QUERY");
-    MQTTClient.loop();
-    delay(100);
-  }
-  while (!(MQTTClient.subscribe("ASSET/QUERY"))) {
-    MQTTClient.loop();
-    Serial.println(" .. subscribing to ASSET/QUERY");
-    delay(100);
-  }
-  while (!(MQTTClient.subscribe("CONFIG/QUERY"))) {
-    MQTTClient.loop();
-    Serial.println(" .. subscribing to CONFIG/QUERY");
-    delay(100);
-  }
+  Serial.println("Subscribing to MQTT topics ...");
+  
   while (!(MQTTClient.subscribe("COMMAND/"))) {
     MQTTClient.loop();
     Serial.println(" .. subscribing to COMMAND/");
@@ -423,6 +463,36 @@ void setup() {
   while (!(MQTTClient.subscribe("EXCEPTION/"))) {
     MQTTClient.loop();
     Serial.println(" .. subscribing to EXCEPTION/");
+    delay(100);
+  } 
+  while (!(MQTTClient.subscribe("STATUS/QUERY"))) {
+    Serial.println(" .. subscribing to STATUS/QUERY");
+    MQTTClient.loop();
+    delay(100);
+  }
+  while (!(MQTTClient.subscribe("STATUS/QUERY/#"))) {
+    Serial.println(" .. subscribing to STATUS/QUERY/#");
+    MQTTClient.loop();
+    delay(100);
+  }
+  while (!(MQTTClient.subscribe("ASSET/QUERY"))) {
+    MQTTClient.loop();
+    Serial.println(" .. subscribing to ASSET/QUERY");
+    delay(100);
+  }
+  while (!(MQTTClient.subscribe("ASSET/QUERY/#"))) {
+    MQTTClient.loop();
+    Serial.println(" .. subscribing to ASSET/QUERY/#");
+    delay(100);
+  }
+  while (!(MQTTClient.subscribe("CONFIG/QUERY"))) {
+    MQTTClient.loop();
+    Serial.println(" .. subscribing to CONFIG/QUERY");
+    delay(100);
+  }
+  while (!(MQTTClient.subscribe("CONFIG/QUERY/#"))) {
+    MQTTClient.loop();
+    Serial.println(" .. subscribing to CONFIG/QUERY/#");
     delay(100);
   }
   Serial.println("Setup Complete. Listening for topics ..");
@@ -449,6 +519,7 @@ void loop() {
     // i.e. if state goes from high (1) to low (0) (pressed to not pressed)
     digitalWrite(ledPin, HIGH);
   }
+  checkControls();              // Check all the timers on the controls
 
   MQTTClient.loop();
   if ((loopcount++ % 100) == 0) {
