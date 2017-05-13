@@ -43,14 +43,10 @@ from status import SystemStatus
 import asset_interface
 import rtc_interface
 from alert import Alert
-from utilities import SM_LOGGER, VERSION
-from utilities import trim
+import utilities
 from zeroconf import ServiceBrowser, ServiceStateChange, Zeroconf
 
 reload(sys)
-
-SECONDS_PER_MINUTE = 60
-MINUTES_PER_HOUR = 60
 
 class Asset(object):
     """Hold Asset (sensor) information."""
@@ -102,7 +98,7 @@ class SmartModule(object):
         self.hostname = ""
         self.last_status = ""
         self.ifconn = InfluxDBClient("138.197.74.74", 8086, "early", "adopter")
-        self.log = logging.getLogger(SM_LOGGER)
+        self.log = logging.getLogger(utilities.SM_LOGGER)
         self.rtc = rtc_interface.RTCInterface()
         self.rtc.power_on_rtc()
         self.launch_time = self.rtc.get_datetime()
@@ -112,40 +108,32 @@ class SmartModule(object):
         self.asset.type = self.rtc.get_type()
         self.ai = asset_interface.AssetInterface(self.asset.type, self.rtc.mock)
         self.rtc.power_off_rtc()
-        self.zeroconf = Zeroconf()
-
-    def __del__(self):
-        try:
-            if self.zeroconf:
-                self.zeroconf.close()
-        except Exception, excpt:
-            self.log.exception("Error trying to close Zeroconf: %s.", excpt)
 
     def become_broker(self):
         """If no broker found. SM performs operation to become the broker."""
         try:
-            # Completely dependent on avahi configured to publish the mosquitto.
-            # We'll implement it on every image. We could dev. a way to register the service though.
+            # Completely dependent on avahi configured to publish the mosquitto service.
+            # Although we could implement a way to use zerconf publishing.
             os.system("sudo systemctl start avahi-daemon.service")
-            return
         except Exception, excpt:
             self.log.info("Error trying to become the Broker: %s.", excpt)
 
     def find_service(self, zeroconf, service_type, name, state_change):
         """Check for published MQTT. If it finds port 1883 of type '_mqtt', update broker name."""
-        if state_change is not ServiceStateChange.Added:
-            return
         # Get the service we want (port 1883 and type '_mqtt._tcp.local.'
         info = zeroconf.get_service_info(service_type, name)
         if info.port == 1883 and service_type == "_mqtt._tcp.local.":
-            # If this is our service, update mqtt broker name and ip on self.comm (Communicator)
-            self.comm.broker_name = info.server
-            self.comm.broker_ip = str(socket.inet_ntoa(info.address))
-            return
+            if state_change is ServiceStateChange.Added:
+                # If this is our service, update mqtt broker name and ip on self.comm (Communicator)
+                self.comm.broker_name = info.server
+                self.comm.broker_ip = str(socket.inet_ntoa(info.address))
+            elif state_change is ServiceStateChange.Removed:
+                # Implement way to handle removed MQTT service
+                pass
 
-    def find_broker(self):
+    def find_broker(self, zeroconf):
         """Create zeroconf object, if needed, and browser for services."""
-        browser = ServiceBrowser(self.zeroconf, "_mqtt._tcp.local.", handlers=[self.find_service])
+        browser = ServiceBrowser(zeroconf, "_mqtt._tcp.local.", handlers=[self.find_service])
 
     def discover(self):
         if self.rtc.mock:
@@ -155,28 +143,35 @@ class SmartModule(object):
             print("Real Smart Module hosting asset ", self.asset.id, self.asset.type,
                   self.asset.context)
 
-        attempt = 1
-        while self.comm.broker_name is None and attempt <= 5: # or?
+        zeroconf = Zeroconf()
+        for x in range(0, 5):
+            # Try to locate the MQTT Broker 5 times.
             self.log.info("Performing Discovery...")
-            self.find_broker()
-            self.log.info("Waiting Broker information on attempt: %d.", attempt)
-            if self.comm.broker_name is None:
+            self.find_broker(zeroconf)
+            self.log.info("Waiting Broker information on attempt: %d.", x + 1)
+            time.sleep(1)
+            if self.comm.broker_name or self.comm.broker_ip:
+                self.log.info("MQTT Broker: {broker_name} IP: {broker_ip}.".format(
+                    broker_name=self.comm.broker_name,
+                    broker_ip=self.comm.broker_ip))
+                break
+            else:
                 self.become_broker()
-                time.sleep(0.5)
-            attempt = attempt + 1
+        else:
+            self.log.info("Couldn't find the broker. Exiting...")
+            sys.exit(-1)
 
-        self.log.info("MQTT Broker: %s. IP: %s.", self.comm.broker_name, self.comm.broker_ip)
         self.comm.smart_module = self
         self.comm.client.loop_start()
         self.comm.connect()
-        self.zeroconf.close()
+        zeroconf.close()
         t_end = time.time() + 10
         while (time.time() < t_end) and not self.comm.is_connected:
             time.sleep(1)
 
         self.comm.subscribe("SCHEDULER/RESPONSE")
         self.comm.send("SCHEDULER/QUERY", "Where are you?")
-        # Just wait for reply...
+        # Just wait for reply... We must review it.
         time.sleep(2)
 
         self.hostname = socket.gethostname()
@@ -221,7 +216,7 @@ class SmartModule(object):
         try:
             sql = 'SELECT {fields} FROM site LIMIT 1;'.format(
                 fields=', '.join(field_names))
-            database = sqlite3.connect('hapi_core.db')
+            database = sqlite3.connect(utilities.DB_CORE)
             db_elements = database.cursor().execute(sql)
             for row in db_elements:
                 for field_name, field_value in zip(field_names, row):
@@ -389,7 +384,7 @@ class SmartModule(object):
                 VALUES (?, ?, ?)
             ''', (now, job.name, result)
             self.log.info("Executed %s", job.name)
-            database = sqlite3.connect('hapi_history.db')
+            database = sqlite3.connect(utilities.DB_HIST)
             database.cursor().execute(*command)
             database.commit()
             database.close()
@@ -400,8 +395,8 @@ class SmartModule(object):
         now = datetime.datetime.now()
         uptime = now - self.launch_time
         days = uptime.days
-        minutes, seconds = divmod(uptime.seconds, SECONDS_PER_MINUTE)
-        hours, minutes = divmod(minutes, MINUTES_PER_HOUR)
+        minutes, seconds = divmod(uptime.seconds, utilities.SECONDS_PER_MINUTE)
+        hours, minutes = divmod(minutes, utilities.MINUTES_PER_HOUR)
         s = ('''
             Smart Module Status
               Software Version v{version}
@@ -413,10 +408,10 @@ class SmartModule(object):
                - location: {executable}
               Timestamp: {timestamp}
               Uptime: This Smart Module has been online for '''
-                  '''{days} days, {hours} hours and {minutes} minutes.
+                  '''{days} days, {hours} hours, {minutes} minutes and {seconds} seconds.
             ###
         ''').format(
-            version=VERSION,
+            version=utilities.VERSION,
             platform=sys.platform,
             encoding=sys.getdefaultencoding(),
             executable=sys.executable,
@@ -425,6 +420,7 @@ class SmartModule(object):
             days=days,
             hours=hours,
             minutes=minutes,
+            seconds=seconds,
         )
         s = trim(s) + '\n'
         try:
@@ -437,7 +433,7 @@ class Scheduler(object):
         self.running = True
         self.smart_module = None
         self.processes = []
-        self.log = logging.getLogger(SM_LOGGER)
+        self.log = logging.getLogger(utilities.SM_LOGGER)
 
     class Job(object):
         def __init__(self):
@@ -489,7 +485,7 @@ class Scheduler(object):
         try:
             sql = 'SELECT {fields} FROM schedule;'.format(
                 fields=', '.join(field_names))
-            database = sqlite3.connect("hapi_core.db")
+            database = sqlite3.connect(utilities.DB_CORE)
             db_jobs = database.cursor().execute(sql)
             for row in db_jobs:
                 job = Scheduler.Job()
@@ -563,7 +559,7 @@ class Scheduler(object):
                         WHERE name=?
                         ORDER BY step ;
                     ''', (job.sequence,)
-                    database = sqlite3.connect('hapi_core.db')
+                    database = sqlite3.connect(utilities.DB_CORE)
                     seq_jobs = self.database.cursor().execute(*command)
                     #print('len(seq_jobs) =', len(seq_jobs))
                     p = Process(target=self.process_sequence, args=(seq_jobs, job, job_rtu,
@@ -595,16 +591,16 @@ class DataSync(object):
     def read_db_version():
         version = ""
         try:
-            database = sqlite3.connect('hapi_core.db')
+            database = sqlite3.connect(utilities.DB_CORE)
             sql = "SELECT data_version FROM db_info;"
             data = database.cursor().execute(sql)
             for element in data:
                 version = element[0]
             database.close()
-            logging.getLogger(SM_LOGGER).info("Read database version: %s", version)
+            logging.getLogger(utilities.SM_LOGGER).info("Read database version: %s", version)
             return version
         except Exception, excpt:
-            logging.getLogger(SM_LOGGER).info("Error reading database version: %s", excpt)
+            logging.getLogger(utilities.SM_LOGGER).info("Error reading database version: %s", excpt)
 
     @staticmethod
     def write_db_version():
@@ -615,15 +611,20 @@ class DataSync(object):
             database.cursor().execute(*command)
             database.commit()
             database.close()
-            logging.getLogger(SM_LOGGER).info("Wrote database version: %s", version)
+            logging.getLogger(utilities.SM_LOGGER).info("Wrote database version: %s", version)
         except Exception, excpt:
-            logging.getLogger(SM_LOGGER).info("Error writing database version: %s", excpt)
+            logging.getLogger(utilities.SM_LOGGER).info("Error writing database version: %s", excpt)
 
     @staticmethod
     def publish_core_db(comm):
         try:
-            subprocess.call("sqlite3 hapi_core.db .dump > output.sql", shell=True)
-            f = codecs.open('output.sql', 'r', encoding='ISO-8859-1')
+            output = "output.sql"
+            command = "sqlite3 {database} .dump > {output}".format(
+                database=utilities.DB_CORE,
+                output=output,
+            )
+            subprocess.call(command, shell=True)
+            f = codecs.open(output, 'r', encoding='ISO-8859-1')
             data = f.read()
             byteArray = bytearray(data.encode('utf-8'))
             comm.unsubscribe("SYNCHRONIZE/DATA")
@@ -635,10 +636,12 @@ class DataSync(object):
 
     def synchronize_core_db(self, data):
         try:
-            with codecs.open("incoming.sql", "w") as fd:
+            incoming = "incoming.sql"
+            with codecs.open(incoming, "w") as fd:
                 fd.write(data)
 
-            subprocess.call('sqlite3 -init incoming.sql hapi_new.db ""', shell=True)
+            command = 'sqlite3 -init {file} hapi_new.db ""'.format(file=incoming)
+            subprocess.call(command, shell=True)
 
             logging.getLogger(SM_LOGGER).info("Synchronized database.")
         except Exception, excpt:
@@ -649,7 +652,7 @@ def main():
 
     # Setup Logging
     logger_level = logging.DEBUG
-    logger = logging.getLogger(SM_LOGGER)
+    logger = logging.getLogger(utilities.SM_LOGGER)
     logger.setLevel(logger_level)
 
     # create logging file handler

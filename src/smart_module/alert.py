@@ -25,7 +25,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import print_function
 import logging
 import sqlite3
-from utilities import SM_LOGGER
+from utilities import SM_LOGGER, DB_CORE
 
 class Alert(object):
     """Hold Alert information fetched from database and check for alerts."""
@@ -58,7 +58,7 @@ class Alert(object):
             '''.split()
             sql = 'SELECT {fields} FROM alert_params WHERE asset_id={asset};'.format(
                 fields=', '.join(field_names), asset=int(self.alert_id))
-            database = sqlite3.connect("hapi_core.db")
+            database = sqlite3.connect(DB_CORE)
             row = database.cursor().execute(sql).fetchone()
             for key, value in zip(field_names, row):
                 setattr(self, key, value)

@@ -22,13 +22,15 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-from __future__ import print_function
 import sys
-import logging
-import sqlite3
 
 VERSION = "3.0 Alpha"
 SM_LOGGER = "smart_module"
+SC_LOGGER = "scheduler"
+DB_CORE = "hapi_core.db"
+DB_HIST = "hapi_history.db"
+SECONDS_PER_MINUTE = 60
+MINUTES_PER_HOUR = 60
 
 def trim(docstring):
     """Trim docstring."""
@@ -56,31 +58,3 @@ def trim(docstring):
         trimmed.pop(0)
     # Return a single string:
     return '\n'.join(trimmed)
-
-# We should probably kill this class.
-class DatabaseConnection(object):
-    """Hold necessary information to connect and perform operations on SQLite3 database."""
-    def __init__(self, connect=False, dbfile="hapi_core.db"):
-        """Create object to hold and connect to SQLite3."""
-        self.dbfile = dbfile
-        self.connection = None
-        self.cursor = None
-        self.log = logging.getLogger(SM_LOGGER)
-        if connect:
-            self.connect()
-
-    def connect(self):
-        """Connect to the SQLite3 database and initialize cursor."""
-        try:
-            self.connection = sqlite3.connect(self.dbfile)
-            self.cursor = self.connection.cursor()
-        except Exception, excpt:
-            self.log.exception("Error connection to database: %s", excpt)
-
-    def __del__(self):
-        """Close SQLite3 database connection."""
-        try:
-            self.connection.close()
-            self.log.info("Database connection closed.")
-        except Exception, excpt:
-            self.log.exception("Error trying to close db connection: %s", excpt)
