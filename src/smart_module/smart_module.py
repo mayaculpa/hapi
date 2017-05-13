@@ -152,8 +152,7 @@ class SmartModule(object):
             if self.comm.broker_name or self.comm.broker_ip:
                 self.log.info("MQTT Broker: {broker_name} IP: {broker_ip}.".format(
                     broker_name=self.comm.broker_name,
-                    broker_ip=self.comm.broker_ip)
-                )
+                    broker_ip=self.comm.broker_ip))
                 break
             else:
                 self.become_broker()
