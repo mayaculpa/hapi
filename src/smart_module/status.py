@@ -33,10 +33,10 @@ import datetime
 import psutil
 
 class SystemStatus(object):
-    """ Small class to handle system information """
+    """Small class to handle system information."""
 
     def __init__(self, update=False):
-        """ If please_update, create the object and fetch all data """
+        """If please_update, create the object and fetch all data."""
         self.cpu = {"percentage": 0}
         self.bootdate = 0
         self.memory = {"used": 0, "free": 0, "cached": 0}
@@ -54,7 +54,7 @@ class SystemStatus(object):
                      "clients": self.clients}])
 
     def update(self):
-        """ Function to update the entire class information """
+        """Function to update the entire class information."""
         self.cpu["percentage"] = psutil.cpu_percent(interval=0.7)
         self.boot = datetime.datetime.fromtimestamp(psutil.boot_time())\
                     .strftime("%Y-%m-%d %H:%M:%S")
