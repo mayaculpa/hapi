@@ -26,8 +26,7 @@ from __future__ import print_function
 import os
 import glob
 import time
-import logging
-from utilities import SM_LOGGER
+import log
 
 class AssetImpl(object):
     def __init__(self):
@@ -38,9 +37,10 @@ class AssetImpl(object):
             base_dir = '/sys/bus/w1/devices'
             device_dir = glob.glob(os.path.join(base_dir, '28*'))[0]
             self.device_path = os.path.join(device_dir, 'w1_slave')
+            self.log = log.Log("asset.log")
             print('Device file:', self.device_path)
         except Exception, excpt:
-            logging.getLogger(SM_LOGGER).exception("Error initializing sensor interface: %s", excpt)
+            self.log.exception("Error initializing sensor interface: %s." % excpt)
 
     def read_temp_raw(self):
         try:
@@ -50,7 +50,7 @@ class AssetImpl(object):
                     lines = lines + line.decode("utf-8")
             return lines.split("\n")
         except Exception, excpt:
-            logging.getLogger(SM_LOGGER).exception("Error reading raw temperature data: %s", excpt)
+            self.log.exception("Error reading raw temperature data: %s." % excpt)
 
     def read_value(self):
         temp_c = -50
@@ -66,6 +66,6 @@ class AssetImpl(object):
                 temp_c = float(temp_string) / 1000.0
 
         except Exception, excpt:
-            logging.getLogger(SM_LOGGER).exception("Error getting converted sensor data: %s", excpt)
+            self.log.exception("Error getting converted sensor data: %s." % excpt)
 
         return temp_c

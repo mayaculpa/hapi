@@ -34,7 +34,7 @@ from multiprocessing import Process
 import urllib2
 import json
 import sqlite3                                      # https://www.sqlite.org/index.html
-import logging
+import log
 import schedule                                     # sudo pip install schedule
 import communicator
 from influxdb import InfluxDBClient
@@ -97,7 +97,7 @@ class SmartModule(object):
         self.hostname = ""
         self.last_status = ""
         self.ifconn = InfluxDBClient("138.197.74.74", 8086, "early", "adopter")
-        self.log = logging.getLogger(utilities.SM_LOGGER)
+        self.log = log.Log("smartmodule.log")
         self.rtc = rtc_interface.RTCInterface()
         self.rtc.power_on_rtc()
         self.launch_time = self.rtc.get_datetime()
@@ -115,7 +115,7 @@ class SmartModule(object):
             # Although we could implement a way to use zerconf publishing.
             os.system("sudo systemctl start avahi-daemon.service")
         except Exception, excpt:
-            self.log.info("Error trying to become the Broker: %s.", excpt)
+            self.log.info("Error trying to become the Broker: %s." % excpt)
 
     def find_service(self, zeroconf, service_type, name, state_change):
         """Check for published MQTT. If it finds port 1883 of type '_mqtt', update broker name."""
@@ -147,7 +147,7 @@ class SmartModule(object):
             # Try to locate the MQTT Broker 5 times.
             self.log.info("Performing Discovery...")
             self.find_broker(zeroconf)
-            self.log.info("Waiting Broker information on attempt: %d.", x + 1)
+            self.log.info("Waiting Broker information on attempt: %d." % (x + 1))
             time.sleep(1)
             if self.comm.broker_name or self.comm.broker_ip:
                 self.log.info("MQTT Broker: {broker_name} IP: {broker_ip}.".format(
@@ -196,7 +196,7 @@ class SmartModule(object):
                 self.comm.send("ANNOUNCE", socket.gethostname() + ".local is running the Scheduler.")
                 self.log.info("Scheduler program loaded.")
             except Exception, excpt:
-                self.log.exception("Error initializing scheduler. %s", excpt)
+                self.log.exception("Error initializing scheduler. %s." % excpt)
 
     def load_site_data(self):
         field_names = '''
@@ -223,7 +223,7 @@ class SmartModule(object):
             database.close()
             self.log.info("Site data loaded.")
         except Exception, excpt:
-            self.log.exception("Error loading site data: %s", excpt)
+            self.log.exception("Error loading site data: %s." % excpt)
 
     def connect_influx(self, database_name):
         """Connect to database named database_name on InfluxDB server.
@@ -295,7 +295,7 @@ class SmartModule(object):
             sysinfo.clients = brokerconnections
             return sysinfo
         except Exception, excpt:
-            self.log.exception("Error getting System Status: %s", excpt)
+            self.log.exception("Error getting System Status: %s." % excpt)
 
     def on_query_status(self):
         """It'll be called by the Scheduler to ask for System Status information."""
@@ -310,7 +310,7 @@ class SmartModule(object):
         try:
             value = str(self.ai.read_value())
         except Exception, excpt:
-            self.log.exception("Error getting asset data: %s", excpt)
+            self.log.exception("Error getting asset data: %s." % excpt)
         return value
 
     def log_sensor_data(self, data, virtual):
@@ -319,7 +319,7 @@ class SmartModule(object):
                 self.push_data(self.asset.name, self.asset.context, self.asset.value,
                                self.asset.unit)
             except Exception, excpt:
-                self.log.exception("Error logging sensor data: %s", excpt)
+                self.log.exception("Error logging sensor data: %s." % excpt)
         else:
             # For virtual assets, assume that the data is already parsed JSON
             unit_symbol = {
@@ -333,7 +333,7 @@ class SmartModule(object):
                     self.push_data(factor, "Environment", value, unit_symbol[factor])
 
             except Exception, excpt:
-                self.log.exception("Error logging sensor data: %s", excpt)
+                self.log.exception("Error logging sensor data: %s." % excpt)
 
     def push_data(self, asset_name, asset_context, value, unit):
         try:
@@ -353,9 +353,9 @@ class SmartModule(object):
                 }
             ]
             conn.write_points(json_body)
-            self.log.info("Wrote to analytic database: %s", json_body)
+            self.log.info("Wrote to analytic database: %s." % json_body)
         except Exception, excpt:
-            self.log.exception('Error writing to analytic database: %s', excpt)
+            self.log.exception("Error writing to analytic database: %s." % excpt)
 
     def get_weather(self):
         response = ""
@@ -375,7 +375,7 @@ class SmartModule(object):
             response = parsed_json['current_observation']
             f.close()
         except Exception, excpt:
-            self.log.exception('Error getting weather data: %s', excpt)
+            self.log.exception("Error getting weather data: %s." % excpt)
         return response
 
     def log_command(self, job, result):
@@ -385,13 +385,13 @@ class SmartModule(object):
                 INSERT INTO command_log (timestamp, command, result)
                 VALUES (?, ?, ?)
             ''', (now, job.name, result)
-            self.log.info("Executed %s", job.name)
+            self.log.info("Executed %s." % job.name)
             database = sqlite3.connect(utilities.DB_HIST)
             database.cursor().execute(*command)
             database.commit()
             database.close()
         except Exception, excpt:
-            self.log.exception("Error logging command: %s", excpt)
+            self.log.exception("Error logging command: %s." % excpt)
 
     def get_env(self):
         now = datetime.datetime.now()
@@ -424,18 +424,18 @@ class SmartModule(object):
             minutes=minutes,
             seconds=seconds,
         )
-        s = trim(s) + '\n'
+        s = utilities.trim(s) + '\n'
         try:
             self.comm.send("ENV/RESPONSE", s)
         except Exception, excpt:
-            self.log.exception("Error getting environment data: %s", excpt)
+            self.log.exception("Error getting environment data: %s." % excpt)
 
 class Scheduler(object):
     def __init__(self):
         self.running = True
         self.smart_module = None
         self.processes = []
-        self.log = logging.getLogger(utilities.SM_LOGGER)
+        self.log = log.Log("scheduler.log")
 
     class Job(object):
         def __init__(self):
@@ -497,7 +497,7 @@ class Scheduler(object):
             database.close()
             self.log.info("Schedule Data Loaded.")
         except Exception, excpt:
-            self.log.exception("Error loading schedule. %s", excpt)
+            self.log.exception("Error loading schedule. %s." % excpt)
 
         return jobs
 
@@ -521,18 +521,17 @@ class Scheduler(object):
                 plural_interval_name = interval_name + 's'
                 d = getattr(schedule.every(job.interval), plural_interval_name)
                 d.do(self.run_job, job)
-                self.log.info(
-                    '  Loading %s job: %s',
+                self.log.info("  Loading %s job: %s." % (
                     suffixed_names[interval_name],
-                    job.name,
+                    job.name)
                 )
             elif interval_name == 'day':
                 schedule.every().day.at(job.at_time).do(self.run_job, job)
-                self.log.info('  Loading time-based job: ' + job.name)
+                self.log.info("  Loading time-based job: " + job.name)
             else:
                 d = getattr(schedule.every(), interval_name)
                 d.do(self.run_job, job)
-                self.log.info('  Loading %s job: %s', interval_name, job.name)
+                self.log.info("  Loading %s job: %s" % (interval_name, job.name))
 
     def run_job(self, job):
         if not self.running or not job.enabled:
@@ -550,7 +549,7 @@ class Scheduler(object):
                 response = eval(job.command)
                 self.smart_module.log_sensor_data(response, True)
             except Exception, excpt:
-                self.log.exception("Error running job. %s", excpt)
+                self.log.exception("Error running job. %s." % excpt)
         else:
             try:
                 if job.sequence != "":
@@ -586,9 +585,10 @@ class Scheduler(object):
                     #self.log_command(job, "")
 
             except Exception, excpt:
-                self.log.exception('Error running job: %s', excpt)
+                self.log.exception("Error running job: %s." % excpt)
 
 class DataSync(object):
+    log = log.Log("datasync.log")
     @staticmethod
     def read_db_version():
         version = ""
@@ -599,10 +599,10 @@ class DataSync(object):
             for element in data:
                 version = element[0]
             database.close()
-            logging.getLogger(utilities.SM_LOGGER).info("Read database version: %s", version)
+            DataSync.log.info("Read database version: %s." % version)
             return version
         except Exception, excpt:
-            logging.getLogger(utilities.SM_LOGGER).info("Error reading database version: %s", excpt)
+            DataSync.log.exception("Error reading database version: %s." % excpt)
 
     @staticmethod
     def write_db_version():
@@ -613,9 +613,9 @@ class DataSync(object):
             database.cursor().execute(*command)
             database.commit()
             database.close()
-            logging.getLogger(utilities.SM_LOGGER).info("Wrote database version: %s", version)
+            DataSync.log.info("Wrote database version: %s." % version)
         except Exception, excpt:
-            logging.getLogger(utilities.SM_LOGGER).info("Error writing database version: %s", excpt)
+            DataSync.log.exception("Error writing database version: %s." % excpt)
 
     @staticmethod
     def publish_core_db(comm):
@@ -632,9 +632,9 @@ class DataSync(object):
             comm.unsubscribe("SYNCHRONIZE/DATA")
             comm.send("SYNCHRONIZE/DATA", byteArray)
             #comm.subscribe("SYNCHRONIZE/DATA")
-            logging.getLogger(SM_LOGGER).info("Published database.")
+            DataSync.log.info("Published database.")
         except Exception, excpt:
-            logging.getLogger(SM_LOGGER).info("Error publishing database: %s", excpt)
+            DataSync.log.exception("Error publishing database: %s." % excpt)
 
     def synchronize_core_db(self, data):
         try:
@@ -645,40 +645,41 @@ class DataSync(object):
             command = 'sqlite3 -init {file} hapi_new.db ""'.format(file=incoming)
             subprocess.call(command, shell=True)
 
-            logging.getLogger(SM_LOGGER).info("Synchronized database.")
+            DataSync.log.info("Synchronized database.")
         except Exception, excpt:
-            logging.getLogger(SM_LOGGER).info("Error synchronizing database: %s", excpt)
+            DataSync.log.exception("Error synchronizing database: %s." % excpt)
 
 def main():
     #max_log_size = 1000000
 
-    # Setup Logging
-    logger_level = logging.DEBUG
-    logger = logging.getLogger(utilities.SM_LOGGER)
-    logger.setLevel(logger_level)
+    # # Setup Logging
+    # logger_level = logging.DEBUG
+    # logger = logging.getLogger(utilities.SM_LOGGER)
+    # logger.setLevel(logger_level)
+    #
+    # # create logging file handler
+    # file_handler = logging.FileHandler('hapi_sm.log', 'a')
+    # file_handler.setLevel(logger_level)
+    #
+    # # create logging console handler
+    # console_handler = logging.StreamHandler()
+    # console_handler.setLevel(logger_level)
+    #
+    # #Set logging format
+    # formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    # file_handler.setFormatter(formatter)
+    # console_handler.setFormatter(formatter)
+    # logger.addHandler(file_handler)
+    # logger.addHandler(console_handler)
 
-    # create logging file handler
-    file_handler = logging.FileHandler('hapi_sm.log', 'a')
-    file_handler.setLevel(logger_level)
-
-    # create logging console handler
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(logger_level)
-
-    #Set logging format
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    file_handler.setFormatter(formatter)
-    console_handler.setFormatter(formatter)
-    logger.addHandler(file_handler)
-    logger.addHandler(console_handler)
-
+    logging = log.Log("smartmodule.log")
     try:
         smart_module = SmartModule()
         smart_module.discover()
         smart_module.load_site_data()
 
     except Exception, excpt:
-        logger.exception("Error initializing Smart Module. %s", excpt)
+        logging.exception("Error initializing Smart Module. %s." % excpt)
 
     while 1:
         try:
@@ -686,7 +687,7 @@ def main():
             schedule.run_pending()
 
         except Exception, excpt:
-            logger.exception("Error in Smart Module main loop. %s", excpt)
+            logging.exception("Error in Smart Module main loop. %s." % excpt)
             break
 
 if __name__ == "__main__":
