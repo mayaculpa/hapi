@@ -43,8 +43,8 @@ Communications Method
 
 //**ESP Based
 // Board Type
-#define HN_ESP8266
-//#define HN_ESP32
+//#define HN_ESP8266
+#define HN_ESP32
 
 // Connection Type
 // ===============
@@ -64,7 +64,7 @@ Communications Method
 #include <ESP8266WiFi.h>
 #include <ESP8266mDNS.h>        // for avahi
 #endif
-#ifdef HN_2560
+#ifndef HN_ESP8266
 #include <WiFi.h>
 #endif
 #include <WiFiUdp.h>            // For ntp
@@ -77,7 +77,12 @@ Communications Method
 #include <ArduinoJson.h>  // JSON library for MQTT strings
 
 #include <math.h>
+#ifndef HN_ESP32
 #include <EEPROM.h>
+#endif
+#ifdef HN_ESP32
+#include <Preferences.h>
+#endif
 #include <OneWire.h>
 #include <DallasTemperature.h>
 #include <Bounce2.h> // Used for "debouncing" inputs
@@ -165,7 +170,20 @@ char* mqtt_topic_array[MAXTOPICS] = {
   "ASSET/QUERY/*",
   "CONFIG/QUERY/"  
 };
-
+#define MAXLISTEN 11
+char* mqtt_listen_array[MAXLISTEN] = {
+  "COMMAND/",
+  "EXCEPTION/",
+  "STATUS/QUERY",
+  "STATUS/QUERY/",
+  "STATUS/QUERY/#",
+  "ASSET/QUERY",
+  "ASSET/QUERY/",
+  "ASSET/QUERY/#",
+  "CONFIG/QUERY",  
+  "CONFIG/QUERY/",  
+  "CONFIG/QUERY/#"  
+};
 
 StaticJsonBuffer<128> hn_topic_exception;               // Exception data for this HN
 char MQTTOutput[256];                                   // String storage for the JSON data
@@ -305,8 +323,8 @@ void b2c(byte* bptr, char* cptr, int len) {
 }
 
 int freeRam (){
-#ifdef HN_ESP8266
-// Gets free ram on the ESP8266
+#if defined(HN_ESP8266) || defined(HN_ESP32)
+// Gets free ram on the ESP8266, ESP32
   return ESP.getFreeHeap();
 #else
 // Gets free ram on the Arduino
@@ -374,6 +392,12 @@ void setup() {
   Serial.println(WiFi.hostname(hostString));
   Serial.print("NewHostname: ");
   Serial.println(WiFi.hostname());
+#endif
+#ifdef HN_ESP32
+  Serial.println(WiFi.getHostname());
+  Serial.println(WiFi.setHostname(hostString));
+  Serial.print("NewHostname: ");
+  Serial.println(WiFi.getHostname());
 #endif
   
 // Start mDNS support
@@ -454,46 +478,16 @@ void setup() {
 // Subscribe to the TOPICs
 
   Serial.println("Subscribing to MQTT topics ...");
-  
-  while (!(MQTTClient.subscribe("COMMAND/"))) {
-    MQTTClient.loop();
-    Serial.println(" .. subscribing to COMMAND/");
-    delay(100);
-  }
-  while (!(MQTTClient.subscribe("EXCEPTION/"))) {
-    MQTTClient.loop();
-    Serial.println(" .. subscribing to EXCEPTION/");
-    delay(100);
-  } 
-  while (!(MQTTClient.subscribe("STATUS/QUERY"))) {
-    Serial.println(" .. subscribing to STATUS/QUERY");
-    MQTTClient.loop();
-    delay(100);
-  }
-  while (!(MQTTClient.subscribe("STATUS/QUERY/#"))) {
-    Serial.println(" .. subscribing to STATUS/QUERY/#");
-    MQTTClient.loop();
-    delay(100);
-  }
-  while (!(MQTTClient.subscribe("ASSET/QUERY"))) {
-    MQTTClient.loop();
-    Serial.println(" .. subscribing to ASSET/QUERY");
-    delay(100);
-  }
-  while (!(MQTTClient.subscribe("ASSET/QUERY/#"))) {
-    MQTTClient.loop();
-    Serial.println(" .. subscribing to ASSET/QUERY/#");
-    delay(100);
-  }
-  while (!(MQTTClient.subscribe("CONFIG/QUERY"))) {
-    MQTTClient.loop();
-    Serial.println(" .. subscribing to CONFIG/QUERY");
-    delay(100);
-  }
-  while (!(MQTTClient.subscribe("CONFIG/QUERY/#"))) {
-    MQTTClient.loop();
-    Serial.println(" .. subscribing to CONFIG/QUERY/#");
-    delay(100);
+  for (int i = 0; i < MAXLISTEN; i++) {
+    Serial.print(i+1);
+    Serial.print(" - ");
+    Serial.println(mqtt_listen_array[i]);
+    do {
+      MQTTClient.loop();
+      Serial.print(" .. subscribing to ");
+      Serial.println(mqtt_listen_array[i]);
+      delay(100);      
+    } while (MQTTClient.subscribe(mqtt_listen_array[i]) == false ); 
   }
   Serial.println("Setup Complete. Listening for topics ..");
 }

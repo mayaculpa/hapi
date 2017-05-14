@@ -225,15 +225,15 @@ boolean publishJSON(const char* topic) {
 void MQTTcallback(char* topic, byte* payload, unsigned int length) {
 
   int i;
-  const char* AId;    // AId for target HAPInode
-  const char* Command;    // Command to execute
-  char* hn_topic;         // Variable to hold all node topics
-  FuncDef f;              // Read Data Functions
-  CFuncDef c;             // Control functions
-  ControlData cd;         // Data for control functions
-  int SensorIdx;          // Target Sensor Index
-  int Number;             // Target pin# or function#
-  int data;               // Data for output
+  const char* AId = "*";      // AId for target HAPInode, preset for receive
+  const char* Command = " ";  // Command to execute
+  char* hn_topic;             // Variable to hold all node topics
+  FuncDef f;                  // Read Data Functions
+  CFuncDef c;                 // Control functions
+  ControlData cd;             // Data for control functions
+  int SensorIdx;              // Target Sensor Index
+  int Number;                 // Target pin# or function#
+  int data;                   // Data for output
 
   hn_topic = &MQTTOutput[0];
   StaticJsonBuffer<200> hn_topic_command;            // Parsing buffer
@@ -261,12 +261,14 @@ void MQTTcallback(char* topic, byte* payload, unsigned int length) {
       Serial.print(":");
       Serial.println(it->value.asString());
     }
-    
+
+    Serial.print("AId - ");
+    Serial.println(AId);
 // Check correct AId       
     if (command_topic.containsKey("AId")) { // AId is required for all messages, even if it is "*"
       AId = command_topic["AId"];
     }
-    else return;
+//    else return;
           
 // Check for COMMAND/ topic based commands
 // =======================================
@@ -330,7 +332,9 @@ void MQTTcallback(char* topic, byte* payload, unsigned int length) {
                 data = command_topic["data"];
               }
               else return;          
+#ifndef HN_ESP32
               analogWrite(Number, data);               // Set the analog pin
+#endif
               return;
             }
           }
