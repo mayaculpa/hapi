@@ -25,8 +25,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import sys
 
 VERSION = "3.0 Alpha"
-SM_LOGGER = "smart_module"
-SC_LOGGER = "scheduler"
 DB_CORE = "hapi_core.db"
 DB_HIST = "hapi_history.db"
 SECONDS_PER_MINUTE = 60

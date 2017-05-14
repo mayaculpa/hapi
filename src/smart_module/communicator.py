@@ -24,9 +24,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import print_function
 import datetime
-import logging
+import log
 import paho.mqtt.client as mqtt
-from utilities import SM_LOGGER
 
 class Communicator(object):
     def __init__(self, sm):
@@ -45,21 +44,21 @@ class Communicator(object):
         self.is_connected = False
         self.scheduler_found = False
         self.broker_connections = -1
-        self.logger = logging.getLogger(SM_LOGGER)
+        self.logger = log.Log("communicator.log")
         self.logger.info("Communicator initialized")
 
     def connect(self):
         try:
-            self.logger.info("Connecting to %s at %s.", self.broker_name, self.broker_ip)
+            self.logger.info("Connecting to %s at %s." % (self.broker_name, self.broker_ip))
             #self.client.connect(host=self.broker_name, port=1883, keepalive=60)
             self.client.connect(host=self.broker_ip, port=1883, keepalive=60)
         except Exception, excpt:
-            self.logger.exception("Error connecting to broker. %s", excpt)
+            self.logger.exception("Error connecting to broker: %s." % excpt)
 
     def on_disconnect(self, client, userdata, rc):
         # We could implement a reconnect call.
         self.is_connected = False
-        self.logger.info("Disconnected: %s.", mqtt.error_string(rc))
+        self.logger.info("Disconnected: %s." % mqtt.error_string(rc))
 
     # The callback for when the client receives a CONNACK response from the server.
     #@staticmethod
@@ -145,4 +144,4 @@ class Communicator(object):
             if self.client:
                 self.client.publish(topic, message)
         except Exception, excpt:
-            self.logger.info("Error publishing message: %s", excpt)
+            self.logger.info("Error publishing message: %s." % excpt)

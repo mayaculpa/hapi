@@ -23,9 +23,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 from __future__ import print_function
-import logging
 import sqlite3
-from utilities import SM_LOGGER, DB_CORE
+import log
+from utilities import DB_CORE
 
 class Alert(object):
     """Hold Alert information fetched from database and check for alerts."""
@@ -36,6 +36,7 @@ class Alert(object):
         self.upper_threshold = 0.0
         self.message = ""
         self.response_type = ""
+        self.logger = log.Log("alert.log")
 
     def __str__(self):
         """Use to pass Alert information in JSON."""
@@ -49,7 +50,7 @@ class Alert(object):
     def update_alert(self):
         """Fetch alert parameters from database."""
         try:
-            logging.getLogger(SM_LOGGER).info("Fetching alert param. from database")
+            self.logger.info("Fetching alert param. from database")
             field_names = '''
                 lower_threshold
                 upper_threshold
@@ -66,11 +67,9 @@ class Alert(object):
             self.upper_threshold = float(self.upper_threshold)
             database.close()
         except Exception, excpt:
-            logging.getLogger(SM_LOGGER).exception("Error fetching alert param. from database: %s",
-                                                   excpt)
+            self.logger.exception("Error fetching alert param. from database: %s." % excpt)
 
     def check_alert(self, current_value):
         """Check for alert."""
         if not self.lower_threshold <= float(current_value) <= self.upper_threshold:
-            print("Alert detected.")
-            print("Value: ", current_value)
+            self.logger.info("ALERT DETECTED.\n  Value: %s." % current_value)
