@@ -96,7 +96,7 @@ class SmartModule(object):
         self.scheduler = None
         self.hostname = ""
         self.last_status = ""
-        self.ifconn = InfluxDBClient("138.197.74.74", 8086, "early", "adopter")
+        self.ifconn = InfluxDBClient("127.0.0.1", 8086, "root", "root")
         self.log = log.Log("smartmodule.log")
         self.rtc = rtc_interface.RTCInterface()
         self.rtc.power_on_rtc()
@@ -608,8 +608,8 @@ class DataSync(object):
     def write_db_version():
         try:
             version = datetime.datetime.now().isoformat()
-            command = 'UPDATE db_info SET data_version = ?;', (version,)
-            database = sqlite3.connect('hapi_core.db')
+            command = "UPDATE db_info SET data_version = ?;", (version,)
+            database = sqlite3.connect(utilities.DB_CORE)
             database.cursor().execute(*command)
             database.commit()
             database.close()
