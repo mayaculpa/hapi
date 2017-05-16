@@ -135,12 +135,11 @@ class SmartModule(object):
         browser = ServiceBrowser(zeroconf, "_mqtt._tcp.local.", handlers=[self.find_service])
 
     def discover(self):
-        if self.rtc.mock:
-            print("Mock Smart Module hosting asset ", self.asset.id, self.asset.type,
-                  self.asset.context)
-        else:
-            print("Real Smart Module hosting asset ", self.asset.id, self.asset.type,
-                  self.asset.context)
+        print("{status} Smart Module hosting asset {asset_id} {asset_type} {asset_context}.".format(
+            status="Mock" if self.rtc.mock else "Real",
+            asset_id=self.asset.id,
+            asset_type=self.asset.type,
+            asset_context=self.asset.context))
 
         zeroconf = Zeroconf()
         for x in range(0, 5):
