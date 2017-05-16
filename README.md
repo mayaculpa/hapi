@@ -2,6 +2,14 @@
 
 # Zero-footprint Autonomous Food Production
 
+## Our purpose
+We have a plan to transform conventional agriculture from one of the top polluting activities on Earth to zero-footprint, autonomous food production. Imagine friendly robots growing and raising organic, non-gmo food for you, your family and community.
+The first step towards that vision is an integrated suite of sensors and controls. We call it an automation platform.
+
+Once this first stage of the vision is complete, we’ll begin adding “sustainable appliances”; equipment that integrates with the automation platform and fulfills key aspects of food production from generating heat from sunlight, to cleaning recycled water, to dehydrating produce. The design of these appliances is focused on minimizing the energy, water and labor inputs for food production.
+
+With a constant stream of data flowing from indoor farms and a diverse array of sustainable appliances, we’ll unleash true food system transformation by developing the intelligent algorithms that will maximize production while minimizing cost
+
 # Under heavy development
 We're currently under heavy development.
 We would love to have you participate! Drop us a note and we'll add you into our product development Slack server so you can keep up with the latest.
@@ -9,7 +17,7 @@ We would love to have you participate! Drop us a note and we'll add you into our
 # Requirements
 The default developing platform is Raspbian, a GNU/Linux Distribution for Raspberry Pi.
 We can't provide any further information about other distributions, but we strongly believe it won't be a problem to run as long as you have all the requirements.
-Note: we can say that Linux Mint and Arch Linux was used to run some tests, though.
+Note: we can say that Linux Mint and Arch Linux were used to run some tests, though.
 
 ## *Development Requirements*
 ### **Smart Module**
@@ -18,8 +26,10 @@ Note: we can say that Linux Mint and Arch Linux was used to run some tests, thou
 3. Python zeroconf: ```pip install zeroconf```
 4. Python psutil: ```pip install psutil```
 5. Python Paho-MQTT: ```pip install paho-mqtt```
-6. Python SDL_DS3231: ![SDL_DS3231 module](https://github.com/switchdoclabs/RTC_SDL_DS3231)
-7. Python RPi.GPIO: ![RPi module](about:blank)
+6. Python RPi.GPIO*: ```pip install RPi.GPIO```
+7. Python SDL_DS3231*: ![SDL_DS3231 module](https://github.com/switchdoclabs/RTC_SDL_DS3231)
+
+*Only needed if running on real mode (with actual sensor data). Read the next note for more information.
 
 You might also considering using a Virtual Environment for testing.
 
@@ -44,7 +54,7 @@ The system needs the following packages installed and properly configured:
 ### *Usage:*
 ```python smart_module.py```
 
-**You should get something as this:**
+**You should get something like this:**
 
     $ python smart_module.py
     2017-05-15 22:37:55.089210 - communicator.log - INFO - Communicator initialized
@@ -90,14 +100,6 @@ Don't forget to check our Wiki Page.
 Note: we're currently redefining a few things. You might want to check it again later.
 
 ![HAPI Wiki Page](/../../wiki "Wiki Page")
-
-## Our purpose
-Develop a suite of tools that will allow people to grow a variety of food in diverse environments. Our primary focus is on building intelligent automation for hydroponics and aquaponics.
-Imagine systems in your garage, basement or local community center that can churn out strawberries and kale, year-round with minimal expertise, expense and effort.
-That’s what we’re shooting for.
-
-However, people live in diverse locations and are faced with different resource constraints. For instance, access to clean water could be a challenge in Ghana whereas access to energy could be a challenge in Greenland.
-So alongside the automation platform, we’re also developing equipment to help people overcome those challenges. The multi-stage water filter and the solar thermal air heater are results of this effort.
 
 ## Open Source
 HAPI is an open project, meaning anyone and everyone can participate to the best of their ability.
