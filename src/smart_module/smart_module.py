@@ -190,8 +190,8 @@ class SmartModule(object):
                 self.comm.unsubscribe("SCHEDULER/RESPONSE")
                 self.comm.subscribe("STATUS/RESPONSE")
                 self.comm.subscribe("ASSET/RESPONSE" + "/#")
-                self.comm.send("SCHEDULER/RESPONSE", socket.gethostname() + ".local")
-                self.comm.send("ANNOUNCE", socket.gethostname() + ".local is running the Scheduler.")
+                self.comm.send("SCHEDULER/RESPONSE", self.hostname + ".local")
+                self.comm.send("ANNOUNCE", self.hostname + ".local is running the Scheduler.")
                 self.log.info("Scheduler program loaded.")
             except Exception as excpt:
                 self.log.exception("Error initializing scheduler. %s." % excpt)
@@ -287,7 +287,7 @@ class SmartModule(object):
         conn.write_points(json)
 
     def get_status(self, brokerconnections):
-        """Fetch system information (stats) and return a list with a single dictionary (JSON)."""
+        """Fetch system information (stats)."""
         try:
             sysinfo = SystemStatus(update=True)
             sysinfo.clients = brokerconnections
@@ -297,18 +297,19 @@ class SmartModule(object):
 
     def on_query_status(self):
         """It'll be called by the Scheduler to ask for System Status information."""
-        self.comm.send("STATUS/QUERY", "I might need to know how you are!")
+        self.comm.send("STATUS/QUERY", "How are you?")
 
     def on_check_alert(self):
         """It'll called by the Scheduler to ask for Alert Conditions."""
         self.comm.send("ASSET/QUERY/" + self.asset.id, "Is it warm here?")
 
     def get_asset_data(self):
-        value = -1000
         try:
             value = str(self.ai.read_value())
         except Exception as excpt:
             self.log.exception("Error getting asset data: %s." % excpt)
+            value = -1000
+
         return value
 
     def log_sensor_data(self, data, virtual):
@@ -521,8 +522,7 @@ class Scheduler(object):
                 d.do(self.run_job, job)
                 self.log.info("  Loading %s job: %s." % (
                     suffixed_names[interval_name],
-                    job.name)
-                )
+                    job.name))
             elif interval_name == 'day':
                 schedule.every().day.at(job.at_time).do(self.run_job, job)
                 self.log.info("  Loading time-based job: " + job.name)

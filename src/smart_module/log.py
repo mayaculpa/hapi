@@ -49,15 +49,15 @@ class Log(object):
         return str(string)
 
     def info(self, information):
-        """Append INFORMATION in information to file. Accepts a single string."""
+        """Append INFO in information to file. Accepts a single string."""
         string = self.build_string("INFO", information)
         with open(self.log_file, "a") as log:
             log.write(string + "\n")
         print(string)
 
     def exception(self, information):
-        """Append EXCEPTION in information to file. Accepts a single string."""
-        string = self.build_string("EXCEPTION", information)
+        """Append ERROR in information to file. Accepts a single string."""
+        string = self.build_string("[!!] ERROR", information)
         with open(self.log_file, "a") as log:
             log.write(string + "\n")
         print(string)

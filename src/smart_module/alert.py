@@ -77,4 +77,3 @@ class Alert(object):
         """Check for alert."""
         if not self.lower_threshold <= float(current_value) <= self.upper_threshold:
             self.logger.info("ALERT DETECTED. Value: %s." % current_value)
-

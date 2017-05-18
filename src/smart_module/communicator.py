@@ -23,7 +23,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 from __future__ import print_function
-import datetime
+import sys
 import log
 import paho.mqtt.client as mqtt
 
@@ -48,26 +48,29 @@ class Communicator(object):
     def connect(self):
         try:
             self.logger.info("Connecting to %s at %s." % (self.broker_name, self.broker_ip))
-            #self.client.connect(host=self.broker_name, port=1883, keepalive=60)
             self.client.connect(host=self.broker_ip, port=1883, keepalive=60)
         except Exception as excpt:
-            self.logger.exception("Error connecting to broker: %s." % excpt)
+            self.logger.exception("[Exiting] Error connecting to broker: %s." % excpt)
+            sys.exit(-1)
 
     def subscribe(self, topic):
+        """Subscribe to a topic (QoS = 0)."""
         self.client.subscribe(topic, qos=0)
 
     def unsubscribe(self, topic):
+        """Unsubscribe to a topic."""
         self.client.unsubscribe(topic)
 
     def on_disconnect(self, client, userdata, rc):
         # We could implement a reconnect call.
         self.is_connected = False
         self.logger.info("Disconnected: %s." % mqtt.error_string(rc))
+        sys.exit(-1)
 
     # The callback for when the client receives a CONNACK response from the server.
     #@staticmethod
     def on_connect(self, client, userdata, flags, rc):
-        self.logger.info("Connected with result code " + str(rc))
+        self.logger.info("Connected with result code %s" % str(rc))
         # Subscribing in on_connect() means if we lose connection and reconnect, subscriptions will
         # be renewed.
         #self.client.subscribe("SCHEDULER/LOCATE")
