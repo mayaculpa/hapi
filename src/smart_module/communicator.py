@@ -33,9 +33,6 @@ class Communicator(object):
         self.name = ""
         self.broker_name = None
         self.broker_ip = None
-        self.fallback_broker = ""
-        self.influx_address = ""
-        self.start_uptime = datetime.datetime.now()
         self.client = mqtt.Client(clean_session=True, userdata=None, protocol=mqtt.MQTTv311)
         self.client.on_connect = self.on_connect
         self.client.on_message = self.on_message
@@ -45,6 +42,7 @@ class Communicator(object):
         self.scheduler_found = False
         self.broker_connections = -1
         self.logger = log.Log("communicator.log")
+
         self.logger.info("Communicator initialized")
 
     def connect(self):
@@ -52,8 +50,14 @@ class Communicator(object):
             self.logger.info("Connecting to %s at %s." % (self.broker_name, self.broker_ip))
             #self.client.connect(host=self.broker_name, port=1883, keepalive=60)
             self.client.connect(host=self.broker_ip, port=1883, keepalive=60)
-        except Exception, excpt:
+        except Exception as excpt:
             self.logger.exception("Error connecting to broker: %s." % excpt)
+
+    def subscribe(self, topic):
+        self.client.subscribe(topic, qos=0)
+
+    def unsubscribe(self, topic):
+        self.client.unsubscribe(topic)
 
     def on_disconnect(self, client, userdata, rc):
         # We could implement a reconnect call.
@@ -66,23 +70,17 @@ class Communicator(object):
         self.logger.info("Connected with result code " + str(rc))
         # Subscribing in on_connect() means if we lose connection and reconnect, subscriptions will
         # be renewed.
-        self.is_connected = True
-        self.client.subscribe("COMMAND" + "/#")
         #self.client.subscribe("SCHEDULER/LOCATE")
-        self.client.subscribe("SCHEDULER/IDENT")
-        self.client.subscribe("$SYS/broker/clients/total")
-        self.client.subscribe("SYNCHRONIZE/DATA" + "/#", qos=0)
-        self.client.subscribe("SYNCHRONIZE/VERSION", qos=0)
-        self.client.subscribe("SYNCHRONIZE/CORE", qos=0)
-        self.client.subscribe("SYNCHRONIZE/GET", qos=0)
-        self.client.subscribe("ASSET/QUERY" + "/#")
-        self.client.subscribe("STATUS/QUERY")
-
-    def subscribe(self, topic):
-        self.client.subscribe(topic)
-
-    def unsubscribe(self, topic):
-        self.client.unsubscribe(topic)
+        self.is_connected = True
+        self.subscribe("COMMAND" + "/#")
+        self.subscribe("SCHEDULER/IDENT")
+        self.subscribe("$SYS/broker/clients/total")
+        self.subscribe("SYNCHRONIZE/DATA" + "/#")
+        self.subscribe("SYNCHRONIZE/VERSION")
+        self.subscribe("SYNCHRONIZE/CORE")
+        self.subscribe("SYNCHRONIZE/GET")
+        self.subscribe("ASSET/QUERY" + "/#")
+        self.subscribe("STATUS/QUERY")
 
     # The callback when a message is received
     def on_message(self, client, userdata, msg):
@@ -143,5 +141,5 @@ class Communicator(object):
         try:
             if self.client:
                 self.client.publish(topic, message)
-        except Exception, excpt:
+        except Exception as excpt:
             self.logger.info("Error publishing message: %s." % excpt)
