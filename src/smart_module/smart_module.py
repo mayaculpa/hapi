@@ -120,14 +120,17 @@ class SmartModule(object):
         """Check for published MQTT. If it finds port 1883 of type '_mqtt', update broker name."""
         # Get the service we want (port 1883 and type '_mqtt._tcp.local.'
         info = zeroconf.get_service_info(service_type, name)
-        if info.port == 1883 and service_type == "_mqtt._tcp.local.":
-            if state_change is ServiceStateChange.Added:
-                # If this is our service, update mqtt broker name and ip on self.comm (Communicator)
-                self.comm.broker_name = info.server
-                self.comm.broker_ip = str(socket.inet_ntoa(info.address))
-            elif state_change is ServiceStateChange.Removed:
-                # Implement way to handle removed MQTT service
-                pass
+        if not info.port == 1883 and not service_type == "_mqtt._tcp.local.":
+            return
+
+        if state_change is ServiceStateChange.Added:
+            # If this is our service, update mqtt broker name and ip on self.comm (Communicator)
+            self.comm.broker_name = info.server
+            self.comm.broker_ip = str(socket.inet_ntoa(info.address))
+        elif state_change is ServiceStateChange.Removed:
+            # Implement way to handle removed MQTT service
+            # It only makes sense if leave zeroconf connection opened. It could be interesting.
+            pass
 
     def find_broker(self, zeroconf):
         """Create zeroconf object, if needed, and browser for services."""
@@ -142,7 +145,7 @@ class SmartModule(object):
 
         zeroconf = Zeroconf()
         for x in range(0, 5):
-            # Try to locate the MQTT Broker.
+            # Try to locate the MQTT Broker. If can't find, become one.
             self.log.info("Performing Discovery...")
             self.find_broker(zeroconf)
             self.log.info("Waiting Broker information on attempt: %d." % (x + 1))
@@ -155,12 +158,13 @@ class SmartModule(object):
             else:
                 self.become_broker()
         else:
-            self.log.info("Couldn't find the broker. Exiting...")
+            self.log.info("Couldn't find or become the broker. Exiting...")
             sys.exit(-1)
 
         self.comm.smart_module = self
         self.comm.client.loop_start()
         self.comm.connect()
+        # we could leave it open to handle removed MQTT service, if that was the broker
         zeroconf.close()
         t_end = time.time() + 10
         while (time.time() < t_end) and not self.comm.is_connected:
