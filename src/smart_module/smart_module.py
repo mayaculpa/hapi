@@ -158,10 +158,9 @@ class SmartModule(object):
             else:
                 self.become_broker()
         else:
-            self.log.info("Couldn't find or become the broker. Exiting...")
+            self.log.info("[Exiting] Couldn't find or become the broker.")
             sys.exit(-1)
 
-        self.comm.smart_module = self
         self.comm.client.loop_start()
         self.comm.connect()
         # we could leave it open to handle removed MQTT service, if that was the broker

@@ -54,8 +54,8 @@ class SystemStatus(object):
     def update(self):
         """Function to update the entire class information."""
         self.cpu["percentage"] = psutil.cpu_percent(interval=0.7)
-        self.boot = datetime.datetime.fromtimestamp(psutil.boot_time())\
-                    .strftime("%Y-%m-%d %H:%M:%S")
+        self.boot = datetime.datetime.fromtimestamp(psutil.boot_time()).strftime(
+            "%Y-%m-%d %H:%M:%S")
         virtual_memory = psutil.virtual_memory()
         self.memory["used"] = virtual_memory.used
         self.memory["free"] = virtual_memory.free
