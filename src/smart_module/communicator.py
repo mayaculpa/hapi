@@ -51,7 +51,6 @@ class Communicator(object):
             self.client.connect(host=self.broker_ip, port=1883, keepalive=60)
         except Exception as excpt:
             self.logger.exception("[Exiting] Error connecting to broker: %s" % excpt)
-            self.client.loop_stop()
             sys.exit(-1)
 
     def subscribe(self, topic):
@@ -66,6 +65,7 @@ class Communicator(object):
         # We could implement a reconnect call.
         self.is_connected = False
         self.logger.info("[Exiting] Disconnected: %s" % mqtt.error_string(rc))
+        self.client.loop_stop()
         sys.exit(-1)
 
     # The callback for when the client receives a CONNACK response from the server.
