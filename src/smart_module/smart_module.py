@@ -161,8 +161,8 @@ class SmartModule(object):
             self.log.info("[Exiting] Couldn't find or become the broker.")
             sys.exit(-1)
 
-        self.comm.client.loop_start()
         self.comm.connect()
+        self.comm.client.loop_start()
         # we could leave it open to handle removed MQTT service, if that was the broker
         zeroconf.close()
         t_end = time.time() + 10
