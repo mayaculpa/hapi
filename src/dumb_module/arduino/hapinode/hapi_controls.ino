@@ -61,6 +61,7 @@ float controlPumps(int Device){
       }
     }
     if (c.iPtr(Device) < HapicData[Device].hcs_offValue) { // is the TurnOff value exceeded?
+      HapicData[Device].hc_running = false;
       digitalWrite(
         HapicData[Device].hc_controlpin,
         !HapicData[Device].hc_polarity);
