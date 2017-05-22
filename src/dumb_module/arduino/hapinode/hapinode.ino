@@ -459,7 +459,7 @@ void setup() {
     if (sendMQTTStatus()) {
       mqtt_broker_connected = true;
     }
-  } while (mqtt_broker_connected == false);
+  } while (!mqtt_broker_connected);
 
 // Subscribe to the TOPICs
 
@@ -473,7 +473,7 @@ void setup() {
       Serial.print(" .. subscribing to ");
       Serial.println(mqtt_listen_array[i]);
       delay(100);      
-    } while (MQTTClient.subscribe(mqtt_listen_array[i]) == false ); 
+    } while (!MQTTClient.subscribe(mqtt_listen_array[i])); 
   }
   
   Serial.println("Setup Complete. Listening for topics ..");
