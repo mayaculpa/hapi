@@ -66,16 +66,9 @@ float controlPumps(int Device){
       d.hc_running = false;
       digitalWrite(d.hc_controlpin, !d.hc_polarity);
     }
-  } else
-  {
-    if (d.hc_start >= epoch) {       // Is the timeOn value exceeded?
-      d.hc_active = true;        // Turn it On, Pump is now running
-      digitalWrite(d.hc_controlpin, d.hc_polarity);
-    }
-    if (c.iPtr(Device) > d.hcs_onValue) { // Is the turnOn value exceeded?
-      d.hc_active = true;        // Turn it On, Pump is now running
-      digitalWrite(d.hc_controlpin, d.hc_polarity);
-    }
+  } else if (d.hc_start >= epoch || c.iPtr(Device) > d.hcs_onValue) {
+    d.hc_active = true;        // Turn it On, Pump is now running
+    digitalWrite(d.hc_controlpin, d.hc_polarity);
   }
 }
 
@@ -97,17 +90,9 @@ float controlLamps(int Device){
       d.hc_active = false;
       digitalWrite(d.hc_controlpin, !(d.hc_polarity));
     }
-  } else
-  {
-    if (d.hc_start >= epoch) {    // Is the timeOn value exceeded?
-      d.hc_active = true;        // Turn it On, Lamp is now on
-      digitalWrite(d.hc_controlpin, d.hc_polarity);
-    }
-    if (c.iPtr(Device) > d.hcs_onValue) { // Is the turnOn value exceeded?
-      d.hc_active = true;                // Turn it On, Lamp is now on
-      digitalWrite(d.hc_controlpin, d.hc_polarity);
-    }
+  } else if (d.hc_start >= epoch || c.iPtr(Device) > d.hcs_onValue) { // Is the turnOn value exceeded?
+    d.hc_active = true;        // Turn it On, Lamp is now on
+    digitalWrite(d.hc_controlpin, d.hc_polarity);
   }
 }
-
 
