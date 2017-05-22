@@ -36,11 +36,11 @@ Communications Method
 
 void setupControls(void){
   int i;
-  // Initialize 
+  // Initialize
 }
 
 boolean checkControls(void) {
-  CFuncDef c;  
+  CFuncDef c;
   for (int i=0;i<CONTROL_FUNCTIONS;i++) {
     c = HapicFunctions[i];                // initialize access structure
     c.oPtr(i);                            // call the check function
@@ -55,7 +55,7 @@ float controlPumps(int Device){
   if (d.hc_active) {           // is the pump running?
     if (d.hc_end > epoch) {     // Yes, should it be turned off?
       d.hc_active = false;
-      digitalWrite(d.hc_controlpin, !(d.hc_polarity));     
+      digitalWrite(d.hc_controlpin, !(d.hc_polarity));
       if (d.hc_repeat != 0) {   // Is repeat active?
         d.hc_start += d.hc_repeat;
         d.hc_end += d.hc_repeat;
@@ -65,12 +65,12 @@ float controlPumps(int Device){
     if (c.iPtr(Device) < d.hcs_offValue) { // is the TurnOff value exceeded?
       d.hc_running = false;
       digitalWrite(d.hc_controlpin, !d.hc_polarity);
-    }    
-  } else 
+    }
+  } else
   {
     if (d.hc_start >= epoch) {       // Is the timeOn value exceeded?
       d.hc_active = true;        // Turn it On, Pump is now running
-      digitalWrite(d.hc_controlpin, d.hc_polarity); 
+      digitalWrite(d.hc_controlpin, d.hc_polarity);
     }
     if (c.iPtr(Device) > d.hcs_onValue) { // Is the turnOn value exceeded?
       d.hc_active = true;        // Turn it On, Pump is now running
@@ -87,7 +87,7 @@ float controlLamps(int Device){
   if (d.hc_active) {           // is the Lamp On?
     if (d.hc_end > epoch) {     // Yes, should it be turned off?
       d.hc_active = false;
-      digitalWrite(d.hc_controlpin, !(d.hc_polarity));   
+      digitalWrite(d.hc_controlpin, !(d.hc_polarity));
       if (d.hc_repeat != 0) {   // Is repeat active?
         d.hc_start += d.hc_repeat;
         d.hc_end += d.hc_repeat;
@@ -95,13 +95,13 @@ float controlLamps(int Device){
     }
     if (c.iPtr(Device) < d.hcs_offValue) { // is the TurnOff value exceeded?
       d.hc_active = false;
-      digitalWrite(d.hc_controlpin, !(d.hc_polarity));  
-    }    
-  } else 
+      digitalWrite(d.hc_controlpin, !(d.hc_polarity));
+    }
+  } else
   {
     if (d.hc_start >= epoch) {    // Is the timeOn value exceeded?
       d.hc_active = true;        // Turn it On, Lamp is now on
-      digitalWrite(d.hc_controlpin, d.hc_polarity);   
+      digitalWrite(d.hc_controlpin, d.hc_polarity);
     }
     if (c.iPtr(Device) > d.hcs_onValue) { // Is the turnOn value exceeded?
       d.hc_active = true;                // Turn it On, Lamp is now on

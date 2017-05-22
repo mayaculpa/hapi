@@ -175,7 +175,7 @@ char* mqtt_topic_array[MAXTOPICS] = {
   "ASSET/QUERY",
   "ASSET/QUERY/",
   "ASSET/QUERY/*",
-  "CONFIG/QUERY/"  
+  "CONFIG/QUERY/"
 };
 #define MAXLISTEN 11
 char* mqtt_listen_array[MAXLISTEN] = {
@@ -187,9 +187,9 @@ char* mqtt_listen_array[MAXLISTEN] = {
   "ASSET/QUERY",
   "ASSET/QUERY/",
   "ASSET/QUERY/#",
-  "CONFIG/QUERY",  
-  "CONFIG/QUERY/",  
-  "CONFIG/QUERY/#"  
+  "CONFIG/QUERY",
+  "CONFIG/QUERY/",
+  "CONFIG/QUERY/#"
 };
 
 StaticJsonBuffer<128> hn_topic_exception;               // Exception data for this HN
@@ -301,7 +301,7 @@ ControlData ccontrol3 = {"ppn", cNutr_PIN, true, 0, 0, 0, false, sTDS_PIN, 0, 0}
 ControlData ccontrol4 = {"pHU", cpHUp_PIN, true, 0, 0, 0, false, spH_PIN, 0, 0};          // pHUp
 ControlData ccontrol5 = {"pHD", cpHDn_PIN, true, 0, 0, 0, false, spH_PIN, 0, 0};          // pHDown
 ControlData ccontrol6 = {"lmp", cLamp_PIN, true, 0, 0, 0, false, sLux_PIN, 0, 0};         // Lamp
-ControlData HapicData[CONTROL_FUNCTIONS] = {ccontrol1, ccontrol2, ccontrol3, ccontrol4, ccontrol5, ccontrol6};  
+ControlData HapicData[CONTROL_FUNCTIONS] = {ccontrol1, ccontrol2, ccontrol3, ccontrol4, ccontrol5, ccontrol6};
 
 //**** End Sensors Section ****
 
@@ -363,7 +363,7 @@ void setup() {
 
 #ifdef HN_2560
   Serial.println(hostString);
-#endif  
+#endif
 #ifdef HN_ESP8266
   Serial.println(WiFi.hostname());
   Serial.println(WiFi.hostname(hostString));
@@ -382,14 +382,14 @@ void setup() {
   Serial.println(WiFi.localIP());
   Serial.print("Hostname   : ");
 #endif
-    
+
 // Start mDNS support
 // ==================
   Serial.print("HN_Id:      ");
   Serial.println(HN_Id);
   Serial.print("hostString: ");
   Serial.println(hostString);
-  
+
 #if defined(HN_ESP8266) || defined(HN_ESP32)
  if (!MDNS.begin(hostString)) {
     Serial.println("Error setting up MDNS responder!");
@@ -468,10 +468,10 @@ void setup() {
       MQTTClient.loop();
       Serial.print(" .. subscribing to ");
       Serial.println(mqtt_listen_array[i]);
-      delay(100);      
-    } while (!MQTTClient.subscribe(mqtt_listen_array[i])); 
+      delay(100);
+    } while (!MQTTClient.subscribe(mqtt_listen_array[i]));
   }
-  
+
   Serial.println("Setup Complete. Listening for topics ..");
 }
 
@@ -483,7 +483,7 @@ void loop() {
     getNTPTime();
     loopcount = 0;
   }
-    
+
   checkControls();              // Check all the timers on the controls
   MQTTClient.loop();            // Check for MQTT topics
   flashLED();                   // Flash LED - slow blink

@@ -38,7 +38,7 @@ boolean getNTPTime(void) {
   sendNTPpacket(timeServerIP); // send an NTP packet to a time server
   // wait to see if a reply is available
   delay(1000);
-  
+
   int cb = udp.parsePacket();
   if (!cb) {
     Serial.println("no packet yet");
