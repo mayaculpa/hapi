@@ -51,7 +51,7 @@ boolean sendMQTTStatus(void){
   status_message["DIO"] = String(NUM_DIGITAL);
   status_message["AIO"] = String(NUM_ANALOG);
   status_message["Free SRAM"] = String(freeRam()) + "k";
-  if (idle_mode == false){
+  if (!idle_mode) {
     status_message["Idle"] = false;
   }else{
     status_message["Idle"] = true;

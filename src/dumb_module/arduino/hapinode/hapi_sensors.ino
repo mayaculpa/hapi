@@ -117,7 +117,7 @@ float readTemperatured(int iDevice) {
   }
   else {
     returnValue = h;
-    if (metric == false) {
+    if (!metric) {
       returnValue = (returnValue * 9.0)/ 5.0 + 32.0; // Convert Celsius to Fahrenheit
     }
   }
@@ -137,7 +137,7 @@ float read1WireTemperature(int iDevice) {
   }
   else
   {
-    if (metric == false) {
+    if (!metric) {
       returnValue = (returnValue * 9.0)/ 5.0 + 32.0; // Convert Celsius to Fahrenheit 
     }
   }
