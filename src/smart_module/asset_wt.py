@@ -39,7 +39,7 @@ class AssetImpl(object):
             self.device_path = os.path.join(device_dir, 'w1_slave')
             self.log = log.Log("asset.log")
             print('Device file:', self.device_path)
-        except Exception, excpt:
+        except Exception as excpt:
             self.log.exception("Error initializing sensor interface: %s." % excpt)
 
     def read_temp_raw(self):
@@ -49,7 +49,7 @@ class AssetImpl(object):
                 for line in tempfile:
                     lines = lines + line.decode("utf-8")
             return lines.split("\n")
-        except Exception, excpt:
+        except Exception as excpt:
             self.log.exception("Error reading raw temperature data: %s." % excpt)
 
     def read_value(self):
@@ -65,7 +65,7 @@ class AssetImpl(object):
                 temp_string = lines[1][equals_pos+2:]
                 temp_c = float(temp_string) / 1000.0
 
-        except Exception, excpt:
+        except Exception as excpt:
             self.log.exception("Error getting converted sensor data: %s." % excpt)
 
         return temp_c

@@ -29,6 +29,7 @@ from utilities import DB_CORE
 
 class Alert(object):
     """Hold Alert information fetched from database and check for alerts."""
+
     def __init__(self, asset_id):
         """Create object with null values."""
         self.alert_id = asset_id
@@ -47,10 +48,15 @@ class Alert(object):
                      "response": self.response_type
                     }])
 
+    def __del__(self):
+        """Close all connections on object deletion."""
+        # This should be important regarding email and sms notifications.
+        pass
+
     def update_alert(self):
         """Fetch alert parameters from database."""
         try:
-            self.logger.info("Fetching alert param. from database")
+            self.logger.info("Fetching alert parameters from database")
             field_names = '''
                 lower_threshold
                 upper_threshold
@@ -66,10 +72,10 @@ class Alert(object):
             self.lower_threshold = float(self.lower_threshold)
             self.upper_threshold = float(self.upper_threshold)
             database.close()
-        except Exception, excpt:
-            self.logger.exception("Error fetching alert param. from database: %s." % excpt)
+        except Exception as excpt:
+            self.logger.exception("Error fetching alert parameters from database: %s." % excpt)
 
     def check_alert(self, current_value):
-        """Check for alert."""
+        """Check for alert to a given _value_."""
         if not self.lower_threshold <= float(current_value) <= self.upper_threshold:
-            self.logger.info("ALERT DETECTED.\n  Value: %s." % current_value)
+            self.logger.info("[!] ALERT DETECTED. Value: %s." % current_value)

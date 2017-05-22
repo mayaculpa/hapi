@@ -61,9 +61,12 @@ float controlPumps(int Device){
         d.hc_end += d.hc_repeat;
       }
     }
-    if (c.iPtr(Device) < d.hcs_offValue) { // is the TurnOff value exceeded?
-      d.hc_active = false;
-      digitalWrite(d.hc_controlpin, !(d.hc_polarity));   
+
+    if (c.iPtr(Device) < HapicData[Device].hcs_offValue) { // is the TurnOff value exceeded?
+      HapicData[Device].hc_running = false;
+      digitalWrite(
+        HapicData[Device].hc_controlpin,
+        !HapicData[Device].hc_polarity);
     }    
   } else 
   {
