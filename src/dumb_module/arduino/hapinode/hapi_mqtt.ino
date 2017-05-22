@@ -42,7 +42,7 @@ boolean sendMQTTStatus(void){
   JsonObject& status_message = hn_topic_status.createObject();
 
 // Publish current status
-  // Identify HAPInode 
+  // Identify HAPInode
   status_message["Node"] = HN_Id;
   // Returns the current status of the HN itself
   // Includes firmware version, MAC address, IP Address, Free RAM and Idle Mode
@@ -60,7 +60,7 @@ boolean sendMQTTStatus(void){
   status_message.printTo(MQTTOutput, 128);          // MQTT JSON string is max 96 bytes
   strcpy(mqtt_topic, mqtt_topic_status);            // Generic status response topic
   strcat(mqtt_topic, hostString);                   // Add the NodeId
-  
+
   Serial.print(mqtt_topic);
   Serial.print(" : ");
   Serial.println(MQTTOutput);
@@ -131,7 +131,7 @@ boolean sendMQTTAsset(int AssetIdx, int Number) {
   strcat(mqtt_topic,"/");                           // /
   strcat(mqtt_topic,f.fName);                       // sensor name
   publishJSON(mqtt_topic);                          // Publish it
-      
+
   Serial.print(mqtt_topic);
   Serial.print(" : ");
   Serial.println(MQTTOutput);
@@ -141,7 +141,7 @@ boolean sendMQTTException(int AssetIdx, int Number) {
   createAssetJSON(AssetIdx, Number);
   publishJSON(mqtt_topic_exception);
 }
-  
+
 boolean createAssetJSON(int AssetIdx, int Number) {
   //For custom functions
   FuncDef f = HapisFunctions[Number];
@@ -154,7 +154,7 @@ boolean createAssetJSON(int AssetIdx, int Number) {
 
 // Set the NodeId
   asset_message["Node"] = HN_Id;
-  
+
   // Assembles a message with values from pins and custom functions
   // Returns a JSON string
 
@@ -166,14 +166,14 @@ boolean createAssetJSON(int AssetIdx, int Number) {
       asset_message["ctxt"] =  "PIN";             // Context
       asset_message["unit"] =  "";                // Units of measurement
       pinValue = digitalRead(Number);
-      asset_message["data"] = pinValue;           // Data 
+      asset_message["data"] = pinValue;           // Data
       break;
     case SENSORID_AIO:
       asset_message["Asset"] =  "AIO";
       asset_message["ctxt"] =  "PIN";
       asset_message["unit"] =  "";
       pinValue = analogRead(Number);
-      asset_message["data"] = pinValue; 
+      asset_message["data"] = pinValue;
       break;
     case SENSORID_FN:
       f = HapisFunctions[Number];
@@ -227,14 +227,14 @@ boolean publishJSON(const char* topic) {
       }
       else {
         Serial.println("Send Message failed after one retry.");
-        return false;        
+        return false;
       }
     }
     else {
       Serial.println("Connection to MQTT Broker failed...");
       return false;
     }
-  }  
+  }
 }
 
 void MQTTcallback(char* topic, byte* payload, unsigned int length) {
@@ -250,7 +250,7 @@ void MQTTcallback(char* topic, byte* payload, unsigned int length) {
   int Number;                 // Target pin# or function#
   int data;                   // Data for output
   boolean succeed;
-  
+
   hn_topic = &MQTTOutput[0];
   StaticJsonBuffer<200> hn_topic_command;            // Parsing buffer
 
@@ -280,12 +280,12 @@ void MQTTcallback(char* topic, byte* payload, unsigned int length) {
 
     Serial.print("Node - ");
     Serial.println(Node);
-// Check correct Node ID       
+// Check correct Node ID
     if (command_topic.containsKey("Node")) { // NodeId is required for all messages, even if it is "*"
       Node = command_topic["Node"];
     }
 //    else return;
-          
+
 // Check for COMMAND/ topic based commands
 // =======================================
     if ((strcmp(Node, hostString) == 0) || (strcmp(Node, "*") == 0)) { // Handle wildcard
@@ -315,7 +315,7 @@ void MQTTcallback(char* topic, byte* payload, unsigned int length) {
             if (command_topic.containsKey("pin")) {   // pin - required
               Number = command_topic["pin"];
             }
-            else return;             
+            else return;
             if (strcmp(Command, "din") == 0) {
               AssetIdx = SENSORID_DIO;
               sendMQTTAsset(AssetIdx, Number);         // Publish digital data
@@ -325,7 +325,7 @@ void MQTTcallback(char* topic, byte* payload, unsigned int length) {
               if (command_topic.containsKey("data")) {  // Data - required
                 data = command_topic["data"];
               }
-              else return;          
+              else return;
               digitalWrite(Number, data);               // Set the digital pin
               return;
             }
@@ -337,7 +337,7 @@ void MQTTcallback(char* topic, byte* payload, unsigned int length) {
             if (command_topic.containsKey("pin")) {   // pin - required
               Number = command_topic["pin"];
             }
-            else return;             
+            else return;
             if (strcmp(Command, "ain") == 0) {
               AssetIdx = SENSORID_AIO;
               sendMQTTAsset(AssetIdx, Number);         // Publish analog data
@@ -347,7 +347,7 @@ void MQTTcallback(char* topic, byte* payload, unsigned int length) {
               if (command_topic.containsKey("data")) {  // Data - required
                 data = command_topic["data"];
               }
-              else return;          
+              else return;
 #ifndef HN_ESP32
               analogWrite(Number, data);               // Set the analog pin
 #endif
@@ -356,7 +356,7 @@ void MQTTcallback(char* topic, byte* payload, unsigned int length) {
           }
           Serial.println(" .. not AIO");
 
-// Function IO            
+// Function IO
           Number = 9999;                              // Unlikely value
           AssetIdx = SENSORID_FN;                    // Asset Function IO
           for (int i=0;i < SENSOR_FUNCTIONS;i++) {    // Scan for a match on the sensor name
@@ -377,40 +377,40 @@ void MQTTcallback(char* topic, byte* payload, unsigned int length) {
               if (!(strcmp(command_topic["Asset"],c.fName))) {  // Asset match?
                 Number = i;                           // Match for control name
               }
-            }            
+            }
           }
           if (Number != 9999) {                       // If we have a match on the name
             if (strcmp(Command, "fnin") == 0) {
               sendMQTTAsset(AssetIdx, Number);       // Publish sensor or control function data
             return;
-            } 
+            }
             if (strcmp(Command, "fnout") == 0) {      // Function out only works for controls
               c = HapicFunctions[Number];             // Point to control output function structure
 // Control
               if (command_topic.containsKey("pol")) {  // Polarity ( boolean)
                 HapicData[Number].hc_polarity = command_topic["pol"];
-              } 
-              if (command_topic.containsKey("stt")) {  // Start time (unix secs)              
+              }
+              if (command_topic.containsKey("stt")) {  // Start time (unix secs)
                 Serial.println("writing stt");
                 HapicData[Number].hc_start = command_topic["stt"];
-              }              
+              }
               if (command_topic.containsKey("end")) {  // End time (unix secs)
                 HapicData[Number].hc_end = command_topic["end"];
-              } 
+              }
               if (command_topic.containsKey("rpt")) {  // Repeat time (s)
                 HapicData[Number].hc_repeat = command_topic["rpt"];
               }
 // Associated sensor
               if (command_topic.containsKey("von")) {  // Value to turn on
                 HapicData[Number].hcs_onValue = command_topic["von"];
-              } 
+              }
               if (command_topic.containsKey("voff")) {  // Value to turn off
                 HapicData[Number].hcs_offValue = command_topic["voff"];
               }
               return;
             }
-            else return;         // Found a valid control name but no valid command or data     
-          }       
+            else return;         // Found a valid control name but no valid command or data
+          }
           Serial.println(" .. not Control I/O");
         } // Command topic contains a SensorId
         else return;
@@ -432,7 +432,7 @@ void MQTTcallback(char* topic, byte* payload, unsigned int length) {
       }
       Serial.print(" .. not ");
       Serial.println(hn_topic);
-      
+
 // ASSET topics
 // ============
 // Handle wildcards
@@ -484,7 +484,7 @@ void MQTTcallback(char* topic, byte* payload, unsigned int length) {
       }
       Serial.print(" .. not ");
       Serial.println(hn_topic);
-      
+
 // CONFIG topic
 // ============
 // Wildcards are not allowed in CONFIG
@@ -505,20 +505,20 @@ void MQTTcallback(char* topic, byte* payload, unsigned int length) {
 // Control
         if (command_topic.containsKey("pol")) {  // Polarity ( boolean)
           HapicData[Number].hc_polarity = command_topic["pol"];
-        } 
-        if (command_topic.containsKey("stt")) {  // Start time (unix secs)              
+        }
+        if (command_topic.containsKey("stt")) {  // Start time (unix secs)
           HapicData[Number].hc_start = command_topic["stt"];
-        }              
+        }
         if (command_topic.containsKey("end")) {  // End time (unix secs)
           HapicData[Number].hc_end = command_topic["end"];
-        } 
+        }
         if (command_topic.containsKey("rpt")) {  // Repeat time (s)
           HapicData[Number].hc_repeat = command_topic["rpt"];
         }
 // Associated sensor
         if (command_topic.containsKey("von")) {  // Value to turn on
           HapicData[Number].hcs_onValue = command_topic["von"];
-        } 
+        }
         if (command_topic.containsKey("voff")) {  // Value to turn off
           HapicData[Number].hcs_offValue = command_topic["voff"];
         }
@@ -526,10 +526,10 @@ void MQTTcallback(char* topic, byte* payload, unsigned int length) {
       }
       Serial.print(" .. not ");
       Serial.println(hn_topic);
-      
+
 // Other topics go here
 // ====================
-      
+
     }   // end strcmp NodeId
   }     // end Valid JSON object
 }
