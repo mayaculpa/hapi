@@ -195,7 +195,6 @@ char* mqtt_listen_array[MAXLISTEN] = {
 StaticJsonBuffer<128> hn_topic_exception;               // Exception data for this HN
 char MQTTOutput[256];                                   // String storage for the JSON data
 char MQTTInput[256];                                    // String storage for the JSON data
-boolean mqtt_broker_connected = false;
 
 // Callback function header
 void MQTTcallback(char* topic, byte* payload, unsigned int length);
@@ -453,13 +452,10 @@ void setup() {
 
   // Wait until connected to MQTT Broker
   // client.connect returns a boolean value
-  mqtt_broker_connected = false;
   Serial.println("Connecting to MQTT broker ...");
-  do {
-    if (sendMQTTStatus()) {
-      mqtt_broker_connected = true;
-    }
-  } while (!mqtt_broker_connected);
+  // Poll until connected.
+  while (!sendMQTTStatus())
+    ;
 
 // Subscribe to the TOPICs
 
