@@ -494,14 +494,8 @@ void loop() {
 
 void flashLED(void) {
   if ((loopcount++ % 100) == 0) {
-    if (ledState) {
-      digitalWrite(ledPin, LOW);
-      ledState = false;
-    }
-    else {
-      digitalWrite(ledPin, HIGH);
-      ledState = true;
-    }
+    ledState = !ledState;
+    digitalWrite(ledPin, ledState ? HIGH : LOW);
     hapiSensors();
   }
 }
