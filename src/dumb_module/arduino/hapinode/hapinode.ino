@@ -34,12 +34,11 @@ Communications Method
   MQTT        Listens for messages on Port 1883
 */
 
-
 //**** Begin Board Configuration Section ****
 
 // Board Type
 // ==========
-// Arduinodefine HN_2560         // Must have WiFi shield
+//#define HN_2560         // Must have ethernet shield
 
 //**ESP Based
 // Board Type
@@ -48,8 +47,8 @@ Communications Method
 
 // Connection Type
 // ===============
-#define HN_WiFi
 //#define HN_ENET          // Define for Ethernet shield
+#define HN_WiFi           // Define for WiFi support
 
 // Protocol Type
 // =============
@@ -59,30 +58,38 @@ Communications Method
 
 #include <DHT.h>
 #include <SPI.h>
-#ifdef HN_WiFi
+
 #ifdef HN_ESP8266
 #include <ESP8266WiFi.h>
 #include <ESP8266mDNS.h>        // for avahi
 #endif
-#ifndef HN_ESP8266
+
+#ifdef HN_ESP32
 #include <WiFi.h>
+#include <ESPmDNS.h>            // for avahi
 #endif
+
+#ifdef HN_WiFi
 #include <WiFiUdp.h>            // For ntp
 #endif
+
 #ifdef HN_ENET
 #include <Ethernet.h>
 #include <EthernetBonjour.h>
+#include <EthernetUdp.h>
 #endif
+
 #include <PubSubClient.h> // Allows us to connect to, and publish to the MQTT brokerinclude <stdlib.h>
 #include <ArduinoJson.h>  // JSON library for MQTT strings
-
 #include <math.h>
+
 #ifndef HN_ESP32
 #include <EEPROM.h>
 #endif
 #ifdef HN_ESP32
 #include <Preferences.h>
 #endif
+
 #include <OneWire.h>
 #include <DallasTemperature.h>
 #include <Bounce2.h> // Used for "debouncing" inputs
@@ -90,7 +97,7 @@ Communications Method
 // =====================================================================
 // Make sure to update these files for your own WiFi and/or MQTT Broker!
 // =====================================================================
-#include "nodewifi.h"       // WiFi and MQTT setup
+#include "nodecomms.h"      // WiFi, UDP, NTP and MQTT setup
 #include "nodeboard.h"      // Node default pin allocations
 
 //**** Begin Main Variable Definition Section ****
@@ -99,7 +106,7 @@ unsigned long mscount;              // millisecond counter
 unsigned long epoch;                // UTC seconds
 
 String HAPI_FW_VERSION = "v3.0";    // The version of the firmware the HN is running
-#ifdef HN_2560
+#ifdef HN_ENET
 String HN_base = "HN2";             // Prefix for mac address
 #endif
 #ifdef HN_ESP8266
@@ -109,7 +116,7 @@ String HN_base = "HN3";             // Prefix for mac address
 String HN_base = "HN4";             // Prefix for mac address
 #endif
 
-String HN_id = "HNx";              // HN address
+String HN_Id = "HNx";              // HN address
 String HN_status = "Online";
 
 boolean idle_mode = false;         // a boolean representing the idle mode of the HN
@@ -129,34 +136,34 @@ byte mac[] = { 0x55, 0x55, 0x55, 0x55, 0x55, 0x55 };
 char mac_str[16] = "555555555555";
 char hostString[32] = {0};              // for mDNS Hostname
 
-#ifdef HN_ENET
-EthernetClient HNClient;
-#endif
+// ntp config
+IPAddress timeServerIP;               // Place to store IP address of mqttbroker.local
+const char* ntpServerName = "mqttbroker"; // Assume mqttbroker is also the time server
+const int NTP_PACKET_SIZE = 48;       // NTP time stamp is in the first 48 bytes of the message
+byte packetBuffer[ NTP_PACKET_SIZE];  //buffer to hold incoming and outgoing packets
+unsigned int localPort = UDP_port;    // local port to listen for UDP packets
 
 #ifdef HN_WiFi
 // Local wifi network parameters (set in nodewifi.h)
 const char* ssid = HAPI_SSID;
 const char* password = HAPI_PWD;
-// WiFi config
 int WiFiStatus = 0;
 WiFiClient HNClient;
-// ntp config
-IPAddress timeServerIP;               // Place to store IP address of mqttbroker.local
-const char* ntpServerName = "mqttbroker";
-const int NTP_PACKET_SIZE = 48;       // NTP time stamp is in the first 48 bytes of the message
-byte packetBuffer[ NTP_PACKET_SIZE];  //buffer to hold incoming and outgoing packets
-unsigned int localPort = UDP_port;    // local port to listen for UDP packets
 WiFiUDP udp;                          // A UDP instance to let us send and receive packets over UDP
+#endif // HN_WiFi
 
+#ifdef HN_ENET
+EthernetClient HNClient;
+EthernetUDP udp;
+#endif  // HN_ENET
 
-#endif
 //**** End Communications Section ****
 
 //**** Begin MQTT Section ****
 const char* clientID = "HAPInode";
-const char* mqtt_topic_status = "STATUS/RESPONSE";         // General Status topic
-const char* mqtt_topic_asset = "ASSET/RESPONSE";           // Genral Asset topic
-char mqtt_topic_command[256] = "COMMAND/";              // Command topic for this HN
+const char* mqtt_topic_status = "STATUS/RESPONSE/";     // General Status topic
+const char* mqtt_topic_asset = "ASSET/RESPONSE/";       // Genral Asset topic
+char mqtt_topic[256] = "COMMAND/";                      // Topic for this HN
 const char* mqtt_topic_exception = "EXCEPTION/";        // General Exception topic
 
 #define MAXTOPICS 5
@@ -192,7 +199,7 @@ boolean mqtt_broker_connected = false;
 
 // Callback function header
 void MQTTcallback(char* topic, byte* payload, unsigned int length);
-PubSubClient MQTTClient(HNClient);                          // 1883 is the listener port for the Broker
+PubSubClient MQTTClient(HNClient);                      // 1883 is the listener port for the Broker
 
 // Prepare JSON string objects
 
@@ -208,12 +215,8 @@ JsonObject& exception_topic = hn_topic_exception.createObject();
 #define CONTROLDATA1_FN 4  // CONTROL FUNCTION TIME DATA
 #define CONTROLDATA2_FN 5  // CONTROL FUNCTION VALUE DATA
 
-// TEST
-const int ledPin = 2; // This code uses the built-in led for visual feedback that the button has been pressed
-const int buttonPin = 5; // Connect your button to pin #gpio13
-int ledflash = 0;
-Bounce bouncer = Bounce();  // Initialise the Pushbutton Bouncer object
-// end TEST
+const int ledPin = 2; // Use the built-in led for visual feedback
+boolean ledState = false;
 
 // Flow meter devices
 Bounce flowrate = Bounce();   // Use bouncer object to measure flow rate
@@ -249,11 +252,11 @@ struct FuncDef {   //define a structure to associate a Name to generic function 
 // Format: abbreviation, context, pin, data function
 FuncDef sfunc1 = {"tmp", "Env", "C", -1, &readTemperatured};
 FuncDef sfunc2 = {"hum", "Env", "%", -1, &readHumidity};
-FuncDef sfunc3 = {"lux", "Env", "lux", LIGHT_SENSORPIN, &readLightSensor};
+FuncDef sfunc3 = {"lux", "Env", "lux", sLux_PIN, &readLightSensor};
 FuncDef sfunc4 = {"tmw", "Water", "C", ONE_WIRE_BUS, &read1WireTemperature};
-FuncDef sfunc5 = {"phv", "Water", "pH", PH_SENSORPIN, &readpH};
-FuncDef sfunc6 = {"tds", "Water", "ppm", TDS_SENSORPIN, &readTDS};
-FuncDef sfunc7 = {"flo", "Water", "lpm", FLOW_SENSORPIN, &readFlow};
+FuncDef sfunc5 = {"phv", "Water", "pH", spH_PIN, &readpH};
+FuncDef sfunc6 = {"tds", "Water", "ppm", sTDS_PIN, &readTDS};
+FuncDef sfunc7 = {"flo", "Water", "lpm", sFlow_PIN, &readFlow};
 FuncDef HapisFunctions[SENSOR_FUNCTIONS] = {sfunc1, sfunc2, sfunc3, sfunc4, sfunc5, sfunc6, sfunc7};
 
 // Custom control devices
@@ -287,18 +290,18 @@ struct ControlData {
   unsigned long hc_start;           // Start time (unix time)
   unsigned long hc_end;             // End time (unix time)
   unsigned long hc_repeat;          // Repeat interval (seconds)
-  boolean hc_running;               // Pump running or not, Lamp on or off
+  boolean hc_active;               // Pump running or not, Lamp on or off
   int hcs_sensepin;                 // Pin used for iPtr function control
   int hcs_onValue;                  // Sensor value at which control turns On
   int hcs_offValue;                 // Sensor value at which control turns Off
 };
 
-ControlData ccontrol1 = {"ppw", cWatr_PIN, true, 0, 0, 0, false, sWatr_PIN, 0, 0};          // Water
-ControlData ccontrol2 = {"ppf", cFill_PIN, true, 0, 0, 0, false, sFill_PIN, 0, 0};          // Fill
-ControlData ccontrol3 = {"ppn", cNutr_PIN, true, 0, 0, 0, false, sNutr_PIN, 0, 0};          // Nutrient
-ControlData ccontrol4 = {"pHU", cpHUp_PIN, true, 0, 0, 0, false, spHUp_PIN, 0, 0};          // pHUp
-ControlData ccontrol5 = {"pHD", cpHDn_PIN, true, 0, 0, 0, false, spHDn_PIN, 0, 0};          // pHDown
-ControlData ccontrol6 = {"lmp", cLamp_PIN, true, 0, 0, 0, false, sLamp_PIN, 0, 0};          // Lamp
+ControlData ccontrol1 = {"ppw", cWatr_PIN, true, 0, 0, 0, false, sFlow_PIN, 0, 0};        // Water
+ControlData ccontrol2 = {"ppf", cFill_PIN, true, 0, 0, 0, false, sFloat_PIN, 0, 0};       // Fill
+ControlData ccontrol3 = {"ppn", cNutr_PIN, true, 0, 0, 0, false, sTDS_PIN, 0, 0};         // Nutrient
+ControlData ccontrol4 = {"pHU", cpHUp_PIN, true, 0, 0, 0, false, spH_PIN, 0, 0};          // pHUp
+ControlData ccontrol5 = {"pHD", cpHDn_PIN, true, 0, 0, 0, false, spH_PIN, 0, 0};          // pHDown
+ControlData ccontrol6 = {"lmp", cLamp_PIN, true, 0, 0, 0, false, sLux_PIN, 0, 0};         // Lamp
 ControlData HapicData[CONTROL_FUNCTIONS] = {ccontrol1, ccontrol2, ccontrol3, ccontrol4, ccontrol5, ccontrol6};  
 
 //**** End Sensors Section ****
@@ -339,32 +342,11 @@ void setup() {
   pinMode(ledPin, OUTPUT);
   digitalWrite(ledPin, HIGH);
 
-// TESTING
-// Setup pushbutton Bouncer object
-  pinMode(buttonPin, INPUT);
-  bouncer.attach(buttonPin);
-  bouncer.interval(5);
-// end TESTING
-
 // Start Debug port and sensors
 // ============================
   setupSensors();             // Initialize I/O and start devices
   inputString.reserve(200);   // reserve 200 bytes for the inputString
   Serial.begin(115200);       // Debug port
-
-#ifdef HN_ENET
-  Serial.println("Initializing network....");
-  if (Ethernet.begin(mac) == 0) {
-    Serial.println("Failed to obtain IP address  ...");
-  } else
-  {
-    Serial.print("IP address: ");
-    Serial.println(Ethernet.localIP());
-  }
-
-  //TODO
-  // Bonjour support
-#endif
 
 #ifdef HN_WiFi
   Serial.println("Initializing WiFi network....");
@@ -374,19 +356,15 @@ void setup() {
     Serial.print(".");
   }
   WiFi.macAddress(mac);
-
+#endif // HN_WiFi
 
   b2c(&mac[3], &mac_str[0], 3);         //convert mac to ASCII value for unique station ID
-  HN_id = HN_base + String(mac_str);
-  HN_id.toCharArray(hostString,(HN_id.length()+1));
-  
-  Serial.println();
-  Serial.print("IP  address: ");
-  Serial.println(WiFi.localIP());
-  Serial.print("Hostname   : ");
+  HN_Id = HN_base + String(mac_str);
+  HN_Id.toCharArray(hostString,(HN_Id.length()+1));
+
 #ifdef HN_2560
   Serial.println(hostString);
-#endif
+#endif  
 #ifdef HN_ESP8266
   Serial.println(WiFi.hostname());
   Serial.println(WiFi.hostname(hostString));
@@ -399,16 +377,21 @@ void setup() {
   Serial.print("NewHostname: ");
   Serial.println(WiFi.getHostname());
 #endif
-  
+#if defined(HN_ESP32) || defined(HN_ESP32)
+  Serial.println();
+  Serial.print("IP  address: ");
+  Serial.println(WiFi.localIP());
+  Serial.print("Hostname   : ");
+#endif
+    
 // Start mDNS support
 // ==================
-
-  Serial.print("HN_id:      ");
-  Serial.println(HN_id);
+  Serial.print("HN_Id:      ");
+  Serial.println(HN_Id);
   Serial.print("hostString: ");
   Serial.println(hostString);
   
-#ifdef HN_ESP8266
+#if defined(HN_ESP8266) || defined(HN_ESP32)
  if (!MDNS.begin(hostString)) {
     Serial.println("Error setting up MDNS responder!");
   }
@@ -439,7 +422,7 @@ void setup() {
   }
   Serial.println();
 #endif
-#endif
+
 
 // Start NTP support
 // =================
@@ -451,8 +434,11 @@ void setup() {
 #endif
 #ifdef HN_2560
   Serial.println(udp.remoteIP());
+  //TODO get timeServerIP
 #endif
+#ifdef HN_WiFi
   WiFi.hostByName(ntpServerName, timeServerIP);   // Get mqttbroker's IP address
+#endif
   Serial.print("Local IP:   ");
   Serial.println(timeServerIP);
   getNTPTime();
@@ -463,7 +449,7 @@ void setup() {
   MQTTClient.setServer(MQTT_broker_address, MQTT_port);
   MQTTClient.setCallback(MQTTcallback);
 
-  exception_topic["AId"] = HN_id;
+  exception_topic["Node"] = HN_Id;
 
   // Wait until connected to MQTT Broker
   // client.connect returns a boolean value
@@ -489,42 +475,38 @@ void setup() {
       delay(100);      
     } while (MQTTClient.subscribe(mqtt_listen_array[i]) == false ); 
   }
+  
   Serial.println("Setup Complete. Listening for topics ..");
 }
 
 void loop() {
   // Wait for a new event, publish topic
-  // Fake this event with a push-button
-  // Update button state
-  // This needs to be called so that the Bouncer object can check if the button has been pressed
   if (mscount < millis()) epoch += (millis() - mscount)/10;     // Update local copy until ntp sync
   mscount = millis();
-  bouncer.update();
-  if (bouncer.rose()) {
-    // Turn light on when button is pressed down
-    // (i.e. if the state of the button rose from 0 to 1 (not pressed to pressed))
-    digitalWrite(ledPin, LOW);
-    Serial.println("Button pushed");
-    sendMQTTStatus();
-    sendAllMQTTAssets();
-  }
-  else if (bouncer.fell()) {
-    // Turn light off when button is released
-    // i.e. if state goes from high (1) to low (0) (pressed to not pressed)
-    digitalWrite(ledPin, HIGH);
-  }
-  checkControls();              // Check all the timers on the controls
-
-  MQTTClient.loop();
-  if ((loopcount++ % 100) == 0) {
-    if (digitalRead(ledPin) == HIGH) digitalWrite(ledPin, LOW);
-    else digitalWrite(ledPin, HIGH);
-  }
   if ((loopcount++ % 3600) == 0) {
     getNTPTime();
     loopcount = 0;
   }
+    
+  checkControls();              // Check all the timers on the controls
+  MQTTClient.loop();            // Check for MQTT topics
+  flashLED();                   // Flash LED - slow blink
+
   delay(100);
+
 }
 
+void flashLED(void) {
+  if ((loopcount++ % 100) == 0) {
+    if (ledState) {
+      digitalWrite(ledPin, LOW);
+      ledState = false;
+    }
+    else {
+      digitalWrite(ledPin, HIGH);
+      ledState = true;
+    }
+    hapiSensors();
+  }
+}
 
