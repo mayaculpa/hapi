@@ -68,8 +68,8 @@ void setupSensors(void){
   wp_sensors.begin();
 
 // Start the flow sensor
-  pinMode(FLOW_SENSORPIN, INPUT);
-  flowrate.attach(FLOW_SENSORPIN);
+  pinMode(sFlow_PIN, INPUT);
+  flowrate.attach(sFlow_PIN);
   flowrate.interval(5);
 }
 
@@ -242,5 +242,11 @@ float readSensorPin(int iDevice) {
    float pinData;
 //TODO
 return pinData;
+}
+
+boolean hapiSensors(void) {
+  for (int i = 0; i < SENSOR_FUNCTIONS; i++) {
+    sendMQTTAsset(SENSORID_FN, i);         // Sensor values
+  }
 }
 

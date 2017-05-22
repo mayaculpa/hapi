@@ -49,66 +49,70 @@ boolean checkControls(void) {
 
 float controlPumps(int Device){
   CFuncDef c;
+  ControlData d;
   c = HapicFunctions[Device];
-  if (HapicData[Device].hc_running) {           // is the pump running?
-    if (HapicData[Device].hc_end > epoch) {     // Yes, should it be turned off?
-      HapicData[Device].hc_running = false;
-      if (HapicData[Device].hc_polarity) digitalWrite(HapicData[Device].hc_controlpin, 0);
-      else digitalWrite(HapicData[Device].hc_controlpin, 1);      
-      if (HapicData[Device].hc_repeat != 0) {   // Is repeat active?
-        HapicData[Device].hc_start += HapicData[Device].hc_repeat;
-        HapicData[Device].hc_end += HapicData[Device].hc_repeat;
+  d = HapicData[Device];
+  if (d.hc_active) {           // is the pump running?
+    if (d.hc_end > epoch) {     // Yes, should it be turned off?
+      d.hc_active = false;
+      if (d.hc_polarity) digitalWrite(d.hc_controlpin, 0);
+      else digitalWrite(d.hc_controlpin, 1);      
+      if (d.hc_repeat != 0) {   // Is repeat active?
+        d.hc_start += d.hc_repeat;
+        d.hc_end += d.hc_repeat;
       }
     }
-    if (c.iPtr(Device) < HapicData[Device].hcs_offValue) { // is the TurnOff value exceeded?
-      HapicData[Device].hc_running = false;
-      if (HapicData[Device].hc_polarity) digitalWrite(HapicData[Device].hc_controlpin, 0);
-      else digitalWrite(HapicData[Device].hc_controlpin, 1);    
+    if (c.iPtr(Device) < d.hcs_offValue) { // is the TurnOff value exceeded?
+      d.hc_active = false;
+      if (d.hc_polarity) digitalWrite(d.hc_controlpin, 0);
+      else digitalWrite(d.hc_controlpin, 1);    
     }    
   } else 
   {
-    if (HapicData[Device].hc_start >= epoch) {       // Is the timeOn value exceeded?
-      HapicData[Device].hc_running = true;        // Turn it On, Pump is now running
-      if (HapicData[Device].hc_polarity) digitalWrite(HapicData[Device].hc_controlpin, 1);
-      else digitalWrite(HapicData[Device].hc_controlpin, 0);
+    if (d.hc_start >= epoch) {       // Is the timeOn value exceeded?
+      d.hc_active = true;        // Turn it On, Pump is now running
+      if (d.hc_polarity) digitalWrite(d.hc_controlpin, 1);
+      else digitalWrite(d.hc_controlpin, 0);
     }
-    if (c.iPtr(Device) > HapicData[Device].hcs_onValue) { // Is the turnOn value exceeded?
-      HapicData[Device].hc_running = true;        // Turn it On, Pump is now running
-      if (HapicData[Device].hc_polarity) digitalWrite(HapicData[Device].hc_controlpin, 1);
-      else digitalWrite(HapicData[Device].hc_controlpin, 0);
+    if (c.iPtr(Device) > d.hcs_onValue) { // Is the turnOn value exceeded?
+      d.hc_active = true;        // Turn it On, Pump is now running
+      if (d.hc_polarity) digitalWrite(d.hc_controlpin, 1);
+      else digitalWrite(d.hc_controlpin, 0);
     }
   }
 }
 
 float controlLamps(int Device){
   CFuncDef c;
+  ControlData d;
   c = HapicFunctions[Device];
-  if (HapicData[Device].hc_running) {           // is the Lamp On?
-    if (HapicData[Device].hc_end > epoch) {     // Yes, should it be turned off?
-      HapicData[Device].hc_running = false;
-      if (HapicData[Device].hc_polarity) digitalWrite(HapicData[Device].hc_controlpin, 0);
-      else digitalWrite(HapicData[Device].hc_controlpin, 1);      
-      if (HapicData[Device].hc_repeat != 0) {   // Is repeat active?
-        HapicData[Device].hc_start += HapicData[Device].hc_repeat;
-        HapicData[Device].hc_end += HapicData[Device].hc_repeat;
+  d = HapicData[Device];
+  if (d.hc_active) {           // is the Lamp On?
+    if (d.hc_end > epoch) {     // Yes, should it be turned off?
+      d.hc_active = false;
+      if (d.hc_polarity) digitalWrite(d.hc_controlpin, 0);
+      else digitalWrite(d.hc_controlpin, 1);      
+      if (d.hc_repeat != 0) {   // Is repeat active?
+        d.hc_start += d.hc_repeat;
+        d.hc_end += d.hc_repeat;
       }
     }
-    if (c.iPtr(Device) < HapicData[Device].hcs_offValue) { // is the TurnOff value exceeded?
-      HapicData[Device].hc_running = false;
-      if (HapicData[Device].hc_polarity) digitalWrite(HapicData[Device].hc_controlpin, 0);
-      else digitalWrite(HapicData[Device].hc_controlpin, 1);    
+    if (c.iPtr(Device) < d.hcs_offValue) { // is the TurnOff value exceeded?
+      d.hc_active = false;
+      if (d.hc_polarity) digitalWrite(d.hc_controlpin, 0);
+      else digitalWrite(d.hc_controlpin, 1);    
     }    
   } else 
   {
-    if (HapicData[Device].hc_start >= epoch) {    // Is the timeOn value exceeded?
-      HapicData[Device].hc_running = true;        // Turn it On, Lamp is now on
-      if (HapicData[Device].hc_polarity) digitalWrite(HapicData[Device].hc_controlpin, 1);
-      else digitalWrite(HapicData[Device].hc_controlpin, 0);
+    if (d.hc_start >= epoch) {    // Is the timeOn value exceeded?
+      d.hc_active = true;        // Turn it On, Lamp is now on
+      if (d.hc_polarity) digitalWrite(d.hc_controlpin, 1);
+      else digitalWrite(d.hc_controlpin, 0);
     }
-    if (c.iPtr(Device) > HapicData[Device].hcs_onValue) { // Is the turnOn value exceeded?
-      HapicData[Device].hc_running = true;                // Turn it On, Lamp is now on
-      if (HapicData[Device].hc_polarity) digitalWrite(HapicData[Device].hc_controlpin, 1);
-      else digitalWrite(HapicData[Device].hc_controlpin, 0);
+    if (c.iPtr(Device) > d.hcs_onValue) { // Is the turnOn value exceeded?
+      d.hc_active = true;                // Turn it On, Lamp is now on
+      if (d.hc_polarity) digitalWrite(d.hc_controlpin, 1);
+      else digitalWrite(d.hc_controlpin, 0);
     }
   }
 }
