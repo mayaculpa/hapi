@@ -63,7 +63,7 @@ float controlPumps(int Device){
     }
 
     if (c.iPtr(Device) < d.hcs_offValue) { // is the TurnOff value exceeded?
-      d.hc_running = false;
+      d.hc_active = false;
       digitalWrite(d.hc_controlpin, !d.hc_polarity);
     }
   } else if (d.hc_start >= epoch || c.iPtr(Device) > d.hcs_onValue) {
