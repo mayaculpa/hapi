@@ -34,7 +34,7 @@ Communications Method
   MQTT        Listens for messages on Port 1883
 */
 
-boolean getNTPTime(void) {
+void getNTPTime(void) {
   sendNTPpacket(timeServerIP); // send an NTP packet to a time server
   // wait to see if a reply is available
   delay(1000);
