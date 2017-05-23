@@ -92,7 +92,7 @@ boolean sendMQTTStatus(void){
 }
 
 boolean sendAllMQTTAssets(void) {
-//Process digital pins
+  //Process digital pins
   for (int x = 0; x < NUM_DIGITAL; x++) {
     if (pinControl[x] > 0) {
       if (pinControl[x] < 5) {
@@ -100,25 +100,25 @@ boolean sendAllMQTTAssets(void) {
       }
     }
   }
-//Process analog pins
+  //Process analog pins
   for (int x = 0; x < NUM_ANALOG; x++) {
     while (!(sendMQTTAsset(SENSORID_AIO, x+NUM_DIGITAL)));  // Until it is sent
   }
-// Process Custom Functions
+  // Process Custom Functions
   for (int x = 0; x < SENSOR_FUNCTIONS; x++) {
     while (!(sendMQTTAsset(SENSORID_FN, x)));  // Until it is sent
   }
-// Process Custom Functions
-  for (int x = 0; x < CONTROL_FUNCTIONS; x++) {
-    while (!(sendMQTTAsset(CONTROLID_FN, x)));  // Until it is sent
+  // Process Custom Functions
+  for (int i = 0; i < ArrayLength(HapicFunctions); i++) {
+    while (!(sendMQTTAsset(CONTROLID_FN, i)));  // Until it is sent
   }
-// Process Custom Functions
-  for (int x = 0; x < CONTROL_FUNCTIONS; x++) {
-    while (!(sendMQTTAsset(CONTROLDATA1_FN, x)));  // Until it is sent
+  // Process Custom Functions
+  for (int i = 0; i < ArrayLength(HapicFunctions); i++) {
+    while (!(sendMQTTAsset(CONTROLDATA1_FN, i)));  // Until it is sent
   }
-// Process Custom Functions
-  for (int x = 0; x < CONTROL_FUNCTIONS; x++) {
-    while (!(sendMQTTAsset(CONTROLDATA2_FN, x)));  // Until it is sent
+  // Process Custom Functions
+  for (int i = 0; i < ArrayLength(HapicFunctions); i++) {
+    while (!(sendMQTTAsset(CONTROLDATA2_FN, i)));  // Until it is sent
   }
   return true;
 }
@@ -372,7 +372,7 @@ void MQTTcallback(char* topic, byte* payload, unsigned int length) {
           else {                                      // Did not find a sensor, so try controls
             Serial.println(" .. not Sensor Read");
             AssetIdx = CONTROLID_FN;                 // Control Function IO
-            for (int i=0;i < CONTROL_FUNCTIONS;i++) { // Scan for a match on the control name
+            for (int i=0;i < ArrayLength(HapicFunctions);i++) { // Scan for a match on the control name
               c = HapicFunctions[i];                  // Point to control function structure
               if (!(strcmp(command_topic["Asset"],c.fName))) {  // Asset match?
                 Number = i;                           // Match for control name
@@ -468,7 +468,7 @@ void MQTTcallback(char* topic, byte* payload, unsigned int length) {
       Serial.println(hn_topic);
 // Handle Controls
       AssetIdx = CONTROLID_FN;                   // Control Function IO
-      for (int i=0;i < CONTROL_FUNCTIONS;i++) {   // Scan for a match on the control name
+      for (int i=0;i < ArrayLength(HapicFunctions);i++) {   // Scan for a match on the control name
         c = HapicFunctions[i];                    // Point to control function structure
         strcpy(hn_topic,mqtt_topic_array[1]);     // Set base topic for an asset query
         strcat(hn_topic,hostString);              // NodeId next
@@ -490,7 +490,7 @@ void MQTTcallback(char* topic, byte* payload, unsigned int length) {
 // Wildcards are not allowed in CONFIG
 // It must have a valid NodeId, Asset and data to work
       Number = 9999;                              // Unlikely value
-      for (int i=0;i < CONTROL_FUNCTIONS;i++) {    // Scan for a match on the control name
+      for (int i=0;i < ArrayLength(HapicFunctions);i++) {    // Scan for a match on the control name
         c = HapicFunctions[i];                    // Point to control function structure
         strcpy(hn_topic,mqtt_topic_array[CONFIGSTART]);     // Set base topic for a specific asset query
         strcat(hn_topic,hostString);              // NodeId next

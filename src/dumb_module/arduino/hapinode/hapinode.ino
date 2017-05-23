@@ -271,7 +271,7 @@ struct CFuncDef {   //define a structure to associate a Name to generic control 
   GenericFP iPtr;
 };
 
-#define CONTROL_FUNCTIONS 6          //The number of custom control functions supported on this HN
+#define ArrayLength(x) (sizeof(x)/sizeof(*(x)))
 // Create a FuncDef for each custom control function
 // Format: abbreviation, context, Control data index, control function, data function
 CFuncDef cfunc1 = {"ppw", "Pump", "lpm", 1, &controlPumps, &readSensorPin};
@@ -280,7 +280,7 @@ CFuncDef cfunc3 = {"ppn", "Pump", "lpm", 3, &controlPumps, &readTDS};
 CFuncDef cfunc4 = {"pHU", "Pump", "lpm", 4, &controlPumps, &readpH};
 CFuncDef cfunc5 = {"pHD", "Pump", "lpm", 5, &controlPumps, &readpH};
 CFuncDef cfunc6 = {"lmp", "Lamp", "lpm", 6, &controlLamps, &readLightSensor};
-CFuncDef HapicFunctions[CONTROL_FUNCTIONS] = {cfunc1, cfunc2, cfunc3, cfunc4, cfunc5, cfunc6};
+CFuncDef HapicFunctions[] = {cfunc1, cfunc2, cfunc3, cfunc4, cfunc5, cfunc6};
 
 struct ControlData {
   const char* hc_name;              // abbreviation
@@ -301,7 +301,7 @@ ControlData ccontrol3 = {"ppn", cNutr_PIN, true, 0, 0, 0, false, sTDS_PIN, 0, 0}
 ControlData ccontrol4 = {"pHU", cpHUp_PIN, true, 0, 0, 0, false, spH_PIN, 0, 0};          // pHUp
 ControlData ccontrol5 = {"pHD", cpHDn_PIN, true, 0, 0, 0, false, spH_PIN, 0, 0};          // pHDown
 ControlData ccontrol6 = {"lmp", cLamp_PIN, true, 0, 0, 0, false, sLux_PIN, 0, 0};         // Lamp
-ControlData HapicData[CONTROL_FUNCTIONS] = {ccontrol1, ccontrol2, ccontrol3, ccontrol4, ccontrol5, ccontrol6};
+ControlData HapicData[] = {ccontrol1, ccontrol2, ccontrol3, ccontrol4, ccontrol5, ccontrol6};
 
 //**** End Sensors Section ****
 
