@@ -311,7 +311,7 @@ void MQTTcallback(char* topic, byte* payload, unsigned int length) {
         if (command_topic.containsKey("Asset")) {     // AssetID is required
           Serial.println("Processing Asset");
 // Digital IO
-          if (!(strcmp(command_topic["Asset"], "DIO"))) { // Digital IO
+          if (strcmp(command_topic["Asset"], "DIO") == 0) { // Digital IO
             if (command_topic.containsKey("pin")) {   // pin - required
               Number = command_topic["pin"];
             }
@@ -333,7 +333,7 @@ void MQTTcallback(char* topic, byte* payload, unsigned int length) {
           Serial.println(" .. not DIO");
 
 // Analog IO
-          if (!(strcmp(command_topic["Asset"], "AIO"))) { // Analog IO
+          if (strcmp(command_topic["Asset"], "AIO") == 0) { // Analog IO
             if (command_topic.containsKey("pin")) {   // pin - required
               Number = command_topic["pin"];
             }
@@ -361,7 +361,7 @@ void MQTTcallback(char* topic, byte* payload, unsigned int length) {
           AssetIdx = SENSORID_FN;                    // Asset Function IO
           for (int i=0;i < ArrayLength(HapisFunctions);i++) {    // Scan for a match on the sensor name
             f = HapisFunctions[i];                    // Point to Asset read function structure
-            if (!(strcmp(command_topic["Asset"],f.fName))) {  // Asset match?
+            if (strcmp(command_topic["Asset"],f.fName) == 0) {  // Asset match?
               Number = i;                             // Match for Sensor name
             }
           }
@@ -374,7 +374,7 @@ void MQTTcallback(char* topic, byte* payload, unsigned int length) {
             AssetIdx = CONTROLID_FN;                 // Control Function IO
             for (int i=0;i < ArrayLength(HapicFunctions);i++) { // Scan for a match on the control name
               c = HapicFunctions[i];                  // Point to control function structure
-              if (!(strcmp(command_topic["Asset"],c.fName))) {  // Asset match?
+              if (strcmp(command_topic["Asset"],c.fName) == 0) {  // Asset match?
                 Number = i;                           // Match for control name
               }
             }
@@ -456,7 +456,7 @@ void MQTTcallback(char* topic, byte* payload, unsigned int length) {
         strcat(hn_topic,hostString);              // NodeId next
         strcat(hn_topic,"/");                     //  .. MQTT separator
         strcat(hn_topic, f.fName);                //  .. and the sensor name
-        if (!(strcmp(topic, hn_topic))) {         // Asset match?
+        if (strcmp(topic, hn_topic) == 0) {         // Asset match?
           Number = i;                             // Match for Sensor name
         }
       }
@@ -474,7 +474,7 @@ void MQTTcallback(char* topic, byte* payload, unsigned int length) {
         strcat(hn_topic,hostString);              // NodeId next
         strcat(hn_topic,"/");                     //  .. MQTT separator
         strcat(hn_topic, c.fName);                //  .. and the control name
-        if (!(strcmp(topic, hn_topic))) {         // Asset match?
+        if (strcmp(topic, hn_topic) == 0) {         // Asset match?
           Number = i;                             // Match for Sensor name
         }
       }
@@ -496,7 +496,7 @@ void MQTTcallback(char* topic, byte* payload, unsigned int length) {
         strcat(hn_topic,hostString);              // NodeId next
         strcat(hn_topic,"/");                     //  .. MQTT separator
         strcat(hn_topic, c.fName);                //  .. and the sensor name
-        if (!(strcmp(topic, hn_topic))) {         // Asset match?
+        if (strcmp(topic, hn_topic) == 0) {         // Asset match?
           Number = i;                             // Match for Sensor name
         }
       }
