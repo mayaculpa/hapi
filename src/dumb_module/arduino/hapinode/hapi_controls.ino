@@ -41,7 +41,7 @@ void setupControls(void){
 
 boolean checkControls(void) {
   CFuncDef c;
-  for (int i=0;i<CONTROL_FUNCTIONS;i++) {
+  for (int i=0;i<ArrayLength(HapicFunctions);i++) {
     c = HapicFunctions[i];                // initialize access structure
     c.oPtr(i);                            // call the check function
   }

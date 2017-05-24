@@ -245,7 +245,7 @@ return pinData;
 }
 
 boolean hapiSensors(void) {
-  for (int i = 0; i < SENSOR_FUNCTIONS; i++) {
+  for (int i = 0; i < ArrayLength(HapisFunctions); i++) {
     sendMQTTAsset(SENSORID_FN, i);         // Sensor values
   }
 }
