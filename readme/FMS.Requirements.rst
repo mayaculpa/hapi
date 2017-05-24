@@ -2,6 +2,8 @@
 FMS Activities
 ==============
 
+.. image:: hapi-four-leaf-square.png
+
 Home Screen
 ===========
 
