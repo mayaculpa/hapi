@@ -27,9 +27,11 @@ Functional Requirements
 - Unit should have a push-button on/off power button (grommetted/watertight)
 - Unit should have an led (grommetted/watertight)Illustration 1: Mock Side View
 
-- Illustration 1: Mock Side View
+..
+
     .. image:: mock-side-view.png
-- Illustration 2: Mock Split View
+- Illustration 1: Mock Side View
     .. image:: mock-split-view.png
-- Illustration 3: Bottom View (random positioning)
+- Illustration 2: Mock Split View
     .. image:: bottom-view-random-positioning.png
+- Illustration 3: Bottom View (random positioning)
