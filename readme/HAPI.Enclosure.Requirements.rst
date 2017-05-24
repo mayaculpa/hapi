@@ -2,7 +2,7 @@
 Enclosure Requirements
 ======================
 
-image:: hapi.png
+.. image:: hapi.png
 
 Physical Requirements
 =====================
@@ -28,8 +28,8 @@ Functional Requirements
 - Unit should have an led (grommetted/watertight)Illustration 1: Mock Side View
 
 - Illustration 1: Mock Side View
-    image:: mock-side-view.png
+    .. image:: mock-side-view.png
 - Illustration 2: Mock Split View
-    image:: mock-split-view.png
+    .. image:: mock-split-view.png
 - Illustration 3: Bottom View (random positioning)
-    image:: bottom-view-random-positioning.png
+    .. image:: bottom-view-random-positioning.png
