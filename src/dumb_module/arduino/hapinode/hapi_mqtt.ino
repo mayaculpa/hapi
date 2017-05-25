@@ -93,12 +93,10 @@ boolean sendMQTTStatus(void){
 
 boolean sendAllMQTTAssets(void) {
   //Process digital pins
-  for (int x = 0; x < NUM_DIGITAL; x++) {
-    if (pinControl[x] > 0) {
-      if (pinControl[x] < 5) {
-        while (!(sendMQTTAsset(SENSORID_DIO, x)))  // Until it is sent
-          ;
-      }
+  for (int i = 0; i < NUM_DIGITAL; i++) {
+    if (0 < pinControl[i] && pinControl[i] < 5) {
+      while (!(sendMQTTAsset(SENSORID_DIO, i)))  // Until it is sent
+        ;
     }
   }
   //Process analog pins
