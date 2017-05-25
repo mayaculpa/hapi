@@ -51,11 +51,7 @@ boolean sendMQTTStatus(void){
   status_message["DIO"] = String(NUM_DIGITAL);
   status_message["AIO"] = String(NUM_ANALOG);
   status_message["Free SRAM"] = String(freeRam()) + "k";
-  if (!idle_mode) {
-    status_message["Idle"] = false;
-  }else{
-    status_message["Idle"] = true;
-  }
+  status_message["Idle"] = idle_mode;
 
   status_message.printTo(MQTTOutput, 128);          // MQTT JSON string is max 96 bytes
   strcpy(mqtt_topic, mqtt_topic_status);            // Generic status response topic
