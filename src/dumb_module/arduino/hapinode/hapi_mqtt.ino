@@ -96,29 +96,35 @@ boolean sendAllMQTTAssets(void) {
   for (int x = 0; x < NUM_DIGITAL; x++) {
     if (pinControl[x] > 0) {
       if (pinControl[x] < 5) {
-        while (!(sendMQTTAsset(SENSORID_DIO, x)));  // Until it is sent
+        while (!(sendMQTTAsset(SENSORID_DIO, x)))  // Until it is sent
+          ;
       }
     }
   }
   //Process analog pins
   for (int x = 0; x < NUM_ANALOG; x++) {
-    while (!(sendMQTTAsset(SENSORID_AIO, x+NUM_DIGITAL)));  // Until it is sent
+    while (!(sendMQTTAsset(SENSORID_AIO, x+NUM_DIGITAL)))  // Until it is sent
+      ;
   }
   // Process Custom Functions
   for (int i = 0; i < ArrayLength(HapisFunctions); i++) {
-    while (!(sendMQTTAsset(SENSORID_FN, i)));  // Until it is sent
+    while (!(sendMQTTAsset(SENSORID_FN, i)))  // Until it is sent
+      ;
   }
   // Process Custom Functions
   for (int i = 0; i < ArrayLength(HapicFunctions); i++) {
-    while (!(sendMQTTAsset(CONTROLID_FN, i)));  // Until it is sent
+    while (!(sendMQTTAsset(CONTROLID_FN, i)))  // Until it is sent
+      ;
   }
   // Process Custom Functions
   for (int i = 0; i < ArrayLength(HapicFunctions); i++) {
-    while (!(sendMQTTAsset(CONTROLDATA1_FN, i)));  // Until it is sent
+    while (!(sendMQTTAsset(CONTROLDATA1_FN, i)))  // Until it is sent
+      ;
   }
   // Process Custom Functions
   for (int i = 0; i < ArrayLength(HapicFunctions); i++) {
-    while (!(sendMQTTAsset(CONTROLDATA2_FN, i)));  // Until it is sent
+    while (!(sendMQTTAsset(CONTROLDATA2_FN, i)))  // Until it is sent
+      ;
   }
   return true;
 }
