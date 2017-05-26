@@ -51,11 +51,7 @@ boolean sendMQTTStatus(void){
   status_message["DIO"] = String(NUM_DIGITAL);
   status_message["AIO"] = String(NUM_ANALOG);
   status_message["Free SRAM"] = String(freeRam()) + "k";
-  if (!idle_mode) {
-    status_message["Idle"] = false;
-  }else{
-    status_message["Idle"] = true;
-  }
+  status_message["Idle"] = idle_mode;
 
   status_message.printTo(MQTTOutput, 128);          // MQTT JSON string is max 96 bytes
   strcpy(mqtt_topic, mqtt_topic_status);            // Generic status response topic
@@ -93,32 +89,36 @@ boolean sendMQTTStatus(void){
 
 boolean sendAllMQTTAssets(void) {
   //Process digital pins
-  for (int x = 0; x < NUM_DIGITAL; x++) {
-    if (pinControl[x] > 0) {
-      if (pinControl[x] < 5) {
-        while (!(sendMQTTAsset(SENSORID_DIO, x)));  // Until it is sent
-      }
+  for (int i = 0; i < NUM_DIGITAL; i++) {
+    if (0 < pinControl[i] && pinControl[i] < 5) {
+      while (!(sendMQTTAsset(SENSORID_DIO, i)))  // Until it is sent
+        ;
     }
   }
   //Process analog pins
   for (int x = 0; x < NUM_ANALOG; x++) {
-    while (!(sendMQTTAsset(SENSORID_AIO, x+NUM_DIGITAL)));  // Until it is sent
+    while (!(sendMQTTAsset(SENSORID_AIO, x+NUM_DIGITAL)))  // Until it is sent
+      ;
   }
   // Process Custom Functions
   for (int i = 0; i < ArrayLength(HapisFunctions); i++) {
-    while (!(sendMQTTAsset(SENSORID_FN, i)));  // Until it is sent
+    while (!(sendMQTTAsset(SENSORID_FN, i)))  // Until it is sent
+      ;
   }
   // Process Custom Functions
   for (int i = 0; i < ArrayLength(HapicFunctions); i++) {
-    while (!(sendMQTTAsset(CONTROLID_FN, i)));  // Until it is sent
+    while (!(sendMQTTAsset(CONTROLID_FN, i)))  // Until it is sent
+      ;
   }
   // Process Custom Functions
   for (int i = 0; i < ArrayLength(HapicFunctions); i++) {
-    while (!(sendMQTTAsset(CONTROLDATA1_FN, i)));  // Until it is sent
+    while (!(sendMQTTAsset(CONTROLDATA1_FN, i)))  // Until it is sent
+      ;
   }
   // Process Custom Functions
   for (int i = 0; i < ArrayLength(HapicFunctions); i++) {
-    while (!(sendMQTTAsset(CONTROLDATA2_FN, i)));  // Until it is sent
+    while (!(sendMQTTAsset(CONTROLDATA2_FN, i)))  // Until it is sent
+      ;
   }
   return true;
 }
