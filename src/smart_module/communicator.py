@@ -50,7 +50,7 @@ class Communicator(object):
             self.logger.info("Connecting to %s at %s." % (self.broker_name, self.broker_ip))
             self.client.connect(host=self.broker_ip, port=1883, keepalive=60)
         except Exception as excpt:
-            self.logger.exception("[Exiting] Error connecting to broker: %s" % excpt)
+            self.logger.exception("[Exiting] Error connecting to broker: %s", excpt)
             sys.exit(-1)
 
     def subscribe(self, topic):
@@ -71,7 +71,7 @@ class Communicator(object):
     # The callback for when the client receives a CONNACK response from the server.
     #@staticmethod
     def on_connect(self, client, userdata, flags, rc):
-        self.logger.info("Connected with result code %s" % str(rc))
+        self.logger.info("Connected with result code %s", rc)
         # Subscribing in on_connect() means if we lose connection and reconnect, subscriptions will
         # be renewed.
         #self.client.subscribe("SCHEDULER/LOCATE")
@@ -146,4 +146,4 @@ class Communicator(object):
             if self.client:
                 self.client.publish(topic, message)
         except Exception as excpt:
-            self.logger.info("Error publishing message: %s." % excpt)
+            self.logger.info("Error publishing message: %s.", excpt)

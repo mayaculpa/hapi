@@ -40,7 +40,7 @@ class AssetImpl(object):
             self.log = log.Log("asset.log")
             print('Device file:', self.device_path)
         except Exception as excpt:
-            self.log.exception("Error initializing sensor interface: %s." % excpt)
+            self.log.exception("Error initializing sensor interface: %s.", excpt)
 
     def read_temp_raw(self):
         try:
@@ -50,7 +50,7 @@ class AssetImpl(object):
                     lines = lines + line.decode("utf-8")
             return lines.split("\n")
         except Exception as excpt:
-            self.log.exception("Error reading raw temperature data: %s." % excpt)
+            self.log.exception("Error reading raw temperature data: %s.", excpt)
 
     def read_value(self):
         temp_c = -50
@@ -66,6 +66,6 @@ class AssetImpl(object):
                 temp_c = float(temp_string) / 1000.0
 
         except Exception as excpt:
-            self.log.exception("Error getting converted sensor data: %s." % excpt)
+            self.log.exception("Error getting converted sensor data: %s.", excpt)
 
         return temp_c
