@@ -621,11 +621,7 @@ String getStatus() {
   retval += "Analog= " + String(NUM_ANALOG) + "\n";
   retval += "Free SRAM: " + String(freeRam()) + "k\n";
 
-  if (!idle_mode) {
-    retval += "Idle Mode: False";
-  }else{
-    retval += "Idle Mode: True";
-  }
+  retval += "Idle Mode: " + (idle_mode ? "True" : "False");
 
   return retval;
 
