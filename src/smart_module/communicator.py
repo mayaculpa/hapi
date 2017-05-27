@@ -71,7 +71,7 @@ class Communicator(object):
     # The callback for when the client receives a CONNACK response from the server.
     #@staticmethod
     def on_connect(self, client, userdata, flags, rc):
-        self.logger.info("Connected with result code %s" % rc)
+        self.logger.info("Connected with result code %s", rc)
         # Subscribing in on_connect() means if we lose connection and reconnect, subscriptions will
         # be renewed.
         #self.client.subscribe("SCHEDULER/LOCATE")
