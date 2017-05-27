@@ -48,9 +48,9 @@ class Log(object):
         )
         return str(string)
 
-    def info(self, information):
+    def info(self, information, *args):
         """Append INFO in information to file. Accepts a single string."""
-        string = self.build_string("INFO", information)
+        string = self.build_string("INFO", information % args)
         with open(self.log_file, "a") as log:
             log.write(string + "\n")
         print(string)
