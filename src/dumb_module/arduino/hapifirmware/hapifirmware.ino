@@ -706,21 +706,10 @@ void setup() {
 }
 
 void loop() {
-#ifdef RTU_USB
+#if defined(RTU_USB) || defined(RTU_UNO)
   if (Serial.available()) {
     inputString = getCommand();
-#endif
-#ifdef RTU_UNO
-  if (Serial.available()) {
-    inputString = getCommand();
-#endif
-#ifdef RTU_ENET
-  // Wait for a new client to connect
-  client = rtuServer.available();
-  if (client) {
-    inputString = getCommand(client);
-#endif
-#ifdef RTU_ESP
+#elif defined(RTU_ENET) || defined(RTU_ESP)
   // Wait for a new client to connect
   client = rtuServer.available();
   if (client) {
