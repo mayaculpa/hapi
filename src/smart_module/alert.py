@@ -73,7 +73,7 @@ class Alert(object):
             self.upper_threshold = float(self.upper_threshold)
             database.close()
         except Exception as excpt:
-            self.logger.exception("Error fetching alert parameters from database: %s." % excpt)
+            self.logger.exception("Error fetching alert parameters from database: %s.", excpt)
 
     def check_alert(self, current_value):
         """Check for alert to a given _value_."""
