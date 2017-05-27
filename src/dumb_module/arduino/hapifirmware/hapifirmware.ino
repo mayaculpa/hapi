@@ -576,55 +576,55 @@ String getStatus() {
   String macstring = (char*)mac;
 
   retval = RTUID + "\r\n";
-  retval = retval + "Firmware " + HAPI_CLI_VERSION + "\r\n";
+  retval += "Firmware " + HAPI_CLI_VERSION + "\r\n";
   Serial.println(retval);
 #ifdef RTU_USB
-  retval = retval + "Connected on USB\r\n";
+  retval += "Connected on USB\r\n";
 #endif
 #ifdef RTU_UNO
-  retval = retval + "Connected on USB\r\n";
+  retval += "Connected on USB\r\n";
 #endif
 #ifdef RTU_ENET
-  retval = retval + "MAC=";
-  retval = retval + "0x" + String(mac[0], HEX) + ":";
-  retval = retval + "0x" + String(mac[1], HEX) + ":";
-  retval = retval + "0x" + String(mac[2], HEX) + ":";
-  retval = retval + "0x" + String(mac[3], HEX) + ":";
-  retval = retval + "0x" + String(mac[4], HEX) + ":";
-  retval = retval + "0x" + String(mac[5], HEX) + "\n";
+  retval += "MAC=";
+  retval += "0x" + String(mac[0], HEX) + ":";
+  retval += "0x" + String(mac[1], HEX) + ":";
+  retval += "0x" + String(mac[2], HEX) + ":";
+  retval += "0x" + String(mac[3], HEX) + ":";
+  retval += "0x" + String(mac[4], HEX) + ":";
+  retval += "0x" + String(mac[5], HEX) + "\n";
   Serial.println(retval);
-  retval = retval + "IP=";
-  retval = retval + String(Ethernet.localIP()[0]) + ".";
-  retval = retval + String(Ethernet.localIP()[1]) + ".";
-  retval = retval + String(Ethernet.localIP()[2]) + ".";
-  retval = retval + String(Ethernet.localIP()[3]) + "\n";
+  retval += "IP=";
+  retval += String(Ethernet.localIP()[0]) + ".";
+  retval += String(Ethernet.localIP()[1]) + ".";
+  retval += String(Ethernet.localIP()[2]) + ".";
+  retval += String(Ethernet.localIP()[3]) + "\n";
   Serial.println(retval);
 #endif
 #ifdef RTU_ESP
-  retval = retval + "MAC=";
-  retval = retval + "0x" + String(mac[0], HEX) + ":";
-  retval = retval + "0x" + String(mac[1], HEX) + ":";
-  retval = retval + "0x" + String(mac[2], HEX) + ":";
-  retval = retval + "0x" + String(mac[3], HEX) + ":";
-  retval = retval + "0x" + String(mac[4], HEX) + ":";
-  retval = retval + "0x" + String(mac[5], HEX) + "\n";
+  retval += "MAC=";
+  retval += "0x" + String(mac[0], HEX) + ":";
+  retval += "0x" + String(mac[1], HEX) + ":";
+  retval += "0x" + String(mac[2], HEX) + ":";
+  retval += "0x" + String(mac[3], HEX) + ":";
+  retval += "0x" + String(mac[4], HEX) + ":";
+  retval += "0x" + String(mac[5], HEX) + "\n";
   Serial.println(retval);
-  retval = retval + "IP=";
-  retval = retval + String(WiFi.localIP()[0]) + ".";
-  retval = retval + String(WiFi.localIP()[1]) + ".";
-  retval = retval + String(WiFi.localIP()[2]) + ".";
-  retval = retval + String(WiFi.localIP()[3]) + "\n";
+  retval += "IP=";
+  retval += String(WiFi.localIP()[0]) + ".";
+  retval += String(WiFi.localIP()[1]) + ".";
+  retval += String(WiFi.localIP()[2]) + ".";
+  retval += String(WiFi.localIP()[3]) + "\n";
   Serial.println(retval);
 #endif
 
-  retval = retval + "Digital= " + String(NUM_DIGITAL) + "\n";
-  retval = retval + "Analog= " + String(NUM_ANALOG) + "\n";
-  retval = retval + "Free SRAM: " + String(freeRam()) + "k\n";
+  retval += "Digital= " + String(NUM_DIGITAL) + "\n";
+  retval += "Analog= " + String(NUM_ANALOG) + "\n";
+  retval += "Free SRAM: " + String(freeRam()) + "k\n";
 
   if (!idle_mode) {
-    retval = retval + "Idle Mode: False";
+    retval += "Idle Mode: False";
   }else{
-    retval = retval + "Idle Mode: True";
+    retval += "Idle Mode: True";
   }
 
   return retval;
