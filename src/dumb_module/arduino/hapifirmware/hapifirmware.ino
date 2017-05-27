@@ -490,22 +490,11 @@ String getCommand(WiFiClient client) {
   char inChar;
   inputString = "";
 
-#ifdef RTU_USB
-  while ((Serial.available() > 0) && !stringComplete) {
+#if defined(RTU_USB) || defined(RTU_UNO)
+  while (Serial.available() > 0 && !stringComplete) {
     inChar = (char)Serial.read();  // read the bytes incoming from the client:
-#endif
-#ifdef RTU_UNO
-  while ((Serial.available() > 0) && !stringComplete) {
-    inChar = (char)Serial.read();  // read the bytes incoming from the client:
-#endif
-
-#ifdef RTU_ENET
-  while ((client.available() > 0) && !stringComplete) {
-    inChar = (char)client.read();  // read the bytes incoming from the client:
-#endif
-#ifdef RTU_ENET
-
-  while ((client.available() > 0) && !stringComplete) {
+#elif defined(RTU_ENET) || defined(RTU_ESP)
+  while (client.available() > 0 && !stringComplete) {
     inChar = (char)client.read();  // read the bytes incoming from the client:
 #endif
     inputString += inChar;
