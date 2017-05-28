@@ -71,20 +71,90 @@ Communications Protocol: Ethernet, USB
 #define DHTPIN 12        // Reserved pin for DHT-22 sensor
 
 
+enum pin_control_enum {
+    // code relies on following order
+    UNUSED_PIN, // or reserved
+    DIGITAL_INPUT_PIN,
+    DIGITAL_INPUT_PULLUP_PIN,
+    DIGITAL_OUTPUT_PIN,
+    ANALOG_OUTPUT_PIN,
+    ANALOG_INPUT_PIN
+};
 // Default pin modes
-// 0 not used or reserved;  1 digital input; 2 digital input_pullup; 3 digital output; 4 analog output; 5 analog input;
 // Analog input pins are assumed to be used as analog input pins
-int pinControl[NUM_DIGITAL+NUM_ANALOG] = {
-                                  // DIGITAL
-  0, 0, 3, 3, 0, 3, 3, 3, 3, 3,   //  0 -  9
-  0, 2, 1, 3, 0, 0, 0, 0, 0, 0,   // 10 - 19
-  0, 0, 3, 3, 3, 3, 3, 3, 1, 1,   // 20 - 29
-  1, 1, 1, 1, 1, 1, 1, 1, 1, 1,   // 30 - 39
-  1, 1, 1, 1, 1, 1, 1, 1, 2, 2,   // 40 - 49
-  0, 0, 0, 0,                     // 50 - 53
-                                  // ANALOG
-  5, 5, 5, 5, 5, 5, 5, 5, 5, 5,   // 54 - 63
-  5, 5, 0, 0, 0, 0                // 64 - 69
+enum pin_control_enum pinControl[NUM_DIGITAL+NUM_ANALOG] = {
+  // DIGITAL
+  UNUSED_PIN,                //  0
+  UNUSED_PIN,                //  1
+  DIGITAL_OUTPUT_PIN,        //  2
+  DIGITAL_OUTPUT_PIN,        //  3
+  UNUSED_PIN,                //  4
+  DIGITAL_OUTPUT_PIN,        //  5
+  DIGITAL_OUTPUT_PIN,        //  6
+  DIGITAL_OUTPUT_PIN,        //  7
+  DIGITAL_OUTPUT_PIN,        //  8
+  DIGITAL_OUTPUT_PIN,        //  9
+  UNUSED_PIN,                // 10
+  DIGITAL_INPUT_PULLUP_PIN,  // 11
+  DIGITAL_INPUT_PIN,         // 12
+  DIGITAL_OUTPUT_PIN,        // 13
+  UNUSED_PIN,                // 14
+  UNUSED_PIN,                // 15
+  UNUSED_PIN,                // 16
+  UNUSED_PIN,                // 17
+  UNUSED_PIN,                // 18
+  UNUSED_PIN,                // 19
+  UNUSED_PIN,                // 20
+  UNUSED_PIN,                // 21
+  DIGITAL_OUTPUT_PIN,        // 22
+  DIGITAL_OUTPUT_PIN,        // 23
+  DIGITAL_OUTPUT_PIN,        // 24
+  DIGITAL_OUTPUT_PIN,        // 25
+  DIGITAL_OUTPUT_PIN,        // 26
+  DIGITAL_OUTPUT_PIN,        // 27
+  DIGITAL_INPUT_PIN,         // 28
+  DIGITAL_INPUT_PIN,         // 29
+  DIGITAL_INPUT_PIN,         // 30
+  DIGITAL_INPUT_PIN,         // 31
+  DIGITAL_INPUT_PIN,         // 32
+  DIGITAL_INPUT_PIN,         // 33
+  DIGITAL_INPUT_PIN,         // 34
+  DIGITAL_INPUT_PIN,         // 35
+  DIGITAL_INPUT_PIN,         // 36
+  DIGITAL_INPUT_PIN,         // 37
+  DIGITAL_INPUT_PIN,         // 38
+  DIGITAL_INPUT_PIN,         // 39
+  DIGITAL_INPUT_PIN,         // 40
+  DIGITAL_INPUT_PIN,         // 41
+  DIGITAL_INPUT_PIN,         // 42
+  DIGITAL_INPUT_PIN,         // 43
+  DIGITAL_INPUT_PIN,         // 44
+  DIGITAL_INPUT_PIN,         // 45
+  DIGITAL_INPUT_PIN,         // 46
+  DIGITAL_INPUT_PIN,         // 47
+  DIGITAL_INPUT_PULLUP_PIN,  // 48
+  DIGITAL_INPUT_PULLUP_PIN,  // 49
+  UNUSED_PIN,                // 50
+  UNUSED_PIN,                // 51
+  UNUSED_PIN,                // 52
+  UNUSED_PIN,                // 53
+  // ANALOG
+  ANALOG_INPUT_PIN,          // 54
+  ANALOG_INPUT_PIN,          // 55
+  ANALOG_INPUT_PIN,          // 56
+  ANALOG_INPUT_PIN,          // 57
+  ANALOG_INPUT_PIN,          // 58
+  ANALOG_INPUT_PIN,          // 59
+  ANALOG_INPUT_PIN,          // 60
+  ANALOG_INPUT_PIN,          // 61
+  ANALOG_INPUT_PIN,          // 62
+  ANALOG_INPUT_PIN,          // 63
+  ANALOG_INPUT_PIN,          // 64
+  ANALOG_INPUT_PIN,          // 65
+  UNUSED_PIN,                // 66
+  UNUSED_PIN,                // 67
+  UNUSED_PIN,                // 68
+  UNUSED_PIN                 // 69
 };
 
 // Default pin states
