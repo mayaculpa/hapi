@@ -587,7 +587,7 @@ String buildResponse() {
 //  assembleResponse(response, "lastcmd", lastCommand);
   //Process digital pins
   for (int i = 0; i < NUM_DIGITAL; i++) {
-    if (0 < pinControl[i] && pinControl[i] < 5) {
+    if (1 <= pinControl[i] && pinControl[i] <= 4) {
       assembleResponse(response, (String)i, (String)digitalRead(i));
     }
   }
