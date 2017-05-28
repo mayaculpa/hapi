@@ -586,13 +586,11 @@ String buildResponse() {
   assembleResponse(response, "version", HAPI_CLI_VERSION);
 //  assembleResponse(response, "lastcmd", lastCommand);
   //Process digital pins
-  for (int x = 0; x < NUM_DIGITAL; x++) {
-    if (pinControl[x] > 0) {
-      if (pinControl[x] < 5) {
-        assembleResponse(response, (String)x, (String)digitalRead(x));
-      }
-    } // END OF if pinControl>0 -
-  }   // Next x
+  for (int i = 0; i < NUM_DIGITAL; i++) {
+    if (pinControl[i] > 0 && pinControl[i] < 5) {
+      assembleResponse(response, (String)i, (String)digitalRead(i));
+    }
+  }
 
   //Process analog pins
   for (int x = 0; x < NUM_ANALOG; x++) {
