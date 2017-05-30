@@ -119,7 +119,10 @@ class RTCInterface(object):
             return float(random.randrange(8, 34, 1))
 
         try:
-            return self.ds3231.getTemp()
+            self.power_on_rtc()
+            internal_temp = self.ds3231.getTemp()
+            self.power_off_rtc()
+            return internal_temp
         except Exception as excpt:
             self.logger.exception("Error getting the temperature from the RTC. %s.", excpt)
 
