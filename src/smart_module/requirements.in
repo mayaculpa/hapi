@@ -1,0 +1,7 @@
+influxdb
+schedule
+zeroconf
+psutil
+paho-mqtt
+# Following needed only if running on real mode (with actual sensor data).
+RPi.GPIO # Needed only 
