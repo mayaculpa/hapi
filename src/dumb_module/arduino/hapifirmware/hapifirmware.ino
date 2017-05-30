@@ -72,7 +72,6 @@ Communications Protocol: Ethernet, USB
 
 
 enum pin_control_enum {
-    // code relies on following order
     UNUSED_PIN, // or reserved
     DIGITAL_INPUT_PIN,
     DIGITAL_INPUT_PULLUP_PIN,
@@ -587,7 +586,11 @@ String buildResponse() {
 //  assembleResponse(response, "lastcmd", lastCommand);
   //Process digital pins
   for (int i = 0; i < NUM_DIGITAL; i++) {
-    if (1 <= pinControl[i] && pinControl[i] <= 4) {
+    switch (pinControl[i]) {
+    case DIGITAL_INPUT_PIN:
+    case DIGITAL_INPUT_PULLUP_PIN:
+    case DIGITAL_OUTPUT_PIN:
+    case ANALOG_OUTPUT_PIN:
       assembleResponse(response, (String)i, (String)digitalRead(i));
     }
   }
