@@ -67,7 +67,7 @@ class RTCInterface(object):
         try:
             self.ds3231 = SDL_DS3231.SDL_DS3231(1, 0x68, 0x57)
         except Exception as excpt:
-            self.logger.exception("Error initializing RTC. %s." % excpt)
+            self.logger.exception("Error initializing RTC. %s.", excpt)
 
     def power_on_rtc(self):
         if self.mock:
@@ -94,7 +94,7 @@ class RTCInterface(object):
         try:
             return self.ds3231.read_datetime()
         except Exception as excpt:
-            self.logger.exception("Error getting RTC date/time. %s." % excpt)
+            self.logger.exception("Error getting RTC date/time. %s.", excpt)
 
     def set_datetime(self):
         '''Writes the system datetime to the attached RTC if not mock.
@@ -106,7 +106,7 @@ class RTCInterface(object):
         try:
             self.ds3231.write_now()
         except Exception as excpt:
-            self.logger.exception("Error writing date/time to RTC. %s." % excpt)
+            self.logger.exception("Error writing date/time to RTC. %s.", excpt)
 
     def get_temp(self):
         '''Gets the internal temperature from the RTC component
@@ -119,9 +119,12 @@ class RTCInterface(object):
             return float(random.randrange(8, 34, 1))
 
         try:
-            return self.ds3231.getTemp()
+            self.power_on_rtc()
+            internal_temp = self.ds3231.getTemp()
+            self.power_off_rtc()
+            return internal_temp
         except Exception as excpt:
-            self.logger.exception("Error getting the temperature from the RTC. %s." % excpt)
+            self.logger.exception("Error getting the temperature from the RTC. %s.", excpt)
 
     def read_eeprom(self, address, n, name, mock_value):
         '''Return string of n bytes from EEPROM starting at address.

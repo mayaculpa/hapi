@@ -175,7 +175,7 @@ char* mqtt_topic_array[MAXTOPICS] = {
   "ASSET/QUERY",
   "ASSET/QUERY/",
   "ASSET/QUERY/*",
-  "CONFIG/QUERY/"  
+  "CONFIG/QUERY/"
 };
 #define MAXLISTEN 11
 char* mqtt_listen_array[MAXLISTEN] = {
@@ -187,15 +187,14 @@ char* mqtt_listen_array[MAXLISTEN] = {
   "ASSET/QUERY",
   "ASSET/QUERY/",
   "ASSET/QUERY/#",
-  "CONFIG/QUERY",  
-  "CONFIG/QUERY/",  
-  "CONFIG/QUERY/#"  
+  "CONFIG/QUERY",
+  "CONFIG/QUERY/",
+  "CONFIG/QUERY/#"
 };
 
 StaticJsonBuffer<128> hn_topic_exception;               // Exception data for this HN
 char MQTTOutput[256];                                   // String storage for the JSON data
 char MQTTInput[256];                                    // String storage for the JSON data
-boolean mqtt_broker_connected = false;
 
 // Callback function header
 void MQTTcallback(char* topic, byte* payload, unsigned int length);
@@ -247,7 +246,7 @@ struct FuncDef {   //define a structure to associate a Name to generic function 
   GenericFP fPtr;
 };
 
-#define SENSOR_FUNCTIONS 7          //The number of custom sensor functions supported on this HN
+#define ArrayLength(x) (sizeof(x)/sizeof(*(x)))
 // Create a FuncDef for each custom function
 // Format: abbreviation, context, pin, data function
 FuncDef sfunc1 = {"tmp", "Env", "C", -1, &readTemperatured};
@@ -257,7 +256,7 @@ FuncDef sfunc4 = {"tmw", "Water", "C", ONE_WIRE_BUS, &read1WireTemperature};
 FuncDef sfunc5 = {"phv", "Water", "pH", spH_PIN, &readpH};
 FuncDef sfunc6 = {"tds", "Water", "ppm", sTDS_PIN, &readTDS};
 FuncDef sfunc7 = {"flo", "Water", "lpm", sFlow_PIN, &readFlow};
-FuncDef HapisFunctions[SENSOR_FUNCTIONS] = {sfunc1, sfunc2, sfunc3, sfunc4, sfunc5, sfunc6, sfunc7};
+FuncDef HapisFunctions[] = {sfunc1, sfunc2, sfunc3, sfunc4, sfunc5, sfunc6, sfunc7};
 
 // Custom control devices
 //Custom functions are special functions for reading sensors or controlling devices. They are
@@ -272,7 +271,6 @@ struct CFuncDef {   //define a structure to associate a Name to generic control 
   GenericFP iPtr;
 };
 
-#define CONTROL_FUNCTIONS 6          //The number of custom control functions supported on this HN
 // Create a FuncDef for each custom control function
 // Format: abbreviation, context, Control data index, control function, data function
 CFuncDef cfunc1 = {"ppw", "Pump", "lpm", 1, &controlPumps, &readSensorPin};
@@ -281,7 +279,7 @@ CFuncDef cfunc3 = {"ppn", "Pump", "lpm", 3, &controlPumps, &readTDS};
 CFuncDef cfunc4 = {"pHU", "Pump", "lpm", 4, &controlPumps, &readpH};
 CFuncDef cfunc5 = {"pHD", "Pump", "lpm", 5, &controlPumps, &readpH};
 CFuncDef cfunc6 = {"lmp", "Lamp", "lpm", 6, &controlLamps, &readLightSensor};
-CFuncDef HapicFunctions[CONTROL_FUNCTIONS] = {cfunc1, cfunc2, cfunc3, cfunc4, cfunc5, cfunc6};
+CFuncDef HapicFunctions[] = {cfunc1, cfunc2, cfunc3, cfunc4, cfunc5, cfunc6};
 
 struct ControlData {
   const char* hc_name;              // abbreviation
@@ -302,7 +300,7 @@ ControlData ccontrol3 = {"ppn", cNutr_PIN, true, 0, 0, 0, false, sTDS_PIN, 0, 0}
 ControlData ccontrol4 = {"pHU", cpHUp_PIN, true, 0, 0, 0, false, spH_PIN, 0, 0};          // pHUp
 ControlData ccontrol5 = {"pHD", cpHDn_PIN, true, 0, 0, 0, false, spH_PIN, 0, 0};          // pHDown
 ControlData ccontrol6 = {"lmp", cLamp_PIN, true, 0, 0, 0, false, sLux_PIN, 0, 0};         // Lamp
-ControlData HapicData[CONTROL_FUNCTIONS] = {ccontrol1, ccontrol2, ccontrol3, ccontrol4, ccontrol5, ccontrol6};  
+ControlData HapicData[] = {ccontrol1, ccontrol2, ccontrol3, ccontrol4, ccontrol5, ccontrol6};
 
 //**** End Sensors Section ****
 
@@ -364,7 +362,7 @@ void setup() {
 
 #ifdef HN_2560
   Serial.println(hostString);
-#endif  
+#endif
 #ifdef HN_ESP8266
   Serial.println(WiFi.hostname());
   Serial.println(WiFi.hostname(hostString));
@@ -383,14 +381,14 @@ void setup() {
   Serial.println(WiFi.localIP());
   Serial.print("Hostname   : ");
 #endif
-    
+
 // Start mDNS support
 // ==================
   Serial.print("HN_Id:      ");
   Serial.println(HN_Id);
   Serial.print("hostString: ");
   Serial.println(hostString);
-  
+
 #if defined(HN_ESP8266) || defined(HN_ESP32)
  if (!MDNS.begin(hostString)) {
     Serial.println("Error setting up MDNS responder!");
@@ -453,13 +451,10 @@ void setup() {
 
   // Wait until connected to MQTT Broker
   // client.connect returns a boolean value
-  mqtt_broker_connected = false;
   Serial.println("Connecting to MQTT broker ...");
-  do {
-    if (sendMQTTStatus()) {
-      mqtt_broker_connected = true;
-    }
-  } while (mqtt_broker_connected == false);
+  // Poll until connected.
+  while (!sendMQTTStatus())
+    ;
 
 // Subscribe to the TOPICs
 
@@ -472,10 +467,10 @@ void setup() {
       MQTTClient.loop();
       Serial.print(" .. subscribing to ");
       Serial.println(mqtt_listen_array[i]);
-      delay(100);      
-    } while (MQTTClient.subscribe(mqtt_listen_array[i]) == false ); 
+      delay(100);
+    } while (!MQTTClient.subscribe(mqtt_listen_array[i]));
   }
-  
+
   Serial.println("Setup Complete. Listening for topics ..");
 }
 
@@ -487,7 +482,7 @@ void loop() {
     getNTPTime();
     loopcount = 0;
   }
-    
+
   checkControls();              // Check all the timers on the controls
   MQTTClient.loop();            // Check for MQTT topics
   flashLED();                   // Flash LED - slow blink
@@ -498,14 +493,8 @@ void loop() {
 
 void flashLED(void) {
   if ((loopcount++ % 100) == 0) {
-    if (ledState) {
-      digitalWrite(ledPin, LOW);
-      ledState = false;
-    }
-    else {
-      digitalWrite(ledPin, HIGH);
-      ledState = true;
-    }
+    ledState = !ledState;
+    digitalWrite(ledPin, ledState ? HIGH : LOW);
     hapiSensors();
   }
 }

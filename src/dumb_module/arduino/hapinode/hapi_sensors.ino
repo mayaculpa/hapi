@@ -117,7 +117,7 @@ float readTemperatured(int iDevice) {
   }
   else {
     returnValue = h;
-    if (metric == false) {
+    if (!metric) {
       returnValue = (returnValue * 9.0)/ 5.0 + 32.0; // Convert Celsius to Fahrenheit
     }
   }
@@ -137,8 +137,8 @@ float read1WireTemperature(int iDevice) {
   }
   else
   {
-    if (metric == false) {
-      returnValue = (returnValue * 9.0)/ 5.0 + 32.0; // Convert Celsius to Fahrenheit 
+    if (!metric) {
+      returnValue = (returnValue * 9.0)/ 5.0 + 32.0; // Convert Celsius to Fahrenheit
     }
   }
 //  Serial.print("18B20 Temperature: ");
@@ -210,7 +210,7 @@ float readTDS(int iDevice) {
 //TODO Need temperature compensation for TDS
   TDSValue = 1.0 * TDSValue;                  //convert the millivolt into TDS value
 //  Serial.print("TDS: ");
-//  Serial.println(TDSValue); 
+//  Serial.println(TDSValue);
   return TDSValue;
 }
 
@@ -245,7 +245,7 @@ return pinData;
 }
 
 boolean hapiSensors(void) {
-  for (int i = 0; i < SENSOR_FUNCTIONS; i++) {
+  for (int i = 0; i < ArrayLength(HapisFunctions); i++) {
     sendMQTTAsset(SENSORID_FN, i);         // Sensor values
   }
 }

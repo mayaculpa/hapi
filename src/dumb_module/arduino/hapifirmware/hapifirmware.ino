@@ -71,20 +71,90 @@ Communications Protocol: Ethernet, USB
 #define DHTPIN 12        // Reserved pin for DHT-22 sensor
 
 
+enum pin_control_enum {
+    // code relies on following order
+    UNUSED_PIN, // or reserved
+    DIGITAL_INPUT_PIN,
+    DIGITAL_INPUT_PULLUP_PIN,
+    DIGITAL_OUTPUT_PIN,
+    ANALOG_OUTPUT_PIN,
+    ANALOG_INPUT_PIN
+};
 // Default pin modes
-// 0 not used or reserved;  1 digital input; 2 digital input_pullup; 3 digital output; 4 analog output; 5 analog input;
 // Analog input pins are assumed to be used as analog input pins
-int pinControl[NUM_DIGITAL+NUM_ANALOG] = {
-                                  // DIGITAL
-  0, 0, 3, 3, 0, 3, 3, 3, 3, 3,   //  0 -  9
-  0, 2, 1, 3, 0, 0, 0, 0, 0, 0,   // 10 - 19
-  0, 0, 3, 3, 3, 3, 3, 3, 1, 1,   // 20 - 29
-  1, 1, 1, 1, 1, 1, 1, 1, 1, 1,   // 30 - 39
-  1, 1, 1, 1, 1, 1, 1, 1, 2, 2,   // 40 - 49
-  0, 0, 0, 0,                     // 50 - 53
-                                  // ANALOG
-  5, 5, 5, 5, 5, 5, 5, 5, 5, 5,   // 54 - 63
-  5, 5, 0, 0, 0, 0                // 64 - 69
+enum pin_control_enum pinControl[NUM_DIGITAL+NUM_ANALOG] = {
+  // DIGITAL
+  UNUSED_PIN,                //  0
+  UNUSED_PIN,                //  1
+  DIGITAL_OUTPUT_PIN,        //  2
+  DIGITAL_OUTPUT_PIN,        //  3
+  UNUSED_PIN,                //  4
+  DIGITAL_OUTPUT_PIN,        //  5
+  DIGITAL_OUTPUT_PIN,        //  6
+  DIGITAL_OUTPUT_PIN,        //  7
+  DIGITAL_OUTPUT_PIN,        //  8
+  DIGITAL_OUTPUT_PIN,        //  9
+  UNUSED_PIN,                // 10
+  DIGITAL_INPUT_PULLUP_PIN,  // 11
+  DIGITAL_INPUT_PIN,         // 12
+  DIGITAL_OUTPUT_PIN,        // 13
+  UNUSED_PIN,                // 14
+  UNUSED_PIN,                // 15
+  UNUSED_PIN,                // 16
+  UNUSED_PIN,                // 17
+  UNUSED_PIN,                // 18
+  UNUSED_PIN,                // 19
+  UNUSED_PIN,                // 20
+  UNUSED_PIN,                // 21
+  DIGITAL_OUTPUT_PIN,        // 22
+  DIGITAL_OUTPUT_PIN,        // 23
+  DIGITAL_OUTPUT_PIN,        // 24
+  DIGITAL_OUTPUT_PIN,        // 25
+  DIGITAL_OUTPUT_PIN,        // 26
+  DIGITAL_OUTPUT_PIN,        // 27
+  DIGITAL_INPUT_PIN,         // 28
+  DIGITAL_INPUT_PIN,         // 29
+  DIGITAL_INPUT_PIN,         // 30
+  DIGITAL_INPUT_PIN,         // 31
+  DIGITAL_INPUT_PIN,         // 32
+  DIGITAL_INPUT_PIN,         // 33
+  DIGITAL_INPUT_PIN,         // 34
+  DIGITAL_INPUT_PIN,         // 35
+  DIGITAL_INPUT_PIN,         // 36
+  DIGITAL_INPUT_PIN,         // 37
+  DIGITAL_INPUT_PIN,         // 38
+  DIGITAL_INPUT_PIN,         // 39
+  DIGITAL_INPUT_PIN,         // 40
+  DIGITAL_INPUT_PIN,         // 41
+  DIGITAL_INPUT_PIN,         // 42
+  DIGITAL_INPUT_PIN,         // 43
+  DIGITAL_INPUT_PIN,         // 44
+  DIGITAL_INPUT_PIN,         // 45
+  DIGITAL_INPUT_PIN,         // 46
+  DIGITAL_INPUT_PIN,         // 47
+  DIGITAL_INPUT_PULLUP_PIN,  // 48
+  DIGITAL_INPUT_PULLUP_PIN,  // 49
+  UNUSED_PIN,                // 50
+  UNUSED_PIN,                // 51
+  UNUSED_PIN,                // 52
+  UNUSED_PIN,                // 53
+  // ANALOG
+  ANALOG_INPUT_PIN,          // 54
+  ANALOG_INPUT_PIN,          // 55
+  ANALOG_INPUT_PIN,          // 56
+  ANALOG_INPUT_PIN,          // 57
+  ANALOG_INPUT_PIN,          // 58
+  ANALOG_INPUT_PIN,          // 59
+  ANALOG_INPUT_PIN,          // 60
+  ANALOG_INPUT_PIN,          // 61
+  ANALOG_INPUT_PIN,          // 62
+  ANALOG_INPUT_PIN,          // 63
+  ANALOG_INPUT_PIN,          // 64
+  ANALOG_INPUT_PIN,          // 65
+  UNUSED_PIN,                // 66
+  UNUSED_PIN,                // 67
+  UNUSED_PIN,                // 68
+  UNUSED_PIN                 // 69
 };
 
 // Default pin states
@@ -402,7 +472,7 @@ float readTemperature(int iDevice) {
   }
   else {
     returnValue = h;
-    if (metric == false) {
+    if (!metric) {
       returnValue = (returnValue * 9.0)/ 5.0 + 32.0; // Convert Celsius to Fahrenheit
     }
   }
@@ -419,7 +489,7 @@ float readWaterTemperature(int iDevice) {
   }
   else
   {
-    if (metric == false) {
+    if (!metric) {
       returnValue = (returnValue * 9.0)/ 5.0 + 32.0; // Convert Celsius to Fahrenheit
     }
   }
@@ -465,7 +535,7 @@ float readThermistorTemp(int iDevice) {
   Temp = log(10000.0*((1024.0/RawADC-1)));
   Temp = 1 / (0.001129148 + (0.000234125 + (0.0000000876741 * Temp * Temp ))* Temp );
   Temp = Temp - 273.15;            // Convert Kelvin to Celsius
-  if (metric == false) {
+  if (!metric) {
      Temp = (Temp * 9.0)/ 5.0 + 32.0; // Convert Celsius to Fahrenheit
   }
 
@@ -490,22 +560,11 @@ String getCommand(WiFiClient client) {
   char inChar;
   inputString = "";
 
-#ifdef RTU_USB
-  while ((Serial.available() > 0) && (stringComplete == false)) {
+#if defined(RTU_USB) || defined(RTU_UNO)
+  while (Serial.available() > 0 && !stringComplete) {
     inChar = (char)Serial.read();  // read the bytes incoming from the client:
-#endif
-#ifdef RTU_UNO
-  while ((Serial.available() > 0) && (stringComplete == false)) {
-    inChar = (char)Serial.read();  // read the bytes incoming from the client:
-#endif
-
-#ifdef RTU_ENET
-  while ((client.available() > 0) && (stringComplete == false)) {
-    inChar = (char)client.read();  // read the bytes incoming from the client:
-#endif
-#ifdef RTU_ENET
-
-  while ((client.available() > 0) && (stringComplete == false)) {
+#elif defined(RTU_ENET) || defined(RTU_ESP)
+  while (client.available() > 0 && !stringComplete) {
     inChar = (char)client.read();  // read the bytes incoming from the client:
 #endif
     inputString += inChar;
@@ -527,13 +586,11 @@ String buildResponse() {
   assembleResponse(response, "version", HAPI_CLI_VERSION);
 //  assembleResponse(response, "lastcmd", lastCommand);
   //Process digital pins
-  for (int x = 0; x < NUM_DIGITAL; x++) {
-    if (pinControl[x] > 0) {
-      if (pinControl[x] < 5) {
-        assembleResponse(response, (String)x, (String)digitalRead(x));
-      }
-    } // END OF if pinControl>0 -
-  }   // Next x
+  for (int i = 0; i < NUM_DIGITAL; i++) {
+    if (0 < pinControl[i] && pinControl[i] < 5) {
+      assembleResponse(response, (String)i, (String)digitalRead(i));
+    }
+  }
 
   //Process analog pins
   for (int x = 0; x < NUM_ANALOG; x++) {
@@ -576,56 +633,52 @@ String getStatus() {
   String macstring = (char*)mac;
 
   retval = RTUID + "\r\n";
-  retval = retval + "Firmware " + HAPI_CLI_VERSION + "\r\n";
+  retval += "Firmware " + HAPI_CLI_VERSION + "\r\n";
   Serial.println(retval);
 #ifdef RTU_USB
-  retval = retval + "Connected on USB\r\n";
+  retval += "Connected on USB\r\n";
 #endif
 #ifdef RTU_UNO
-  retval = retval + "Connected on USB\r\n";
+  retval += "Connected on USB\r\n";
 #endif
 #ifdef RTU_ENET
-  retval = retval + "MAC=";
-  retval = retval + "0x" + String(mac[0], HEX) + ":";
-  retval = retval + "0x" + String(mac[1], HEX) + ":";
-  retval = retval + "0x" + String(mac[2], HEX) + ":";
-  retval = retval + "0x" + String(mac[3], HEX) + ":";
-  retval = retval + "0x" + String(mac[4], HEX) + ":";
-  retval = retval + "0x" + String(mac[5], HEX) + "\n";
+  retval += "MAC=";
+  retval += "0x" + String(mac[0], HEX) + ":";
+  retval += "0x" + String(mac[1], HEX) + ":";
+  retval += "0x" + String(mac[2], HEX) + ":";
+  retval += "0x" + String(mac[3], HEX) + ":";
+  retval += "0x" + String(mac[4], HEX) + ":";
+  retval += "0x" + String(mac[5], HEX) + "\n";
   Serial.println(retval);
-  retval = retval + "IP=";
-  retval = retval + String(Ethernet.localIP()[0]) + ".";
-  retval = retval + String(Ethernet.localIP()[1]) + ".";
-  retval = retval + String(Ethernet.localIP()[2]) + ".";
-  retval = retval + String(Ethernet.localIP()[3]) + "\n";
+  retval += "IP=";
+  retval += String(Ethernet.localIP()[0]) + ".";
+  retval += String(Ethernet.localIP()[1]) + ".";
+  retval += String(Ethernet.localIP()[2]) + ".";
+  retval += String(Ethernet.localIP()[3]) + "\n";
   Serial.println(retval);
 #endif
 #ifdef RTU_ESP
-  retval = retval + "MAC=";
-  retval = retval + "0x" + String(mac[0], HEX) + ":";
-  retval = retval + "0x" + String(mac[1], HEX) + ":";
-  retval = retval + "0x" + String(mac[2], HEX) + ":";
-  retval = retval + "0x" + String(mac[3], HEX) + ":";
-  retval = retval + "0x" + String(mac[4], HEX) + ":";
-  retval = retval + "0x" + String(mac[5], HEX) + "\n";
+  retval += "MAC=";
+  retval += "0x" + String(mac[0], HEX) + ":";
+  retval += "0x" + String(mac[1], HEX) + ":";
+  retval += "0x" + String(mac[2], HEX) + ":";
+  retval += "0x" + String(mac[3], HEX) + ":";
+  retval += "0x" + String(mac[4], HEX) + ":";
+  retval += "0x" + String(mac[5], HEX) + "\n";
   Serial.println(retval);
-  retval = retval + "IP=";
-  retval = retval + String(WiFi.localIP()[0]) + ".";
-  retval = retval + String(WiFi.localIP()[1]) + ".";
-  retval = retval + String(WiFi.localIP()[2]) + ".";
-  retval = retval + String(WiFi.localIP()[3]) + "\n";
+  retval += "IP=";
+  retval += String(WiFi.localIP()[0]) + ".";
+  retval += String(WiFi.localIP()[1]) + ".";
+  retval += String(WiFi.localIP()[2]) + ".";
+  retval += String(WiFi.localIP()[3]) + "\n";
   Serial.println(retval);
 #endif
 
-  retval = retval + "Digital= " + String(NUM_DIGITAL) + "\n";
-  retval = retval + "Analog= " + String(NUM_ANALOG) + "\n";
-  retval = retval + "Free SRAM: " + String(freeRam()) + "k\n";
+  retval += "Digital= " + String(NUM_DIGITAL) + "\n";
+  retval += "Analog= " + String(NUM_ANALOG) + "\n";
+  retval += "Free SRAM: " + String(freeRam()) + "k\n";
 
-  if (idle_mode == false){
-    retval = retval + "Idle Mode: False";
-  }else{
-    retval = retval + "Idle Mode: True";
-  }
+  retval += "Idle Mode: " + (idle_mode ? "True" : "False");
 
   return retval;
 
@@ -710,21 +763,10 @@ void setup() {
 }
 
 void loop() {
-#ifdef RTU_USB
+#if defined(RTU_USB) || defined(RTU_UNO)
   if (Serial.available()) {
     inputString = getCommand();
-#endif
-#ifdef RTU_UNO
-  if (Serial.available()) {
-    inputString = getCommand();
-#endif
-#ifdef RTU_ENET
-  // Wait for a new client to connect
-  client = rtuServer.available();
-  if (client) {
-    inputString = getCommand(client);
-#endif
-#ifdef RTU_ESP
+#elif defined(RTU_ENET) || defined(RTU_ESP)
   // Wait for a new client to connect
   client = rtuServer.available();
   if (client) {
@@ -740,7 +782,7 @@ void loop() {
 
       Serial.println(inputCommand);
 
-      if ((inputCommand == "aoc") && (idle_mode == false)){
+      if ((inputCommand == "aoc") && !idle_mode) {
         cmdFound = true;
         inputPort = inputString.substring(3, 6);
         inputControl = inputString.substring(6, 9);
@@ -750,7 +792,7 @@ void loop() {
       }  // END Of aoc
 
       // doc (Digital Output Control) Sets a single digital output
-      if ((inputCommand == "doc") && (idle_mode == false)) {
+      if ((inputCommand == "doc") && !idle_mode) {
         cmdFound = true;
         inputPort = inputString.substring(4, 6);
         inputControl = inputString.substring(6, 7);
@@ -788,7 +830,7 @@ void loop() {
       }
 
       // res  - resets the Arduino
-      if ((inputCommand == "res") && (idle_mode == false)) {
+      if ((inputCommand == "res") && !idle_mode) {
         cmdFound = true;
         for (int x = 0; x < NUM_DIGITAL+NUM_ANALOG; x++) {
           if (pinControl[x] == 3) {
