@@ -238,7 +238,6 @@ boolean publishJSON(const char* topic) {
 }
 
 void MQTTcallback(char* topic, byte* payload, unsigned int length) {
-
   int i;
   const char* Node = "*";     // NodeId for target HAPInode, preset for anyone
   const char* Command = " ";  // Command to execute
@@ -265,271 +264,268 @@ void MQTTcallback(char* topic, byte* payload, unsigned int length) {
 
 //Parse the topic data
   JsonObject& command_topic = hn_topic_command.parseObject(MQTTInput);
-  if (!command_topic.success())
-  {
+  if (!command_topic.success()) {
     return;
   }
-  else {
-    Serial.println("Parsing .. ");
-    for (JsonObject::iterator it=command_topic.begin(); it!=command_topic.end(); ++it)
-    {
-      Serial.print(it->key);
-      Serial.print(":");
-      Serial.println(it->value.asString());
-    }
+  Serial.println("Parsing .. ");
+  for (JsonObject::iterator it=command_topic.begin(); it!=command_topic.end(); ++it)
+  {
+    Serial.print(it->key);
+    Serial.print(":");
+    Serial.println(it->value.asString());
+  }
 
-    Serial.print("Node - ");
-    Serial.println(Node);
+  Serial.print("Node - ");
+  Serial.println(Node);
 // Check correct Node ID
-    if (command_topic.containsKey("Node")) { // NodeId is required for all messages, even if it is "*"
-      Node = command_topic["Node"];
-    }
+  if (command_topic.containsKey("Node")) { // NodeId is required for all messages, even if it is "*"
+    Node = command_topic["Node"];
+  }
 //    else return;
 
 // Check for COMMAND/ topic based commands
 // =======================================
-    if ((strcmp(Node, hostString) == 0) || (strcmp(Node, "*") == 0)) { // Handle wildcard
-      if (strcmp(topic, "COMMAND/") == 0) {
-        if (command_topic.containsKey("Cmnd")) {  // Cmnd is required
-          Command = command_topic["Cmnd"];
-        }
-        else return;
+  if ((strcmp(Node, hostString) == 0) || (strcmp(Node, "*") == 0)) { // Handle wildcard
+    if (strcmp(topic, "COMMAND/") == 0) {
+      if (command_topic.containsKey("Cmnd")) {  // Cmnd is required
+        Command = command_topic["Cmnd"];
+      }
+      else return;
 
 // Commands that do not require an Asset ID
 // ----------------------------------------
-        if (strcmp(Command, "assets") == 0) {
-          succeed = sendAllMQTTAssets();
-          return;
-        }
-        if (strcmp(Command, "status") == 0) {
-          sendMQTTStatus();
-          return;
-        }
+      if (strcmp(Command, "assets") == 0) {
+        succeed = sendAllMQTTAssets();
+        return;
+      }
+      if (strcmp(Command, "status") == 0) {
+        sendMQTTStatus();
+        return;
+      }
 
 // Commands that do require an Asset ID
 // ------------------------------------
-        if (command_topic.containsKey("Asset")) {     // AssetID is required
-          Serial.println("Processing Asset");
+      if (command_topic.containsKey("Asset")) {     // AssetID is required
+        Serial.println("Processing Asset");
 // Digital IO
-          if (strcmp(command_topic["Asset"], "DIO") == 0) { // Digital IO
-            if (command_topic.containsKey("pin")) {   // pin - required
-              Number = command_topic["pin"];
+        if (strcmp(command_topic["Asset"], "DIO") == 0) { // Digital IO
+          if (command_topic.containsKey("pin")) {   // pin - required
+            Number = command_topic["pin"];
+          }
+          else return;
+          if (strcmp(Command, "din") == 0) {
+            AssetIdx = SENSORID_DIO;
+            sendMQTTAsset(AssetIdx, Number);         // Publish digital data
+            return;
+          }
+          if (strcmp(Command, "dout") == 0) {
+            if (command_topic.containsKey("data")) {  // Data - required
+              data = command_topic["data"];
             }
             else return;
-            if (strcmp(Command, "din") == 0) {
-              AssetIdx = SENSORID_DIO;
-              sendMQTTAsset(AssetIdx, Number);         // Publish digital data
-              return;
-            }
-            if (strcmp(Command, "dout") == 0) {
-              if (command_topic.containsKey("data")) {  // Data - required
-                data = command_topic["data"];
-              }
-              else return;
-              digitalWrite(Number, data);               // Set the digital pin
-              return;
-            }
+            digitalWrite(Number, data);               // Set the digital pin
+            return;
           }
-          Serial.println(" .. not DIO");
+        }
+        Serial.println(" .. not DIO");
 
 // Analog IO
-          if (strcmp(command_topic["Asset"], "AIO") == 0) { // Analog IO
-            if (command_topic.containsKey("pin")) {   // pin - required
-              Number = command_topic["pin"];
+        if (strcmp(command_topic["Asset"], "AIO") == 0) { // Analog IO
+          if (command_topic.containsKey("pin")) {   // pin - required
+            Number = command_topic["pin"];
+          }
+          else return;
+          if (strcmp(Command, "ain") == 0) {
+            AssetIdx = SENSORID_AIO;
+            sendMQTTAsset(AssetIdx, Number);         // Publish analog data
+            return;
+          }
+          if (strcmp(Command, "aout") == 0) {
+            if (command_topic.containsKey("data")) {  // Data - required
+              data = command_topic["data"];
             }
             else return;
-            if (strcmp(Command, "ain") == 0) {
-              AssetIdx = SENSORID_AIO;
-              sendMQTTAsset(AssetIdx, Number);         // Publish analog data
-              return;
-            }
-            if (strcmp(Command, "aout") == 0) {
-              if (command_topic.containsKey("data")) {  // Data - required
-                data = command_topic["data"];
-              }
-              else return;
 #ifndef HN_ESP32
-              analogWrite(Number, data);               // Set the analog pin
+            analogWrite(Number, data);               // Set the analog pin
 #endif
-              return;
-            }
+            return;
           }
-          Serial.println(" .. not AIO");
+        }
+        Serial.println(" .. not AIO");
 
 // Function IO
-          Number = 9999;                              // Unlikely value
-          AssetIdx = SENSORID_FN;                    // Asset Function IO
-          for (int i=0;i < ArrayLength(HapisFunctions);i++) {    // Scan for a match on the sensor name
-            f = HapisFunctions[i];                    // Point to Asset read function structure
-            if (strcmp(command_topic["Asset"],f.fName) == 0) {  // Asset match?
-              Number = i;                             // Match for Sensor name
+        Number = 9999;                              // Unlikely value
+        AssetIdx = SENSORID_FN;                    // Asset Function IO
+        for (int i=0;i < ArrayLength(HapisFunctions);i++) {    // Scan for a match on the sensor name
+          f = HapisFunctions[i];                    // Point to Asset read function structure
+          if (strcmp(command_topic["Asset"],f.fName) == 0) {  // Asset match?
+            Number = i;                             // Match for Sensor name
+          }
+        }
+        if (Number != 9999) {
+          sendMQTTAsset(AssetIdx, Number);         // Publish sensor or control function data
+          return;
+        }
+        else {                                      // Did not find a sensor, so try controls
+          Serial.println(" .. not Sensor Read");
+          AssetIdx = CONTROLID_FN;                 // Control Function IO
+          for (int i=0;i < ArrayLength(HapicFunctions);i++) { // Scan for a match on the control name
+            c = HapicFunctions[i];                  // Point to control function structure
+            if (strcmp(command_topic["Asset"],c.fName) == 0) {  // Asset match?
+              Number = i;                           // Match for control name
             }
           }
-          if (Number != 9999) {
-            sendMQTTAsset(AssetIdx, Number);         // Publish sensor or control function data
-            return;
+        }
+        if (Number != 9999) {                       // If we have a match on the name
+          if (strcmp(Command, "fnin") == 0) {
+            sendMQTTAsset(AssetIdx, Number);       // Publish sensor or control function data
+          return;
           }
-          else {                                      // Did not find a sensor, so try controls
-            Serial.println(" .. not Sensor Read");
-            AssetIdx = CONTROLID_FN;                 // Control Function IO
-            for (int i=0;i < ArrayLength(HapicFunctions);i++) { // Scan for a match on the control name
-              c = HapicFunctions[i];                  // Point to control function structure
-              if (strcmp(command_topic["Asset"],c.fName) == 0) {  // Asset match?
-                Number = i;                           // Match for control name
-              }
-            }
-          }
-          if (Number != 9999) {                       // If we have a match on the name
-            if (strcmp(Command, "fnin") == 0) {
-              sendMQTTAsset(AssetIdx, Number);       // Publish sensor or control function data
-            return;
-            }
-            if (strcmp(Command, "fnout") == 0) {      // Function out only works for controls
-              c = HapicFunctions[Number];             // Point to control output function structure
+          if (strcmp(Command, "fnout") == 0) {      // Function out only works for controls
+            c = HapicFunctions[Number];             // Point to control output function structure
 // Control
-              if (command_topic.containsKey("pol")) {  // Polarity ( boolean)
-                HapicData[Number].hc_polarity = command_topic["pol"];
-              }
-              if (command_topic.containsKey("stt")) {  // Start time (unix secs)
-                Serial.println("writing stt");
-                HapicData[Number].hc_start = command_topic["stt"];
-              }
-              if (command_topic.containsKey("end")) {  // End time (unix secs)
-                HapicData[Number].hc_end = command_topic["end"];
-              }
-              if (command_topic.containsKey("rpt")) {  // Repeat time (s)
-                HapicData[Number].hc_repeat = command_topic["rpt"];
-              }
-// Associated sensor
-              if (command_topic.containsKey("von")) {  // Value to turn on
-                HapicData[Number].hcs_onValue = command_topic["von"];
-              }
-              if (command_topic.containsKey("voff")) {  // Value to turn off
-                HapicData[Number].hcs_offValue = command_topic["voff"];
-              }
-              return;
+            if (command_topic.containsKey("pol")) {  // Polarity ( boolean)
+              HapicData[Number].hc_polarity = command_topic["pol"];
             }
-            else return;         // Found a valid control name but no valid command or data
+            if (command_topic.containsKey("stt")) {  // Start time (unix secs)
+              Serial.println("writing stt");
+              HapicData[Number].hc_start = command_topic["stt"];
+            }
+            if (command_topic.containsKey("end")) {  // End time (unix secs)
+              HapicData[Number].hc_end = command_topic["end"];
+            }
+            if (command_topic.containsKey("rpt")) {  // Repeat time (s)
+              HapicData[Number].hc_repeat = command_topic["rpt"];
+            }
+// Associated sensor
+            if (command_topic.containsKey("von")) {  // Value to turn on
+              HapicData[Number].hcs_onValue = command_topic["von"];
+            }
+            if (command_topic.containsKey("voff")) {  // Value to turn off
+              HapicData[Number].hcs_offValue = command_topic["voff"];
+            }
+            return;
           }
-          Serial.println(" .. not Control I/O");
-        } // Command topic contains a SensorId
-        else return;
-      } // End (strcmp COMMAND/ topic
+          else return;         // Found a valid control name but no valid command or data
+        }
+        Serial.println(" .. not Control I/O");
+      } // Command topic contains a SensorId
+      else return;
+    } // End (strcmp COMMAND/ topic
 
-      Serial.println(" .. not COMMAND/");
+    Serial.println(" .. not COMMAND/");
 
 // Check for topic based commands
 // ==============================
 // STATUS topics
 // =============
-      Serial.print("Checking .. ");
-      Serial.println(topic);
+    Serial.print("Checking .. ");
+    Serial.println(topic);
 
-      strcpy(hn_topic,mqtt_topic_array[STATUSSTART]);     // Status query, any NodeId
-      if (strcmp(topic, hn_topic) == 0) {
-        sendMQTTStatus();
-        return;
-      }
-      Serial.print(" .. not ");
-      Serial.println(hn_topic);
+    strcpy(hn_topic,mqtt_topic_array[STATUSSTART]);     // Status query, any NodeId
+    if (strcmp(topic, hn_topic) == 0) {
+      sendMQTTStatus();
+      return;
+    }
+    Serial.print(" .. not ");
+    Serial.println(hn_topic);
 
 // ASSET topics
 // ============
 // Handle wildcards
-      Serial.println(mqtt_topic_array[ASSETSTART]);  // Assets start
-      for (int i=1;i < CONFIGSTART;i++) {           // Wildcard topics
-        strcpy(hn_topic,mqtt_topic_array[i]);     // Asset query, any NodeId
-        if (strcmp(topic, hn_topic) == 0) {
-            sendAllMQTTAssets();
-            return;
-        }
-        Serial.print(" .. not ");
-        Serial.println(hn_topic);
+    Serial.println(mqtt_topic_array[ASSETSTART]);  // Assets start
+    for (int i=1;i < CONFIGSTART;i++) {           // Wildcard topics
+      strcpy(hn_topic,mqtt_topic_array[i]);     // Asset query, any NodeId
+      if (strcmp(topic, hn_topic) == 0) {
+          sendAllMQTTAssets();
+          return;
       }
+      Serial.print(" .. not ");
+      Serial.println(hn_topic);
+    }
 
 // Handle sensors
-      AssetIdx = SENSORID_FN;                    // Sensor Function IO
-      Number = 9999;                              // Unlikely value
-      for (int i=0;i < ArrayLength(HapisFunctions);i++) {    // Scan for a match on the sensor name
-        f = HapisFunctions[i];                    // Point to sensor read function structure
-        strcpy(hn_topic,mqtt_topic_array[ASSETSTART+1]);     // Set base topic for a specific asset query
-        strcat(hn_topic,hostString);              // NodeId next
-        strcat(hn_topic,"/");                     //  .. MQTT separator
-        strcat(hn_topic, f.fName);                //  .. and the sensor name
-        if (strcmp(topic, hn_topic) == 0) {         // Asset match?
-          Number = i;                             // Match for Sensor name
-        }
+    AssetIdx = SENSORID_FN;                    // Sensor Function IO
+    Number = 9999;                              // Unlikely value
+    for (int i=0;i < ArrayLength(HapisFunctions);i++) {    // Scan for a match on the sensor name
+      f = HapisFunctions[i];                    // Point to sensor read function structure
+      strcpy(hn_topic,mqtt_topic_array[ASSETSTART+1]);     // Set base topic for a specific asset query
+      strcat(hn_topic,hostString);              // NodeId next
+      strcat(hn_topic,"/");                     //  .. MQTT separator
+      strcat(hn_topic, f.fName);                //  .. and the sensor name
+      if (strcmp(topic, hn_topic) == 0) {         // Asset match?
+        Number = i;                             // Match for Sensor name
       }
-      if (Number != 9999) {
-        sendMQTTAsset(AssetIdx, Number);         // Publish sensor or control function data
-        return;                                   //  and exit
-      }
-      Serial.print(" .. not ");
-      Serial.println(hn_topic);
+    }
+    if (Number != 9999) {
+      sendMQTTAsset(AssetIdx, Number);         // Publish sensor or control function data
+      return;                                   //  and exit
+    }
+    Serial.print(" .. not ");
+    Serial.println(hn_topic);
 // Handle Controls
-      AssetIdx = CONTROLID_FN;                   // Control Function IO
-      for (int i=0;i < ArrayLength(HapicFunctions);i++) {   // Scan for a match on the control name
-        c = HapicFunctions[i];                    // Point to control function structure
-        strcpy(hn_topic,mqtt_topic_array[1]);     // Set base topic for an asset query
-        strcat(hn_topic,hostString);              // NodeId next
-        strcat(hn_topic,"/");                     //  .. MQTT separator
-        strcat(hn_topic, c.fName);                //  .. and the control name
-        if (strcmp(topic, hn_topic) == 0) {         // Asset match?
-          Number = i;                             // Match for Sensor name
-        }
+    AssetIdx = CONTROLID_FN;                   // Control Function IO
+    for (int i=0;i < ArrayLength(HapicFunctions);i++) {   // Scan for a match on the control name
+      c = HapicFunctions[i];                    // Point to control function structure
+      strcpy(hn_topic,mqtt_topic_array[1]);     // Set base topic for an asset query
+      strcat(hn_topic,hostString);              // NodeId next
+      strcat(hn_topic,"/");                     //  .. MQTT separator
+      strcat(hn_topic, c.fName);                //  .. and the control name
+      if (strcmp(topic, hn_topic) == 0) {         // Asset match?
+        Number = i;                             // Match for Sensor name
       }
-      if (Number != 9999) {
-        sendMQTTAsset(AssetIdx, Number);         // Publish sensor or control function data
-        return;                                   //  and exit
-      }
-      Serial.print(" .. not ");
-      Serial.println(hn_topic);
+    }
+    if (Number != 9999) {
+      sendMQTTAsset(AssetIdx, Number);         // Publish sensor or control function data
+      return;                                   //  and exit
+    }
+    Serial.print(" .. not ");
+    Serial.println(hn_topic);
 
 // CONFIG topic
 // ============
 // Wildcards are not allowed in CONFIG
 // It must have a valid NodeId, Asset and data to work
-      Number = 9999;                              // Unlikely value
-      for (int i=0;i < ArrayLength(HapicFunctions);i++) {    // Scan for a match on the control name
-        c = HapicFunctions[i];                    // Point to control function structure
-        strcpy(hn_topic,mqtt_topic_array[CONFIGSTART]);     // Set base topic for a specific asset query
-        strcat(hn_topic,hostString);              // NodeId next
-        strcat(hn_topic,"/");                     //  .. MQTT separator
-        strcat(hn_topic, c.fName);                //  .. and the sensor name
-        if (strcmp(topic, hn_topic) == 0) {         // Asset match?
-          Number = i;                             // Match for Sensor name
-        }
+    Number = 9999;                              // Unlikely value
+    for (int i=0;i < ArrayLength(HapicFunctions);i++) {    // Scan for a match on the control name
+      c = HapicFunctions[i];                    // Point to control function structure
+      strcpy(hn_topic,mqtt_topic_array[CONFIGSTART]);     // Set base topic for a specific asset query
+      strcat(hn_topic,hostString);              // NodeId next
+      strcat(hn_topic,"/");                     //  .. MQTT separator
+      strcat(hn_topic, c.fName);                //  .. and the sensor name
+      if (strcmp(topic, hn_topic) == 0) {         // Asset match?
+        Number = i;                             // Match for Sensor name
       }
-      if (Number != 9999) {
-        c = HapicFunctions[Number];             // Point to control output function structure
+    }
+    if (Number != 9999) {
+      c = HapicFunctions[Number];             // Point to control output function structure
 // Control
-        if (command_topic.containsKey("pol")) {  // Polarity ( boolean)
-          HapicData[Number].hc_polarity = command_topic["pol"];
-        }
-        if (command_topic.containsKey("stt")) {  // Start time (unix secs)
-          HapicData[Number].hc_start = command_topic["stt"];
-        }
-        if (command_topic.containsKey("end")) {  // End time (unix secs)
-          HapicData[Number].hc_end = command_topic["end"];
-        }
-        if (command_topic.containsKey("rpt")) {  // Repeat time (s)
-          HapicData[Number].hc_repeat = command_topic["rpt"];
-        }
-// Associated sensor
-        if (command_topic.containsKey("von")) {  // Value to turn on
-          HapicData[Number].hcs_onValue = command_topic["von"];
-        }
-        if (command_topic.containsKey("voff")) {  // Value to turn off
-          HapicData[Number].hcs_offValue = command_topic["voff"];
-        }
-        return;
+      if (command_topic.containsKey("pol")) {  // Polarity ( boolean)
+        HapicData[Number].hc_polarity = command_topic["pol"];
       }
-      Serial.print(" .. not ");
-      Serial.println(hn_topic);
+      if (command_topic.containsKey("stt")) {  // Start time (unix secs)
+        HapicData[Number].hc_start = command_topic["stt"];
+      }
+      if (command_topic.containsKey("end")) {  // End time (unix secs)
+        HapicData[Number].hc_end = command_topic["end"];
+      }
+      if (command_topic.containsKey("rpt")) {  // Repeat time (s)
+        HapicData[Number].hc_repeat = command_topic["rpt"];
+      }
+// Associated sensor
+      if (command_topic.containsKey("von")) {  // Value to turn on
+        HapicData[Number].hcs_onValue = command_topic["von"];
+      }
+      if (command_topic.containsKey("voff")) {  // Value to turn off
+        HapicData[Number].hcs_offValue = command_topic["voff"];
+      }
+      return;
+    }
+    Serial.print(" .. not ");
+    Serial.println(hn_topic);
 
 // Other topics go here
 // ====================
 
-    }   // end strcmp NodeId
-  }     // end Valid JSON object
+  }   // end strcmp NodeId
 }
