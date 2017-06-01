@@ -443,8 +443,7 @@ void setup() {
   Serial.print("Local IP:   ");
   Serial.println(timeServerIP);
   getNTPTime();
-  old_millis = millis();
-  millis_accumulator = -MILLISECONDS_PER_SECOND;
+  initialize_epoch_timekeeping(void);
 
 // Start MQTT support
 // ==================
@@ -478,7 +477,15 @@ void setup() {
   Serial.println("Setup Complete. Listening for topics ..");
 }
 
-void loop() {
+void initialize_epoch_timekeeping(void)
+{
+  old_millis = millis();
+  millis_accumulator = -MILLISECONDS_PER_SECOND;
+}
+
+void poll_epoch_timekeeping(void)
+{
+  /* call this at least once per second, preferably many times per second */
   unsigned long new_millis;
 
   new_millis = millis();
@@ -488,6 +495,10 @@ void loop() {
     epoch++;
   }
   old_millis = new_millis;
+}
+
+void loop() {
+  poll_epoch_timekeeping();
 
   // Wait for a new event, publish topic
   if ((loopcount++ % 3600) == 0) {
