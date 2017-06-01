@@ -476,7 +476,8 @@ void setup() {
 
 void loop() {
   // Wait for a new event, publish topic
-  if (mscount < millis()) epoch += (millis() - mscount)/10;     // Update local copy until ntp sync
+  if (mscount < millis())
+    epoch += (millis() - mscount)/10;     // Update local copy until ntp sync
   mscount = millis();
   if ((loopcount++ % 3600) == 0) {
     getNTPTime();
