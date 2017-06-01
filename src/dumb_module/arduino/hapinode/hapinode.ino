@@ -34,6 +34,8 @@ Communications Method
   MQTT        Listens for messages on Port 1883
 */
 
+#define MILLISECONDS_PER_SECOND (1000)
+
 //**** Begin Board Configuration Section ****
 
 // Board Type
@@ -477,7 +479,7 @@ void setup() {
 void loop() {
   // Wait for a new event, publish topic
   if (mscount < millis())
-    epoch += (millis() - mscount)/10;     // Update local copy until ntp sync
+    epoch += (millis() - mscount)/MILLISECONDS_PER_SECOND;     // Update local copy until ntp sync
   mscount = millis();
   if ((loopcount++ % 3600) == 0) {
     getNTPTime();
