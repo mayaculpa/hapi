@@ -440,6 +440,7 @@ void setup() {
 
   initialize_ntp_timekeeping();
   initialize_led_flasher();
+  initialize_sensor_polling();
 
 // Start MQTT support
 // ==================
@@ -550,19 +551,41 @@ void poll_led_flasher(void)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+// This section should be in its own file.
 
-void loop() {
+#define SENSOR_POLL_PERIOD (10 * MILLISECONDS_PER_SECOND) // Unit is 1 ms.
+unsigned long old_sensor_millis; // Unit is one millisecond.
+signed long sensor_millis_accumulator; // Unit is one millisecond.
+
+void initialize_sensor_polling(void)
+{
+    old_sensor_millis = millis();
+    sensor_millis_accumulator = 0;
+}
+
+void poll_sensors(void)
+{
+    unsigned long new_millis;
+
+    new_millis = millis();
+    sensor_millis_accumulator += new_millis - old_sensor_millis;
+    if (sensor_millis_accumulator >= 0) {
+      sensor_millis_accumulator -= SENSOR_POLL_PERIOD;
+      hapiSensors();
+    }
+    old_sensor_millis = new_millis;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void loop(void)
+{
   poll_ntp_timekeeping();
 
   checkControls();              // Check all the timers on the controls
   MQTTClient.loop();            // Check for MQTT topics
   poll_led_flasher();
+  poll_sensors();
 
   delay(100); //^^^ eliminate need need for this
 }
-
-void flashLED(void) { // ^^^ need to call this once every ten seconds.
-    hapiSensors();
-  }
-}
-
