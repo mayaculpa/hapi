@@ -143,27 +143,29 @@ class SmartModule(object):
             asset_type=self.asset.type,
             asset_context=self.asset.context))
 
-        zeroconf = Zeroconf()
-        for x in range(0, 5):
-            # Try to locate the MQTT Broker. If can't find, become one.
-            self.log.info("Performing Discovery...")
+        try:
+            # Using two different call to 'time.sleep()'. We should consider a better approach.
+            # I'm totally open for new ideas on this.
+            max_sleep_time = 3
+            zeroconf = Zeroconf()
+            self.log.info("Performing Broker discovery...")
             self.find_broker(zeroconf)
-            self.log.info("Waiting Broker information on attempt: %d." % (x + 1))
-            time.sleep(1)
+            time.sleep(max_sleep_time)
             if self.comm.broker_name or self.comm.broker_ip:
                 self.log.info("MQTT Broker: {broker_name} IP: {broker_ip}.".format(
                     broker_name=self.comm.broker_name,
                     broker_ip=self.comm.broker_ip))
-                break
             else:
+                self.log.info("Broker not found. Becoming the broker.")
                 self.become_broker()
-        else:
-            self.log.info("[Exiting] Couldn't find or become the broker.")
-            sys.exit(-1)
+            time.sleep(max_sleep_time)
+            self.comm.connect()
+        except Exception as excpt:
+            self.log.exceptions("[Exiting] Trying to find or become the broker.");
+        finally:
+            self.log.info("Closing Zeroconf connection.")
+            zeroconf.close()
 
-        self.comm.connect()
-        # we could leave it open to handle removed MQTT service, if that was the broker
-        zeroconf.close()
         t_end = time.time() + 10
         while (time.time() < t_end) and not self.comm.is_connected:
             time.sleep(1)
@@ -394,7 +396,7 @@ class SmartModule(object):
                 INSERT INTO command_log (timestamp, command, result)
                 VALUES (?, ?, ?)
             ''', (now, job.name, result)
-            self.log.info("Executed %s." % job.name)
+            self.log.info("Executed %s.", job.name)
             database = sqlite3.connect(utilities.DB_HIST)
             database.cursor().execute(*command)
             database.commit()
@@ -529,16 +531,14 @@ class Scheduler(object):
                 plural_interval_name = interval_name + 's'
                 d = getattr(schedule.every(job.interval), plural_interval_name)
                 d.do(self.run_job, job)
-                self.log.info("  Loading %s job: %s." % (
-                    suffixed_names[interval_name],
-                    job.name))
+                self.log.info("  Loading %s job: %s.", suffixed_names[interval_name], job.name)
             elif interval_name == 'day':
                 schedule.every().day.at(job.at_time).do(self.run_job, job)
                 self.log.info("  Loading time-based job: " + job.name)
             else:
                 d = getattr(schedule.every(), interval_name)
                 d.do(self.run_job, job)
-                self.log.info("  Loading %s job: %s" % (interval_name, job.name))
+                self.log.info("  Loading %s job: %s", interval_name, job.name)
 
     def run_job(self, job):
         if not self.running or not job.enabled:
