@@ -34,6 +34,8 @@ Communications Method
   MQTT        Listens for messages on Port 1883
 */
 
+#define MILLISECONDS_PER_SECOND (1000)
+
 //**** Begin Board Configuration Section ****
 
 // Board Type
@@ -102,7 +104,8 @@ Communications Method
 
 //**** Begin Main Variable Definition Section ****
 int loopcount;                      // Count of times through main loop (for LED etc)
-unsigned long mscount;              // millisecond counter
+unsigned long old_millis; // Unit is one millisecond.
+signed long millis_accumulator; // Unit is one millisecond.
 unsigned long epoch;                // UTC seconds
 
 String HAPI_FW_VERSION = "v3.0";    // The version of the firmware the HN is running
@@ -440,7 +443,7 @@ void setup() {
   Serial.print("Local IP:   ");
   Serial.println(timeServerIP);
   getNTPTime();
-  mscount = millis();         // initialize the millisecond counter
+  initialize_epoch_timekeeping(void);
 
 // Start MQTT support
 // ==================
@@ -474,10 +477,30 @@ void setup() {
   Serial.println("Setup Complete. Listening for topics ..");
 }
 
+void initialize_epoch_timekeeping(void)
+{
+  old_millis = millis();
+  millis_accumulator = -MILLISECONDS_PER_SECOND;
+}
+
+void poll_epoch_timekeeping(void)
+{
+  /* call this at least once per second, preferably many times per second */
+  unsigned long new_millis;
+
+  new_millis = millis();
+  millis_accumulator += new_millis - old_millis;
+  if (millis_accumulator >= 0) {
+    millis_accumulator -= MILLISECONDS_PER_SECOND;
+    epoch++;
+  }
+  old_millis = new_millis;
+}
+
 void loop() {
+  poll_epoch_timekeeping();
+
   // Wait for a new event, publish topic
-  if (mscount < millis()) epoch += (millis() - mscount)/10;     // Update local copy until ntp sync
-  mscount = millis();
   if ((loopcount++ % 3600) == 0) {
     getNTPTime();
     loopcount = 0;
@@ -488,7 +511,6 @@ void loop() {
   flashLED();                   // Flash LED - slow blink
 
   delay(100);
-
 }
 
 void flashLED(void) {
