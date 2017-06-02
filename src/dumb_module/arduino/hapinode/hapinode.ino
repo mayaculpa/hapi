@@ -104,9 +104,6 @@ Communications Method
 
 //**** Begin Main Variable Definition Section ****
 int loopcount;                      // Count of times through main loop (for LED etc)
-unsigned long old_millis; // Unit is one millisecond.
-signed long millis_accumulator; // Unit is one millisecond.
-unsigned long epoch;                // UTC seconds
 
 String HAPI_FW_VERSION = "v3.0";    // The version of the firmware the HN is running
 #ifdef HN_ENET
@@ -442,8 +439,8 @@ void setup() {
 #endif
   Serial.print("Local IP:   ");
   Serial.println(timeServerIP);
-  getNTPTime();
-  initialize_epoch_timekeeping();
+
+  initialize_ntp_timekeeping();
 
 // Start MQTT support
 // ==================
@@ -477,13 +474,26 @@ void setup() {
   Serial.println("Setup Complete. Listening for topics ..");
 }
 
-void initialize_epoch_timekeeping(void)
+///////////////////////////////////////////////////////////////////////////////
+// This section should be moved to ntp file.
+
+#define READ_NTP_PERIOD (6*SECONDS_PER_MINUTE) // Unit is one second.
+unsigned read_ntp_timer;
+
+unsigned long old_millis; // Unit is one millisecond.
+signed long millis_accumulator; // Unit is one millisecond.
+unsigned long epoch;                // UTC seconds
+
+void initialize_ntp_timekeeping(void)
 {
+  getNTPTime();
+  read_ntp_timer = READ_NTP_PERIOD;
+
   old_millis = millis();
   millis_accumulator = -MILLISECONDS_PER_SECOND;
 }
 
-void poll_epoch_timekeeping(void)
+void poll_ntp_timekeeping(void)
 {
   /* call this at least once per second, preferably many times per second */
   unsigned long new_millis;
@@ -493,24 +503,26 @@ void poll_epoch_timekeeping(void)
   if (millis_accumulator >= 0) {
     millis_accumulator -= MILLISECONDS_PER_SECOND;
     epoch++;
+
+    if (read_ntp_timer <= 0) {
+      read_ntp_timer = READ_NTP_PERIOD;
+      getNTPTime();
+    }
+    read_ntp_timer--;
   }
   old_millis = new_millis;
 }
 
-void loop() {
-  poll_epoch_timekeeping();
+///////////////////////////////////////////////////////////////////////////////
 
-  // Wait for a new event, publish topic
-  if ((loopcount++ % 3600) == 0) {
-    getNTPTime();
-    loopcount = 0;
-  }
+void loop() {
+  poll_ntp_timekeeping();
 
   checkControls();              // Check all the timers on the controls
   MQTTClient.loop();            // Check for MQTT topics
   flashLED();                   // Flash LED - slow blink
 
-  delay(100);
+  delay(100); //^^^ eliminate need need for this
 }
 
 void flashLED(void) {
