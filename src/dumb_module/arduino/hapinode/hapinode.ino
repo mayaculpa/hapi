@@ -103,7 +103,6 @@ Communications Method
 #include "nodeboard.h"      // Node default pin allocations
 
 //**** Begin Main Variable Definition Section ****
-int loopcount;                      // Count of times through main loop (for LED etc)
 
 String HAPI_FW_VERSION = "v3.0";    // The version of the firmware the HN is running
 #ifdef HN_ENET
@@ -215,7 +214,6 @@ JsonObject& exception_topic = hn_topic_exception.createObject();
 #define CONTROLDATA2_FN 5  // CONTROL FUNCTION VALUE DATA
 
 const int ledPin = 2; // Use the built-in led for visual feedback
-boolean ledState = false;
 
 // Flow meter devices
 Bounce flowrate = Bounce();   // Use bouncer object to measure flow rate
@@ -441,6 +439,7 @@ void setup() {
   Serial.println(timeServerIP);
 
   initialize_ntp_timekeeping();
+  initialize_led_flasher();
 
 // Start MQTT support
 // ==================
@@ -514,21 +513,55 @@ void poll_ntp_timekeeping(void)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+// This section should be in its own file.
+
+// led is on for LED_ON_DURATION, then off for LED_OFF_DURATION, forever.
+
+unsigned long old_led_flasher_millis; // Unit is one millisecond.
+signed long led_flasher_millis_accumulator; // Unit is one millisecond.
+boolean led_is_on = false;
+
+#define LED_ON_DURATION (1000) // Unit is one millisecond.
+#define LED_OFF_DURATION (9000) // Unit is one millisecond.
+
+void initialize_led_flasher(void)
+{
+  led_flasher_millis_accumulator = 0;
+  old_led_flasher_millis = millis();
+  led_is_on = false;
+  //^^^ consider moving initialization of port pin to here
+  digitalWrite(ledPin, led_is_on ? HIGH : LOW);
+}
+
+void poll_led_flasher(void)
+{
+  /* call this at least once per second, preferably many times per second */
+  unsigned long new_millis;
+
+  new_millis = millis();
+  led_flasher_millis_accumulator += new_millis - old_led_flasher_millis;
+  if (led_flasher_millis_accumulator >= 0) {
+    led_is_on = !led_is_on;
+    digitalWrite(ledPin, led_is_on ? HIGH : LOW);
+    led_flasher_millis_accumulator -= (
+      led_is_on ? LED_ON_DURATION : LED_OFF_DURATION);
+  }
+  old_led_flasher_millis = new_millis;
+}
+
+///////////////////////////////////////////////////////////////////////////////
 
 void loop() {
   poll_ntp_timekeeping();
 
   checkControls();              // Check all the timers on the controls
   MQTTClient.loop();            // Check for MQTT topics
-  flashLED();                   // Flash LED - slow blink
+  poll_led_flasher();
 
   delay(100); //^^^ eliminate need need for this
 }
 
-void flashLED(void) {
-  if ((loopcount++ % 100) == 0) {
-    ledState = !ledState;
-    digitalWrite(ledPin, ledState ? HIGH : LOW);
+void flashLED(void) { // ^^^ need to call this once every ten seconds.
     hapiSensors();
   }
 }
