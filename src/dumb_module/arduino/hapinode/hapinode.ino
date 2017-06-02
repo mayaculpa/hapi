@@ -441,6 +441,7 @@ void setup() {
   initialize_ntp_timekeeping();
   initialize_led_flasher();
   initialize_sensor_polling();
+  initialize_other_stuff_polling();
 
 // Start MQTT support
 // ==================
@@ -559,21 +560,55 @@ signed long sensor_millis_accumulator; // Unit is one millisecond.
 
 void initialize_sensor_polling(void)
 {
-    old_sensor_millis = millis();
-    sensor_millis_accumulator = 0;
+  old_sensor_millis = millis();
+  sensor_millis_accumulator = 0;
 }
 
 void poll_sensors(void)
 {
-    unsigned long new_millis;
+  /* call this at least once per second, preferably many times per second */
+  unsigned long new_millis;
 
-    new_millis = millis();
-    sensor_millis_accumulator += new_millis - old_sensor_millis;
-    if (sensor_millis_accumulator >= 0) {
-      sensor_millis_accumulator -= SENSOR_POLL_PERIOD;
-      hapiSensors();
-    }
-    old_sensor_millis = new_millis;
+  new_millis = millis();
+  sensor_millis_accumulator += new_millis - old_sensor_millis;
+  if (sensor_millis_accumulator >= 0) {
+    sensor_millis_accumulator -= SENSOR_POLL_PERIOD;
+    hapiSensors();
+  }
+  old_sensor_millis = new_millis;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// This section should be in its own file.
+
+#define OTHER_STUFF_PERIOD (100) // Unit is 1 millisecond.
+unsigned long old_other_stuff_millis; // Unit is 1 millisecond.
+signed long other_stuff_accumulator; // Unit is 1 millisecond.
+
+void initialize_other_stuff_polling(void)
+{
+  old_other_stuff_millis = millis();
+  other_stuff_accumulator = 0;
+}
+
+void other_stuff(void)
+{
+  checkControls();              // Check all the timers on the controls
+  MQTTClient.loop();            // Check for MQTT topics
+}
+
+void poll_other_stuff(void)
+{
+  /* call this at least once per second, preferably many times per second */
+  unsigned long new_millis;
+
+  new_millis = millis();
+  other_stuff_accumulator += new_millis - old_other_stuff_millis;
+  if (other_stuff_accumulator >= 0) {
+    other_stuff_accumulator -= OTHER_STUFF_PERIOD;
+    other_stuff();
+  }
+  old_other_stuff_millis = new_millis;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -581,11 +616,7 @@ void poll_sensors(void)
 void loop(void)
 {
   poll_ntp_timekeeping();
-
-  checkControls();              // Check all the timers on the controls
-  MQTTClient.loop();            // Check for MQTT topics
+  poll_other_stuff();
   poll_led_flasher();
   poll_sensors();
-
-  delay(100); //^^^ eliminate need need for this
 }
