@@ -490,7 +490,7 @@ void initialize_ntp_timekeeping(void)
   read_ntp_timer = READ_NTP_PERIOD;
 
   old_millis = millis();
-  millis_accumulator = -MILLISECONDS_PER_SECOND;
+  millis_accumulator = (-MILLISECONDS_PER_SECOND);
 }
 
 void poll_ntp_timekeeping(void)
