@@ -581,7 +581,7 @@ void poll_sensors(void)
 ///////////////////////////////////////////////////////////////////////////////
 // This section should be in its own file.
 
-#define OTHER_STUFF_PERIOD (100) // Unit is 1 millisecond.
+#define OTHER_STUFF_POLLING_PERIOD (100) // Unit is 1 millisecond.
 unsigned long old_other_stuff_millis; // Unit is 1 millisecond.
 signed long other_stuff_accumulator; // Unit is 1 millisecond.
 
@@ -605,7 +605,7 @@ void poll_other_stuff(void)
   new_millis = millis();
   other_stuff_accumulator += new_millis - old_other_stuff_millis;
   if (other_stuff_accumulator >= 0) {
-    other_stuff_accumulator -= OTHER_STUFF_PERIOD;
+    other_stuff_accumulator -= OTHER_STUFF_POLLING_PERIOD;
     other_stuff();
   }
   old_other_stuff_millis = new_millis;
