@@ -3,7 +3,6 @@
 
 """
 HAPI Smart Module v2.1.2
-Authors: Tyler Reed, Pedro Freitas
 Release: April 2017 Beta Milestone
 
 Copyright 2016 Maya Culpa, LLC
@@ -71,11 +70,12 @@ class Alert(object):
                 setattr(self, key, value)
             self.lower_threshold = float(self.lower_threshold)
             self.upper_threshold = float(self.upper_threshold)
-            database.close()
         except Exception as excpt:
             self.logger.exception("Error fetching alert parameters from database: %s.", excpt)
+        finally:
+            database.close()
 
     def check_alert(self, current_value):
         """Check for alert to a given _value_."""
         if not self.lower_threshold <= float(current_value) <= self.upper_threshold:
-            self.logger.info("[!] ALERT DETECTED. Value: %s." % current_value)
+            self.logger.info("[!] ALERT DETECTED. Value: %s.", current_value)

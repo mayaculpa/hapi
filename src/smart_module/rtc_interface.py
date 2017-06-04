@@ -141,7 +141,7 @@ class RTCInterface(object):
                 for i in range(n)
             ]
         except Exception as excpt:
-            self.logger.exception("Error reading %s from EEPROM. %s." % (name, excpt))
+            self.logger.exception("Error reading %s from EEPROM. %s.", name, excpt)
 
         s = ''.join(chr(c) for c in bytes_)
         return s.strip()
@@ -162,7 +162,7 @@ class RTCInterface(object):
             try:
                 self.ds3231.write_AT24C32_byte(address + i, ord(c))
             except Exception as excpt:
-                self.logger.exception("Error writing %s to EEPROM. %s." % (name, excpt))
+                self.logger.exception("Error writing %s to EEPROM. %s.", name, excpt)
                 return
 
     def get_type(self):

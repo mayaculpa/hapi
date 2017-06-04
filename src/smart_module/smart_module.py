@@ -3,7 +3,6 @@
 
 """
 HAPI Smart Module v2.1.2
-Authors: Tyler Reed, Pedro Freitas
 Release: April 2017 Beta Milestone
 
 Copyright 2016 Maya Culpa, LLC
@@ -222,10 +221,11 @@ class SmartModule(object):
             for row in db_elements:
                 for field_name, field_value in zip(field_names, row):
                     setattr(self, field_name, field_value)
-            database.close()
             self.log.info("Site data loaded.")
         except Exception as excpt:
             self.log.exception("Error loading site data: %s.", excpt)
+        finally:
+            database.close()
 
     def connect_influx(self, database_name):
         """Connect to database named database_name on InfluxDB server.
@@ -400,9 +400,10 @@ class SmartModule(object):
             database = sqlite3.connect(utilities.DB_HIST)
             database.cursor().execute(*command)
             database.commit()
-            database.close()
         except Exception as excpt:
             self.log.exception("Error logging command: %s.", excpt)
+        finally:
+            database.close()
 
     def get_env(self):
         now = datetime.datetime.now()
@@ -504,10 +505,11 @@ class Scheduler(object):
                 for field_name, field_value in zip(field_names, row):
                     setattr(job, field_name, field_value)
                 jobs.append(job)
-            database.close()
             self.log.info("Schedule Data Loaded.")
         except Exception as excpt:
             self.log.exception("Error loading schedule. %s.", excpt)
+        finally:
+            database.close()
 
         return jobs
 
@@ -605,11 +607,12 @@ class DataSync(object):
             data = database.cursor().execute(sql)
             for element in data:
                 version = element[0]
-            database.close()
             DataSync.log.info("Read database version: %s." % version)
             return version
         except Exception as excpt:
             DataSync.log.exception("Error reading database version: %s.", excpt)
+        finally:
+            database.close()
 
     @staticmethod
     def write_db_version():
@@ -619,10 +622,11 @@ class DataSync(object):
             database = sqlite3.connect(utilities.DB_CORE)
             database.cursor().execute(*command)
             database.commit()
-            database.close()
             DataSync.log.info("Wrote database version: %s." % version)
         except Exception as excpt:
             DataSync.log.exception("Error writing database version: %s.", excpt)
+        finally:
+            database.close()
 
     @staticmethod
     def publish_core_db(comm):

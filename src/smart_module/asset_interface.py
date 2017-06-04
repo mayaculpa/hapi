@@ -3,7 +3,6 @@
 
 '''
 HAPI Generic Asset Interface
-Authors: Tyler Reed
 Release: April 2017, Alpha Milestone
 Copyright 2016 Maya Culpa, LLC
 

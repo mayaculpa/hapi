@@ -3,7 +3,6 @@
 
 """
 HAPI Master Controller v1.0
-Author: Tyler Reed
 Release: March 2017 Alpha
 
 Copyright 2016 Maya Culpa, LLC
