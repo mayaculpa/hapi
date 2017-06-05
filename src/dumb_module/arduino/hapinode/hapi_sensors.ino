@@ -35,8 +35,7 @@ Communications Method
 */
 
 void setupSensors(void){
-  int i;
-  // Initialize Digital Pins for Input or Output - From the arrays pinControl and pinDefaults
+// Initialize Digital Pins for Input or Output - From the arrays pinControl and pinDefaults
   for (int x = 0; x < (NUM_DIGITAL+NUM_ANALOG); x++) {
     if (pinControl[x] == 1) {
       pinMode(x, INPUT); // Digital Input
@@ -68,9 +67,14 @@ void setupSensors(void){
   wp_sensors.begin();
 
 // Start the flow sensor
-  pinMode(sFlow_PIN, INPUT);
-  flowrate.attach(sFlow_PIN);
+  pinMode(sWtrFlow_PIN, INPUT);
+  flowrate.attach(sWtrFlow_PIN);
   flowrate.interval(5);
+
+// Start the I2C
+  Wire.begin(SDA_PIN,SCL_PIN);      // Default
+  Wire.setClock(400000);  // choose 400 kHz I2C rate
+  delay(1000);
 }
 
 String getPinArray() {
@@ -117,7 +121,7 @@ float readTemperatured(int iDevice) {
   }
   else {
     returnValue = h;
-    if (metric == false) {
+    if (!metric) {
       returnValue = (returnValue * 9.0)/ 5.0 + 32.0; // Convert Celsius to Fahrenheit
     }
   }
@@ -137,8 +141,8 @@ float read1WireTemperature(int iDevice) {
   }
   else
   {
-    if (metric == false) {
-      returnValue = (returnValue * 9.0)/ 5.0 + 32.0; // Convert Celsius to Fahrenheit 
+    if (!metric) {
+      returnValue = (returnValue * 9.0)/ 5.0 + 32.0; // Convert Celsius to Fahrenheit
     }
   }
 //  Serial.print("18B20 Temperature: ");
@@ -146,18 +150,20 @@ float read1WireTemperature(int iDevice) {
   return returnValue;
 }
 
-float readpH(int iDevice) {
+float readpH(int Device) {
   // readpH - Reads pH from an analog pH sensor (Robot Mesh SKU: SEN0161, Module version 1.0)
   unsigned long int avgValue;  //Store the average value of the sensor feedback
   float b;
   int buf[10], temp;
-
-  for (int i = 0; i < 10; i++) //Get 10 sample value from the sensor for smooth the value
+  ControlData d;
+  d = HapicData[Device];
+  
+  for (int i = 0; i < 10; i++) // Get 10 sample values from the sensor
   {
-    buf[i] = analogRead(iDevice);
+    buf[i] = analogRead(d.hcs_sensepin);  // Get the correct pin from the ControlData structure
     delay(10);
   }
-  for (int i = 0; i < 9; i++) //sort the analog from small to large
+  for (int i = 0; i < 9; i++) // Sort the analog from small to large
   {
     for (int j = i + 1; j < 10; j++)
     {
@@ -170,27 +176,30 @@ float readpH(int iDevice) {
     }
   }
   avgValue = 0;
-  for (int i = 2; i < 8; i++)               //take the average value of 6 center sample
+  for (int i = 2; i < 8; i++)               // Take the average value of 6 center samples
     avgValue += buf[i];
-  float phValue = (float)avgValue * 5.0 / 1024 / 6; //convert the analog into millivolt
+  float phValue = ((((float)avgValue * 5.0) / 1024) / 6); // Convert the analog into millivolt    
+
   phValue = 3.5 * phValue;                  //convert the millivolt into pH value
 //  Serial.print("pH: ");
 //  Serial.println(phValue);
   return phValue;
 }
 
-float readTDS(int iDevice) {
+float readTDS(int Device) {
   // readTDS - Reads pH from an analog TDS sensor
   unsigned long int avgValue;  //Store the average value of the sensor feedback
   float b;
   int buf[10], temp;
+  ControlData d;
+  d = HapicData[Device];
 
-  for (int i = 0; i < 10; i++) //Get 10 sample value from the sensor for smooth the value
+  for (int i = 0; i < 10; i++) // Get 10 sample values from the sensor
   {
-    buf[i] = analogRead(iDevice);
+    buf[i] = analogRead(d.hcs_sensepin);  // Get the correct pin from the ControlData structure
     delay(10);
   }
-  for (int i = 0; i < 9; i++) //sort the analog from small to large
+  for (int i = 0; i < 9; i++) // Sort the analog from small to large
   {
     for (int j = i + 1; j < 10; j++)
     {
@@ -203,14 +212,14 @@ float readTDS(int iDevice) {
     }
   }
   avgValue = 0;
-  for (int i = 2; i < 8; i++)               //take the average value of 6 center sample
+  for (int i = 2; i < 8; i++)               // Take the average value of 6 center samples
     avgValue += buf[i];
-  float TDSValue = (float)avgValue * 5.0 / 1024 / 6; //convert the analog into millivolt
+  float TDSValue = ((((float)avgValue * 5.0) / 1024) / 6); // Convert the analog into millivolt
 
 //TODO Need temperature compensation for TDS
-  TDSValue = 1.0 * TDSValue;                  //convert the millivolt into TDS value
+  TDSValue = 1.0 * TDSValue;                  // Convert the millivolt into TDS value
 //  Serial.print("TDS: ");
-//  Serial.println(TDSValue); 
+//  Serial.println(TDSValue);
   return TDSValue;
 }
 
@@ -222,30 +231,36 @@ float readTDS(int iDevice) {
 //  Dark overcast day   Bright room 100 lux   1.5 KΩ
 //  Overcast day        1000 lux              300 Ω
 
-float readLightSensor(int iDevice) {
+float readLightSensor(int Device) {
   // Simple code to read a Light value from a CDS sensor, with 10k to ground
   float Lux;
-  int RawADC = analogRead(iDevice);
+  ControlData d;
+  d = HapicData[Device];
+
+  int RawADC = analogRead(d.hcs_sensepin);
 //TODO
   Lux = (float)RawADC; // Need to do some processing to get lux from CDS reading
   return Lux;
 }
 
-float readFlow(int iDevice) {
-  // readWaterFlowRAte  - Uses an input pulse that creates an average flow rate
+float readFlow(int Device) {
+  // readWaterFlowRate  - Uses an input pulse that creates an average flow rate
   //                      The averaging is done in software and stores a 30second rolling count
-//TODO
+  ControlData d;
+  d = HapicData[Device];
+  
+  //TODO
 return (float)WaterFlowRate;
 }
 
-float readSensorPin(int iDevice) {
+float readSensorPin(int Device) {
    float pinData;
 //TODO
 return pinData;
 }
 
-boolean hapiSensors(void) {
-  for (int i = 0; i < SENSOR_FUNCTIONS; i++) {
+void hapiSensors(void) {
+  for (int i = 0; i < ArrayLength(HapisFunctions); i++) {
     sendMQTTAsset(SENSORID_FN, i);         // Sensor values
   }
 }

@@ -36,12 +36,12 @@ Communications Method
 
 void setupControls(void){
   int i;
-  // Initialize 
+  // Initialize
 }
 
-boolean checkControls(void) {
-  CFuncDef c;  
-  for (int i=0;i<CONTROL_FUNCTIONS;i++) {
+void checkControls(void) {
+  CFuncDef c;
+  for (int i=0;i<ArrayLength(HapicFunctions);i++) {
     c = HapicFunctions[i];                // initialize access structure
     c.oPtr(i);                            // call the check function
   }
@@ -52,32 +52,29 @@ float controlPumps(int Device){
   ControlData d;
   c = HapicFunctions[Device];
   d = HapicData[Device];
-  if (d.hc_active) {           // is the pump running?
-    if (d.hc_end > epoch) {     // Yes, should it be turned off?
+/*
+  Serial.print("Pump checking device:pin -> ");
+  Serial.print(Device);
+  Serial.print(" :  ");
+  Serial.println(d.hc_controlpin);
+  delay(5000);
+*/  
+  if (d.hc_active) {            // is the pump running?
+    if (d.hc_end > currentTime) {     // Yes, should it be turned off?
       d.hc_active = false;
-      digitalWrite(d.hc_controlpin, !(d.hc_polarity));     
+      digitalWrite(d.hc_controlpin, !d.hc_polarity);
       if (d.hc_repeat != 0) {   // Is repeat active?
         d.hc_start += d.hc_repeat;
         d.hc_end += d.hc_repeat;
       }
     }
-
-    if (c.iPtr(Device) < HapicData[Device].hcs_offValue) { // is the TurnOff value exceeded?
-      HapicData[Device].hc_running = false;
-      digitalWrite(
-        HapicData[Device].hc_controlpin,
-        !HapicData[Device].hc_polarity);
-    }    
-  } else 
-  {
-    if (d.hc_start >= epoch) {       // Is the timeOn value exceeded?
-      d.hc_active = true;        // Turn it On, Pump is now running
-      digitalWrite(d.hc_controlpin, d.hc_polarity); 
+    if (c.iPtr(Device) < d.hcs_offValue) { // is the TurnOff value exceeded?
+      d.hc_active = false;
+      digitalWrite(d.hc_controlpin, !d.hc_polarity);
     }
-    if (c.iPtr(Device) > d.hcs_onValue) { // Is the turnOn value exceeded?
-      d.hc_active = true;        // Turn it On, Pump is now running
-      digitalWrite(d.hc_controlpin, d.hc_polarity);
-    }
+  } else if (d.hc_start >= currentTime || c.iPtr(Device) > d.hcs_onValue) {
+    d.hc_active = true;        // Turn it On, Pump is now running
+    digitalWrite(d.hc_controlpin, d.hc_polarity);
   }
 }
 
@@ -86,10 +83,11 @@ float controlLamps(int Device){
   ControlData d;
   c = HapicFunctions[Device];
   d = HapicData[Device];
+  
   if (d.hc_active) {           // is the Lamp On?
-    if (d.hc_end > epoch) {     // Yes, should it be turned off?
+    if (d.hc_end > currentTime) {     // Yes, should it be turned off?
       d.hc_active = false;
-      digitalWrite(d.hc_controlpin, !(d.hc_polarity));   
+      digitalWrite(d.hc_controlpin, !d.hc_polarity);
       if (d.hc_repeat != 0) {   // Is repeat active?
         d.hc_start += d.hc_repeat;
         d.hc_end += d.hc_repeat;
@@ -97,19 +95,11 @@ float controlLamps(int Device){
     }
     if (c.iPtr(Device) < d.hcs_offValue) { // is the TurnOff value exceeded?
       d.hc_active = false;
-      digitalWrite(d.hc_controlpin, !(d.hc_polarity));  
-    }    
-  } else 
-  {
-    if (d.hc_start >= epoch) {    // Is the timeOn value exceeded?
-      d.hc_active = true;        // Turn it On, Lamp is now on
-      digitalWrite(d.hc_controlpin, d.hc_polarity);   
+      digitalWrite(d.hc_controlpin, !d.hc_polarity);
     }
-    if (c.iPtr(Device) > d.hcs_onValue) { // Is the turnOn value exceeded?
-      d.hc_active = true;                // Turn it On, Lamp is now on
-      digitalWrite(d.hc_controlpin, d.hc_polarity);
-    }
+  } else if (d.hc_start >= currentTime || c.iPtr(Device) > d.hcs_onValue) { // Is the turnOn value exceeded?
+    d.hc_active = true;        // Turn it On, Lamp is now on
+    digitalWrite(d.hc_controlpin, d.hc_polarity);
   }
 }
-
 

@@ -47,6 +47,7 @@ Communications Method
 #define MQTT_port 1883
 
 #define UDP_port 2390
+#define NTP_port 123
 
 #define HAPI_SSID "HAPInet"
 #define HAPI_PWD  "HAPIconnect"
