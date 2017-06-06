@@ -103,10 +103,6 @@ Communications Method
 #include "nodeboard.h"      // Node default pin allocations
 
 //**** Begin Main Variable Definition Section ****
-int loopcount;                      // Count of times through main loop (for LED etc)
-unsigned long old_millis; // Unit is one millisecond.
-signed long millis_accumulator; // Unit is one millisecond.
-unsigned long epoch;                // UTC seconds
 
 String HAPI_FW_VERSION = "v3.0";    // The version of the firmware the HN is running
 #ifdef HN_ENET
@@ -218,7 +214,6 @@ JsonObject& exception_topic = hn_topic_exception.createObject();
 #define CONTROLDATA2_FN 5  // CONTROL FUNCTION VALUE DATA
 
 const int ledPin = 2; // Use the built-in led for visual feedback
-boolean ledState = false;
 
 // Flow meter devices
 Bounce flowrate = Bounce();   // Use bouncer object to measure flow rate
@@ -442,8 +437,11 @@ void setup() {
 #endif
   Serial.print("Local IP:   ");
   Serial.println(timeServerIP);
-  getNTPTime();
-  initialize_epoch_timekeeping(void);
+
+  initialize_ntp_timekeeping();
+  initialize_led_flasher();
+  initialize_sensor_polling();
+  initialize_other_stuff_polling();
 
 // Start MQTT support
 // ==================
@@ -477,13 +475,26 @@ void setup() {
   Serial.println("Setup Complete. Listening for topics ..");
 }
 
-void initialize_epoch_timekeeping(void)
+///////////////////////////////////////////////////////////////////////////////
+// This section should be moved to ntp file.
+
+#define READ_NTP_PERIOD (6*SECONDS_PER_MINUTE) // Unit is one second.
+unsigned read_ntp_timer;
+
+unsigned long old_millis; // Unit is one millisecond.
+signed long millis_accumulator; // Unit is one millisecond.
+unsigned long epoch;                // UTC seconds
+
+void initialize_ntp_timekeeping(void)
 {
+  getNTPTime();
+  read_ntp_timer = READ_NTP_PERIOD;
+
   old_millis = millis();
-  millis_accumulator = -MILLISECONDS_PER_SECOND;
+  millis_accumulator = (-MILLISECONDS_PER_SECOND);
 }
 
-void poll_epoch_timekeeping(void)
+void poll_ntp_timekeeping(void)
 {
   /* call this at least once per second, preferably many times per second */
   unsigned long new_millis;
@@ -493,31 +504,119 @@ void poll_epoch_timekeeping(void)
   if (millis_accumulator >= 0) {
     millis_accumulator -= MILLISECONDS_PER_SECOND;
     epoch++;
+
+    if (read_ntp_timer <= 0) {
+      read_ntp_timer = READ_NTP_PERIOD;
+      getNTPTime();
+    }
+    read_ntp_timer--;
   }
   old_millis = new_millis;
 }
 
-void loop() {
-  poll_epoch_timekeeping();
+///////////////////////////////////////////////////////////////////////////////
+// This section should be in its own file.
 
-  // Wait for a new event, publish topic
-  if ((loopcount++ % 3600) == 0) {
-    getNTPTime();
-    loopcount = 0;
-  }
+// led is on for LED_ON_DURATION, then off for LED_OFF_DURATION, forever.
 
-  checkControls();              // Check all the timers on the controls
-  MQTTClient.loop();            // Check for MQTT topics
-  flashLED();                   // Flash LED - slow blink
+unsigned long old_led_flasher_millis; // Unit is one millisecond.
+signed long led_flasher_millis_accumulator; // Unit is one millisecond.
+boolean led_is_on = false;
 
-  delay(100);
+#define LED_ON_DURATION (1000) // Unit is one millisecond.
+#define LED_OFF_DURATION (9000) // Unit is one millisecond.
+
+void initialize_led_flasher(void)
+{
+  led_flasher_millis_accumulator = 0;
+  old_led_flasher_millis = millis();
+  led_is_on = false;
+  //^^^ consider moving initialization of port pin to here
+  digitalWrite(ledPin, led_is_on ? HIGH : LOW);
 }
 
-void flashLED(void) {
-  if ((loopcount++ % 100) == 0) {
-    ledState = !ledState;
-    digitalWrite(ledPin, ledState ? HIGH : LOW);
+void poll_led_flasher(void)
+{
+  /* call this at least once per second, preferably many times per second */
+  unsigned long new_millis;
+
+  new_millis = millis();
+  led_flasher_millis_accumulator += new_millis - old_led_flasher_millis;
+  if (led_flasher_millis_accumulator >= 0) {
+    led_is_on = !led_is_on;
+    digitalWrite(ledPin, led_is_on ? HIGH : LOW);
+    led_flasher_millis_accumulator -= (
+      led_is_on ? LED_ON_DURATION : LED_OFF_DURATION);
+  }
+  old_led_flasher_millis = new_millis;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// This section should be in its own file.
+
+#define SENSOR_POLL_PERIOD (10 * MILLISECONDS_PER_SECOND) // Unit is 1 ms.
+unsigned long old_sensor_millis; // Unit is one millisecond.
+signed long sensor_millis_accumulator; // Unit is one millisecond.
+
+void initialize_sensor_polling(void)
+{
+  old_sensor_millis = millis();
+  sensor_millis_accumulator = 0;
+}
+
+void poll_sensors(void)
+{
+  /* call this at least once per second, preferably many times per second */
+  unsigned long new_millis;
+
+  new_millis = millis();
+  sensor_millis_accumulator += new_millis - old_sensor_millis;
+  if (sensor_millis_accumulator >= 0) {
+    sensor_millis_accumulator -= SENSOR_POLL_PERIOD;
     hapiSensors();
   }
+  old_sensor_millis = new_millis;
 }
 
+///////////////////////////////////////////////////////////////////////////////
+// This section should be in its own file.
+
+#define OTHER_STUFF_POLLING_PERIOD (100) // Unit is 1 millisecond.
+unsigned long old_other_stuff_millis; // Unit is 1 millisecond.
+signed long other_stuff_accumulator; // Unit is 1 millisecond.
+
+void initialize_other_stuff_polling(void)
+{
+  old_other_stuff_millis = millis();
+  other_stuff_accumulator = 0;
+}
+
+void other_stuff(void)
+{
+  checkControls();              // Check all the timers on the controls
+  MQTTClient.loop();            // Check for MQTT topics
+}
+
+void poll_other_stuff(void)
+{
+  /* call this at least once per second, preferably many times per second */
+  unsigned long new_millis;
+
+  new_millis = millis();
+  other_stuff_accumulator += new_millis - old_other_stuff_millis;
+  if (other_stuff_accumulator >= 0) {
+    other_stuff_accumulator -= OTHER_STUFF_POLLING_PERIOD;
+    other_stuff();
+  }
+  old_other_stuff_millis = new_millis;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void loop(void)
+{
+  poll_ntp_timekeeping();
+  poll_other_stuff();
+  poll_led_flasher();
+  poll_sensors();
+}
