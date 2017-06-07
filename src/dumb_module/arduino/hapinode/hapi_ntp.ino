@@ -34,6 +34,8 @@ Communications Method
   MQTT        Listens for messages on Port 1883
 */
 
+#define NTP_UDP_PORT (123)
+
 void getNTPTime(void) {
   sendNTPpacket(timeServerIP); // send an NTP packet to a time server
   // wait to see if a reply is available
@@ -109,7 +111,7 @@ unsigned long sendNTPpacket(IPAddress& address)
 
   // all NTP fields have been given values, now
   // you can send a packet requesting a timestamp:
-  udp.beginPacket(address, 123); //NTP requests are to port 123
+  udp.beginPacket(address, NTP_UDP_PORT);
   udp.write(packetBuffer, NTP_PACKET_SIZE);
   udp.endPacket();
 }
