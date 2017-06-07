@@ -49,7 +49,7 @@ class Communicator(object):
         try:
             self.logger.info("Connecting to %s at %s." % (self.broker_name, self.broker_ip))
             self.client.connect(host=self.broker_ip, port=1883, keepalive=60)
-            self.client.loop_start()            
+            self.client.loop_start()
         except Exception as excpt:
             self.logger.exception("[Exiting] Error connecting to broker: %s", excpt)
             sys.exit(-1)
