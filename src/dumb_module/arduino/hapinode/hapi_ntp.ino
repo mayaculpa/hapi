@@ -43,11 +43,11 @@ void getNTPTime(void) {
 
   int cb = udp.parsePacket();
   if (!cb) {
-    Serial.println("no packet yet");
+    Serial.println(F("no packet yet"));
     return;
   }
 
-//  Serial.print("packet received, length=");
+//  Serial.print(F("packet received, length="));
 //  Serial.println(cb);
   // We've received a packet, read the data from it
   udp.read(packetBuffer, NTP_PACKET_SIZE); // read the packet into the buffer
@@ -60,11 +60,11 @@ void getNTPTime(void) {
   // combine the four bytes (two words) into a long integer
   // this is NTP time (seconds since Jan 1 1900):
   unsigned long secsSince1900 = highWord << 16 | lowWord;
-//  Serial.print("Seconds since Jan 1 1900 = " );
+//  Serial.print(F("Seconds since Jan 1 1900 = ") );
 //  Serial.println(secsSince1900);
 
   // now convert NTP time into everyday time:
-  Serial.print("Unix time = ");
+  Serial.print(F("Unix time = "));
   // Unix time starts on Jan 1 1970. In seconds, that's 2208988800:
   const unsigned long seventyYears = 2208988800UL;
   // subtract seventy years:
@@ -74,7 +74,7 @@ void getNTPTime(void) {
 
 /*
   // print the hour, minute and second:
-  Serial.print("The UTC time is ");       // UTC is the time at Greenwich Meridian (GMT)
+  Serial.print(F("The UTC time is "));       // UTC is the time at Greenwich Meridian (GMT)
   Serial.print((epoch  % 86400L) / 3600); // print the hour (86400 equals secs per day)
   Serial.print(':');
   if ( ((epoch % 3600) / 60) < 10 ) {
@@ -94,7 +94,7 @@ void getNTPTime(void) {
 // send an NTP request to the time server at the given address
 unsigned long sendNTPpacket(IPAddress& address)
 {
-  Serial.println("sending NTP packet...");
+  Serial.println(F("sending NTP packet..."));
   // set all bytes in the buffer to 0
   memset(packetBuffer, 0, NTP_PACKET_SIZE);
   // Initialize values needed to form NTP request

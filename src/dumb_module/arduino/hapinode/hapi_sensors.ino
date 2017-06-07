@@ -75,13 +75,13 @@ void setupSensors(void){
 
 String getPinArray() {
   // Returns all pin configuration information
-  String response = "";
+  String response = F("");
   for (int i = 0; i < NUM_DIGITAL+NUM_ANALOG; i++) {
     if (i <= (NUM_DIGITAL-1)) {
       response = response + String(i) + String(pinControl[i]);
     }
     else {
-      response = response + "A" + String(i - NUM_DIGITAL) + String(pinControl[i]);
+      response = response + F("A") + String(i - NUM_DIGITAL) + String(pinControl[i]);
     }
   }
   return response;
@@ -100,7 +100,7 @@ float readHumidity(int iDevice) {
   else {
     returnValue = h;
   }
-//  Serial.print("DHT Humidity: ");
+//  Serial.print(F("DHT Humidity: "));
 //  Serial.println(returnValue);
   return returnValue;
 }
@@ -121,7 +121,7 @@ float readTemperatured(int iDevice) {
       returnValue = (returnValue * 9.0)/ 5.0 + 32.0; // Convert Celsius to Fahrenheit
     }
   }
-//  Serial.print("DHT Temperature: ");
+//  Serial.print(F("DHT Temperature: "));
 //  Serial.println(returnValue);
   return returnValue;
 }
@@ -141,7 +141,7 @@ float read1WireTemperature(int iDevice) {
       returnValue = (returnValue * 9.0)/ 5.0 + 32.0; // Convert Celsius to Fahrenheit
     }
   }
-//  Serial.print("18B20 Temperature: ");
+//  Serial.print(F("18B20 Temperature: "));
 //  Serial.println(returnValue);
   return returnValue;
 }
@@ -174,7 +174,7 @@ float readpH(int iDevice) {
     avgValue += buf[i];
   float phValue = (float)avgValue * 5.0 / 1024 / 6; //convert the analog into millivolt
   phValue = 3.5 * phValue;                  //convert the millivolt into pH value
-//  Serial.print("pH: ");
+//  Serial.print(F("pH: "));
 //  Serial.println(phValue);
   return phValue;
 }
@@ -209,7 +209,7 @@ float readTDS(int iDevice) {
 
 //TODO Need temperature compensation for TDS
   TDSValue = 1.0 * TDSValue;                  //convert the millivolt into TDS value
-//  Serial.print("TDS: ");
+//  Serial.print(F("TDS: "));
 //  Serial.println(TDSValue);
   return TDSValue;
 }
