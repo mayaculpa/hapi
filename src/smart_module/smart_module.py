@@ -607,7 +607,7 @@ class DataSync(object):
             data = database.cursor().execute(sql)
             for element in data:
                 version = element[0]
-            DataSync.log.info("Read database version: %s." % version)
+            DataSync.log.info("Read database version: %s.", version)
             return version
         except Exception as excpt:
             DataSync.log.exception("Error reading database version: %s.", excpt)
@@ -622,7 +622,7 @@ class DataSync(object):
             database = sqlite3.connect(utilities.DB_CORE)
             database.cursor().execute(*command)
             database.commit()
-            DataSync.log.info("Wrote database version: %s." % version)
+            DataSync.log.info("Wrote database version: %s.", version)
         except Exception as excpt:
             DataSync.log.exception("Error writing database version: %s.", excpt)
         finally:
