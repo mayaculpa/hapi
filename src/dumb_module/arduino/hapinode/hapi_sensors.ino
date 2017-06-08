@@ -157,7 +157,7 @@ float readpH(int Device) {
   int buf[10], temp;
   ControlData d;
   d = HapicData[Device];
-  
+
   for (int i = 0; i < 10; i++) // Get 10 sample values from the sensor
   {
     buf[i] = analogRead(d.hcs_sensepin);  // Get the correct pin from the ControlData structure
@@ -178,7 +178,7 @@ float readpH(int Device) {
   avgValue = 0;
   for (int i = 2; i < 8; i++)               // Take the average value of 6 center samples
     avgValue += buf[i];
-  float phValue = ((((float)avgValue * 5.0) / 1024) / 6); // Convert the analog into millivolt    
+  float phValue = ((((float)avgValue * 5.0) / 1024) / 6); // Convert the analog into millivolt
 
   phValue = 3.5 * phValue;                  //convert the millivolt into pH value
 //  Serial.print("pH: ");
@@ -248,7 +248,7 @@ float readFlow(int Device) {
   //                      The averaging is done in software and stores a 30second rolling count
   ControlData d;
   d = HapicData[Device];
-  
+
   //TODO
 return (float)WaterFlowRate;
 }

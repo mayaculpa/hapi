@@ -361,7 +361,7 @@ void setup() {
 //  digitalWrite(LED_PIN, HIGH);
   Serial.begin(115200);       // Debug port
   while (!Serial) ; // wait for Arduino Serial Monitor
-  
+
 // Start Debug port and sensors
 // ============================
   setupSensors();             // Initialize I/O and start devices
@@ -463,7 +463,7 @@ void setup() {
 
   setupTime();          // initialize RTC using ntp, if available
   mscount = millis();   // initialize the millisecond counter
- 
+
 // Start MQTT support
 // ==================
   MQTTClient.setServer(MQTT_broker_address, MQTT_port);

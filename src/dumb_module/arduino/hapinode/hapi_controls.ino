@@ -58,7 +58,7 @@ float controlPumps(int Device){
   Serial.print(" :  ");
   Serial.println(d.hc_controlpin);
   delay(5000);
-*/  
+*/
   if (d.hc_active) {            // is the pump running?
     if (d.hc_end > currentTime) {     // Yes, should it be turned off?
       d.hc_active = false;
@@ -83,7 +83,7 @@ float controlLamps(int Device){
   ControlData d;
   c = HapicFunctions[Device];
   d = HapicData[Device];
-  
+
   if (d.hc_active) {           // is the Lamp On?
     if (d.hc_end > currentTime) {     // Yes, should it be turned off?
       d.hc_active = false;

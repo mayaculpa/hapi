@@ -10,7 +10,7 @@ void setupTime()  {
      Serial.println("RTC not set and no ntp server !!");
      return;
   }
-  Serial.println("RTC has the system time");          
+  Serial.println("RTC has the system time");
 }
 
 void updateRTC(void) {
@@ -27,8 +27,8 @@ void digitalClockDisplay(){
   Serial.print(" ");
   Serial.print(month());
   Serial.print(" ");
-  Serial.print(year()); 
-  Serial.println(); 
+  Serial.print(year());
+  Serial.println();
 }
 
 void printDigits(int digits){
