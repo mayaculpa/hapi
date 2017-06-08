@@ -85,12 +85,13 @@ class Communicator(object):
         self.subscribe("SYNCHRONIZE/GET")
         self.subscribe("ASSET/QUERY" + "/#")
         self.subscribe("STATUS/QUERY")
+        self.subscribe("ENV/#")
 
     # The callback when a message is received
     def on_message(self, client, userdata, msg):
         print(msg.topic, msg.payload)
         if "ENV/QUERY" in msg.topic:
-            self.smart_module.get_env(msg.payload)
+            self.smart_module.get_env()
 
         elif "ASSET/QUERY" in msg.topic:
             self.send("ASSET/RESPONSE/" + self.smart_module.asset.id,

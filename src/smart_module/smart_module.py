@@ -413,7 +413,6 @@ class SmartModule(object):
               Timestamp: {timestamp}
               Uptime: This Smart Module has been online for '''
                   '''{days} days, {hours} hours, {minutes} minutes and {seconds} seconds.
-            ###
         ''').format(
             version=utilities.VERSION,
             platform=sys.platform,
