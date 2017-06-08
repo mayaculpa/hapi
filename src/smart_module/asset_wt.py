@@ -44,11 +44,8 @@ class AssetImpl(object):
 
     def read_temp_raw(self):
         try:
-            lines = ""
-            with open(self.device_path, "r") as tempfile:
-                for line in tempfile:
-                    lines += line.decode("utf-8")
-            return lines.split("\n")
+            with open(self.device_path, "r") as f:
+                return f.read().decode('utf-8').split('\n')
         except Exception as excpt:
             self.log.exception("Error reading raw temperature data: %s.", excpt)
 
