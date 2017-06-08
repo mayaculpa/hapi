@@ -238,7 +238,7 @@ float readLightSensor(int Device) {
   d = HapicData[Device];
 
   int RawADC = analogRead(d.hcs_sensepin);
-//TODO
+  //TODO
   Lux = (float)RawADC; // Need to do some processing to get lux from CDS reading
   return Lux;
 }
@@ -250,13 +250,13 @@ float readFlow(int Device) {
   d = HapicData[Device];
 
   //TODO
-return (float)WaterFlowRate;
+  return (float)WaterFlowRate;
 }
 
 float readSensorPin(int Device) {
-   float pinData;
-//TODO
-return pinData;
+  float pinData;
+  //TODO
+  return pinData;
 }
 
 void hapiSensors(void) {
