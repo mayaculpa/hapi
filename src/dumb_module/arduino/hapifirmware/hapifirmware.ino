@@ -394,7 +394,7 @@ void assembleResponse(String &responseString, String varName, String value) {
   }
 
   if (!varName.equals(F(""))) {
-    responseString = responseString + F("\")F(" + varName + ")\F("") + F(":") + F("\")F(" + value + ")\F("") + F(",");
+    responseString = responseString + F("\"") + varName + F("\"") + F(":") + F("\"") + value + F("\"") + F(",");
   }
   else {
     if (responseString.endsWith(F(","))) {
