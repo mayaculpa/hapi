@@ -120,7 +120,7 @@ class SmartModule(object):
         """Check for published MQTT. If it finds port 1883 of type '_mqtt', update broker name."""
         # Get the service we want (port 1883 and type '_mqtt._tcp.local.'
         info = zeroconf.get_service_info(service_type, name)
-        if not info.port == 1883 and not service_type == "_mqtt._tcp.local.":
+        if not (info.port == 1883 and service_type == "_mqtt._tcp.local."):
             return
 
         if state_change is ServiceStateChange.Added:
