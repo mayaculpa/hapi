@@ -80,10 +80,10 @@ String getPinArray() {
   String response = "";
   for (int i = 0; i < NUM_DIGITAL+NUM_ANALOG; i++) {
     if (i <= (NUM_DIGITAL-1)) {
-      response = response + String(i) + String(pinControl[i]);
+      response += String(i) + String(pinControl[i]);
     }
     else {
-      response = response + "A" + String(i - NUM_DIGITAL) + String(pinControl[i]);
+      response += "A" + String(i - NUM_DIGITAL) + String(pinControl[i]);
     }
   }
   return response;
