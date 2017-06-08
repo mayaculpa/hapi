@@ -34,8 +34,6 @@ Communications Method
   MQTT        Listens for messages on Port 1883
 */
 
-#define MILLISECONDS_PER_SECOND (1000)
-
 //**** Begin Board Configuration Section ****
 
 // Board Type
