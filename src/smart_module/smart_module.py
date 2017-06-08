@@ -162,7 +162,6 @@ class SmartModule(object):
             sys.exit(-1)
 
         self.comm.connect()
-        self.comm.client.loop_start()
         # we could leave it open to handle removed MQTT service, if that was the broker
         zeroconf.close()
         t_end = time.time() + 10
@@ -231,6 +230,7 @@ class SmartModule(object):
         Create database if it does not already exist.
         Return the connection to the database."""
 
+        self.ifconn = InfluxDBClient("127.0.0.1", 8086, "root", "root")
         databases = self.ifconn.get_list_database()
         for db in databases:
             if database_name in db.values():
@@ -280,13 +280,20 @@ class SmartModule(object):
                         "used": information.disk["used"]
                     }
                    }]
+        tempinf = [{"measurement": "internal", "tags": {"asset": self.name}, "time": timestamp,
+                    "fields": {
+                    "unit": "C",
+                    "unit temp": str(self.rtc.get_temp()),
+                    }
+                   }]
+
         ctsinfo = [{"measurement": "clients", "tags": {"asset": self.name}, "time": timestamp,
                     "fields": {
                         "unit": "integer",
                         "clients": information.clients
                     }
                    }]
-        json = cpuinfo + meminfo + netinfo + botinfo + diskinf + ctsinfo
+        json = cpuinfo + meminfo + netinfo + botinfo + diskinf + tempinf + ctsinfo
         conn.write_points(json)
 
     def get_status(self, brokerconnections):
