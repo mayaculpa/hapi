@@ -34,6 +34,8 @@ Communications Method
   MQTT        Listens for messages on Port 1883
 */
 
+#define MILLISECONDS_PER_SECOND (1000)
+
 //**** Begin Board Configuration Section ****
 
 // Board Type
@@ -500,6 +502,26 @@ void setup() {
   Alarm.timerRepeat(2, checkControls);    // Every  2 seconds
   Alarm.timerRepeat(5, hapiSensors);      // Every  5 seconds
   Alarm.alarmRepeat(3,30,0,updateRTC);    // 3:30am every day
+}
+
+void initialize_epoch_timekeeping(void)
+{
+  old_millis = millis();
+  millis_accumulator = -MILLISECONDS_PER_SECOND;
+}
+
+void poll_epoch_timekeeping(void)
+{
+  /* call this at least once per second, preferably many times per second */
+  unsigned long new_millis;
+
+  new_millis = millis();
+  millis_accumulator += new_millis - old_millis;
+  if (millis_accumulator >= 0) {
+    millis_accumulator -= MILLISECONDS_PER_SECOND;
+    epoch++;
+  }
+  old_millis = new_millis;
 }
 
 void loop() {
