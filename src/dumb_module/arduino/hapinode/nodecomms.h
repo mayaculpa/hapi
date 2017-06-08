@@ -41,15 +41,15 @@ Communications Method
 // Make sure to update this for your own WiFi and/or MQTT Broker!
 // ==============================================================
 
-#define MQTT_broker_address "mqttbroker"    // IP address of mqtt broker
-#define MQTT_broker_username "mqttuser"      // Required if broker security is enabled
-#define MQTT_broker_password "mqttpass"
+#define MQTT_broker_address F("mqttbroker")    // IP address of mqtt broker
+#define MQTT_broker_username F("mqttuser")      // Required if broker security is enabled
+#define MQTT_broker_password F("mqttpass")
 #define MQTT_port 1883
 
 #define UDP_port 2390
 #define NTP_port 123
 
-#define HAPI_SSID "HAPInet"
-#define HAPI_PWD  "HAPIconnect"
+#define HAPI_SSID F("HAPInet")
+#define HAPI_PWD  F("HAPIconnect")
 
 #endif //HAPIWiFi_H
