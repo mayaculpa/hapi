@@ -90,14 +90,21 @@ boolean sendMQTTStatus(void){
 boolean sendAllMQTTAssets(void) {
   //Process digital pins
   for (int i = 0; i < NUM_DIGITAL; i++) {
-    if (0 < pinControl[i] && pinControl[i] < 5) {
+    switch (pinControl[i]) {
+    case DIGITAL_INPUT_PIN:
+    case DIGITAL_INPUT_PULLUP_PIN:
+    case DIGITAL_OUTPUT_PIN:
+    case ANALOG_OUTPUT_PIN:
       while (!(sendMQTTAsset(SENSORID_DIO, i)))  // Until it is sent
         ;
+      break;
+    default:
+      break;
     }
   }
   //Process analog pins
-  for (int x = 0; x < NUM_ANALOG; x++) {
-    while (!(sendMQTTAsset(SENSORID_AIO, x+NUM_DIGITAL)))  // Until it is sent
+  for (int i = 0; i < NUM_ANALOG; i++) {
+    while (!(sendMQTTAsset(SENSORID_AIO, i+NUM_DIGITAL)))  // Until it is sent
       ;
   }
   // Process Custom Functions
