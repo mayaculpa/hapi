@@ -236,7 +236,6 @@ JsonObject& exception_topic = hn_topic_exception.createObject();
 #define CONTROLDATA1_FN 4  // CONTROL FUNCTION TIME DATA
 #define CONTROLDATA2_FN 5  // CONTROL FUNCTION VALUE DATA
 
-
 boolean ledState = false;
 
 // Flow meter devices
@@ -502,26 +501,6 @@ void setup() {
   Alarm.timerRepeat(2, checkControls);    // Every  2 seconds
   Alarm.timerRepeat(5, hapiSensors);      // Every  5 seconds
   Alarm.alarmRepeat(3,30,0,updateRTC);    // 3:30am every day
-}
-
-void initialize_epoch_timekeeping(void)
-{
-  old_millis = millis();
-  millis_accumulator = -MILLISECONDS_PER_SECOND;
-}
-
-void poll_epoch_timekeeping(void)
-{
-  /* call this at least once per second, preferably many times per second */
-  unsigned long new_millis;
-
-  new_millis = millis();
-  millis_accumulator += new_millis - old_millis;
-  if (millis_accumulator >= 0) {
-    millis_accumulator -= MILLISECONDS_PER_SECOND;
-    epoch++;
-  }
-  old_millis = new_millis;
 }
 
 void loop() {
