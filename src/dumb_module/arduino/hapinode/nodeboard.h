@@ -52,7 +52,7 @@ Communications Method
 #define TDS_DRIVE2 27     // Reserved pin for TDS probe
 
 #define cWatr_PIN 4       // Water pump control pin
-#define sFlow_PIN 36      // Water flow sensor pin
+#define sWtrFlow_PIN 36   // Water flow sensor pin
 #define cFill_PIN 2       // Fill pump control pin
 #define sFloat_PIN 39      // Fill float sensor pin
 #define cNutr_PIN 15      // Nutrient pump control pin
