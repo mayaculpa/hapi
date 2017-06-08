@@ -48,16 +48,16 @@ class Log(object):
         )
         return str(string)
 
-    def info(self, information):
-        """Append INFO in information to file. Accepts a single string."""
-        string = self.build_string("INFO", information)
+    def info(self, format, *values):
+        """Append INFO in format % values to file."""
+        string = self.build_string("INFO", format % values)
         with open(self.log_file, "a") as log:
             log.write(string + "\n")
         print(string)
 
-    def exception(self, information):
-        """Append ERROR in information to file. Accepts a single string."""
-        string = self.build_string("[!!] ERROR", information)
+    def exception(self, format, *values):
+        """Append ERROR in format % values to file."""
+        string = self.build_string("[!!] ERROR", format % values)
         with open(self.log_file, "a") as log:
             log.write(string + "\n")
         print(string)

@@ -114,7 +114,7 @@ class SmartModule(object):
             # We will change it soon!
             os.system("sudo systemctl start avahi-daemon.service")
         except Exception as excpt:
-            self.log.info("Error trying to become the Broker: %s." % excpt)
+            self.log.info("Error trying to become the Broker: %s.", excpt)
 
     def find_service(self, zeroconf, service_type, name, state_change):
         """Check for published MQTT. If it finds port 1883 of type '_mqtt', update broker name."""
@@ -197,7 +197,7 @@ class SmartModule(object):
                 self.comm.send("ANNOUNCE", self.hostname + ".local is running the Scheduler.")
                 self.log.info("Scheduler program loaded.")
             except Exception as excpt:
-                self.log.exception("Error initializing scheduler. %s." % excpt)
+                self.log.exception("Error initializing scheduler. %s.", excpt)
 
     def load_site_data(self):
         field_names = '''
@@ -224,7 +224,7 @@ class SmartModule(object):
             database.close()
             self.log.info("Site data loaded.")
         except Exception as excpt:
-            self.log.exception("Error loading site data: %s." % excpt)
+            self.log.exception("Error loading site data: %s.", excpt)
 
     def connect_influx(self, database_name):
         """Connect to database named database_name on InfluxDB server.
@@ -296,7 +296,7 @@ class SmartModule(object):
             sysinfo.clients = brokerconnections
             return sysinfo
         except Exception as excpt:
-            self.log.exception("Error getting System Status: %s." % excpt)
+            self.log.exception("Error getting System Status: %s.", excpt)
 
     def on_query_status(self):
         """It'll be called by the Scheduler to ask for System Status information."""
@@ -310,7 +310,7 @@ class SmartModule(object):
         try:
             value = str(self.ai.read_value())
         except Exception as excpt:
-            self.log.exception("Error getting asset data: %s." % excpt)
+            self.log.exception("Error getting asset data: %s.", excpt)
             value = -1000
 
         return value
@@ -321,7 +321,7 @@ class SmartModule(object):
                 self.push_data(self.asset.name, self.asset.context, self.asset.value,
                                self.asset.unit)
             except Exception as excpt:
-                self.log.exception("Error logging sensor data: %s." % excpt)
+                self.log.exception("Error logging sensor data: %s.", excpt)
         else:
             # For virtual assets, assume that the data is already parsed JSON
             unit_symbol = {
@@ -335,7 +335,7 @@ class SmartModule(object):
                     self.push_data(factor, "Environment", value, unit_symbol[factor])
 
             except Exception as excpt:
-                self.log.exception("Error logging sensor data: %s." % excpt)
+                self.log.exception("Error logging sensor data: %s.", excpt)
 
     def push_data(self, asset_name, asset_context, value, unit):
         try:
@@ -357,7 +357,7 @@ class SmartModule(object):
             conn.write_points(json_body)
             self.log.info("Wrote to analytic database: %s." % json_body)
         except Exception as excpt:
-            self.log.exception("Error writing to analytic database: %s." % excpt)
+            self.log.exception("Error writing to analytic database: %s.", excpt)
 
     def get_weather(self):
         response = ""
@@ -377,7 +377,7 @@ class SmartModule(object):
             response = parsed_json['current_observation']
             f.close()
         except Exception as excpt:
-            self.log.exception("Error getting weather data: %s." % excpt)
+            self.log.exception("Error getting weather data: %s.", excpt)
         return response
 
     def log_command(self, job, result):
@@ -393,7 +393,7 @@ class SmartModule(object):
             database.commit()
             database.close()
         except Exception as excpt:
-            self.log.exception("Error logging command: %s." % excpt)
+            self.log.exception("Error logging command: %s.", excpt)
 
     def get_env(self):
         now = datetime.datetime.now()
@@ -430,7 +430,7 @@ class SmartModule(object):
         try:
             self.comm.send("ENV/RESPONSE", s)
         except Exception as excpt:
-            self.log.exception("Error getting environment data: %s." % excpt)
+            self.log.exception("Error getting environment data: %s.", excpt)
 
 class Scheduler(object):
     def __init__(self):
@@ -499,7 +499,7 @@ class Scheduler(object):
             database.close()
             self.log.info("Schedule Data Loaded.")
         except Exception as excpt:
-            self.log.exception("Error loading schedule. %s." % excpt)
+            self.log.exception("Error loading schedule. %s.", excpt)
 
         return jobs
 
@@ -550,7 +550,7 @@ class Scheduler(object):
                 response = eval(job.command)
                 self.smart_module.log_sensor_data(response, True)
             except Exception as excpt:
-                self.log.exception("Error running job. %s." % excpt)
+                self.log.exception("Error running job. %s.", excpt)
         else:
             try:
                 if job.sequence != "":
@@ -586,7 +586,7 @@ class Scheduler(object):
                     #self.log_command(job, "")
 
             except Exception as excpt:
-                self.log.exception("Error running job: %s." % excpt)
+                self.log.exception("Error running job: %s.", excpt)
 
 class DataSync(object):
     log = log.Log("datasync.log")
@@ -603,7 +603,7 @@ class DataSync(object):
             DataSync.log.info("Read database version: %s." % version)
             return version
         except Exception as excpt:
-            DataSync.log.exception("Error reading database version: %s." % excpt)
+            DataSync.log.exception("Error reading database version: %s.", excpt)
 
     @staticmethod
     def write_db_version():
@@ -616,7 +616,7 @@ class DataSync(object):
             database.close()
             DataSync.log.info("Wrote database version: %s." % version)
         except Exception as excpt:
-            DataSync.log.exception("Error writing database version: %s." % excpt)
+            DataSync.log.exception("Error writing database version: %s.", excpt)
 
     @staticmethod
     def publish_core_db(comm):
@@ -635,7 +635,7 @@ class DataSync(object):
             #comm.subscribe("SYNCHRONIZE/DATA")
             DataSync.log.info("Published database.")
         except Exception as excpt:
-            DataSync.log.exception("Error publishing database: %s." % excpt)
+            DataSync.log.exception("Error publishing database: %s.", excpt)
 
     def synchronize_core_db(self, data):
         try:
@@ -648,7 +648,7 @@ class DataSync(object):
 
             DataSync.log.info("Synchronized database.")
         except Exception as excpt:
-            DataSync.log.exception("Error synchronizing database: %s." % excpt)
+            DataSync.log.exception("Error synchronizing database: %s.", excpt)
 
 def main():
     #max_log_size = 1000000
@@ -680,7 +680,7 @@ def main():
         smart_module.load_site_data()
 
     except Exception as excpt:
-        logging.exception("Error initializing Smart Module. %s." % excpt)
+        logging.exception("Error initializing Smart Module. %s.", excpt)
 
     while 1:
         try:
@@ -688,7 +688,7 @@ def main():
             schedule.run_pending()
 
         except Exception as excpt:
-            logging.exception("Error in Smart Module main loop. %s." % excpt)
+            logging.exception("Error in Smart Module main loop. %s.", excpt)
             break
 
 if __name__ == "__main__":
