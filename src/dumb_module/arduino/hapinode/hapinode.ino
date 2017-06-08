@@ -493,6 +493,7 @@ void setup() {
     } while (!MQTTClient.subscribe(mqtt_listen_array[i]));
   }
   currentTime = now();
+
   Serial.println("Setup Complete. Listening for topics ..");
 // Create the recuring calls, to trigger after time
   Alarm.timerRepeat(1, flashLED);         // Every    second
