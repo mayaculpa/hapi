@@ -468,7 +468,7 @@ void MQTTcallback(char* topic, byte* payload, unsigned int length) {
           Number = i;                             // Match for Sensor name
         }
       }
-      if (Number != INVALID_VALUE) {
+      if (Number != INVALID_VALUE) { //^^^ need to get rid of this style of test
         sendMQTTAsset(AssetIdx, Number);         // Publish sensor or control function data
         return;                                   //  and exit
       }
