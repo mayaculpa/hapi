@@ -402,7 +402,7 @@ float readTemperature(int iDevice) {
   }
   else {
     returnValue = h;
-    if (metric == false) {
+    if (!metric) {
       returnValue = (returnValue * 9.0)/ 5.0 + 32.0; // Convert Celsius to Fahrenheit
     }
   }
@@ -419,7 +419,7 @@ float readWaterTemperature(int iDevice) {
   }
   else
   {
-    if (metric == false) {
+    if (!metric) {
       returnValue = (returnValue * 9.0)/ 5.0 + 32.0; // Convert Celsius to Fahrenheit
     }
   }
@@ -465,7 +465,7 @@ float readThermistorTemp(int iDevice) {
   Temp = log(10000.0*((1024.0/RawADC-1)));
   Temp = 1 / (0.001129148 + (0.000234125 + (0.0000000876741 * Temp * Temp ))* Temp );
   Temp = Temp - 273.15;            // Convert Kelvin to Celsius
-  if (metric == false) {
+  if (!metric) {
      Temp = (Temp * 9.0)/ 5.0 + 32.0; // Convert Celsius to Fahrenheit
   }
 
@@ -491,21 +491,21 @@ String getCommand(WiFiClient client) {
   inputString = "";
 
 #ifdef RTU_USB
-  while ((Serial.available() > 0) && (stringComplete == false)) {
+  while ((Serial.available() > 0) && !stringComplete) {
     inChar = (char)Serial.read();  // read the bytes incoming from the client:
 #endif
 #ifdef RTU_UNO
-  while ((Serial.available() > 0) && (stringComplete == false)) {
+  while ((Serial.available() > 0) && !stringComplete) {
     inChar = (char)Serial.read();  // read the bytes incoming from the client:
 #endif
 
 #ifdef RTU_ENET
-  while ((client.available() > 0) && (stringComplete == false)) {
+  while ((client.available() > 0) && !stringComplete) {
     inChar = (char)client.read();  // read the bytes incoming from the client:
 #endif
 #ifdef RTU_ENET
 
-  while ((client.available() > 0) && (stringComplete == false)) {
+  while ((client.available() > 0) && !stringComplete) {
     inChar = (char)client.read();  // read the bytes incoming from the client:
 #endif
     inputString += inChar;
@@ -621,7 +621,7 @@ String getStatus() {
   retval = retval + "Analog= " + String(NUM_ANALOG) + "\n";
   retval = retval + "Free SRAM: " + String(freeRam()) + "k\n";
 
-  if (idle_mode == false){
+  if (!idle_mode) {
     retval = retval + "Idle Mode: False";
   }else{
     retval = retval + "Idle Mode: True";
@@ -740,7 +740,7 @@ void loop() {
 
       Serial.println(inputCommand);
 
-      if ((inputCommand == "aoc") && (idle_mode == false)){
+      if ((inputCommand == "aoc") && !idle_mode) {
         cmdFound = true;
         inputPort = inputString.substring(3, 6);
         inputControl = inputString.substring(6, 9);
@@ -750,7 +750,7 @@ void loop() {
       }  // END Of aoc
 
       // doc (Digital Output Control) Sets a single digital output
-      if ((inputCommand == "doc") && (idle_mode == false)) {
+      if ((inputCommand == "doc") && !idle_mode) {
         cmdFound = true;
         inputPort = inputString.substring(4, 6);
         inputControl = inputString.substring(6, 7);
@@ -788,7 +788,7 @@ void loop() {
       }
 
       // res  - resets the Arduino
-      if ((inputCommand == "res") && (idle_mode == false)) {
+      if ((inputCommand == "res") && !idle_mode) {
         cmdFound = true;
         for (int x = 0; x < NUM_DIGITAL+NUM_ANALOG; x++) {
           if (pinControl[x] == 3) {
