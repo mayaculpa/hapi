@@ -114,27 +114,27 @@ unsigned long mscount;      // millisecond counter
 time_t epoch;               // UTC seconds
 time_t currentTime;         // Local value
 
-String HAPI_FW_VERSION = F("v3.0");    // The version of the firmware the HN is running
+String HAPI_FW_VERSION = "v3.0";    // The version of the firmware the HN is running
 #ifdef HN_ENET
-String HN_base = F("HN2");             // Prefix for mac address
+String HN_base = "HN2";             // Prefix for mac address
 #endif
 #ifdef HN_ESP8266
-String HN_base = F("HN3");             // Prefix for mac address
+String HN_base = "HN3";             // Prefix for mac address
 #endif
 #ifdef HN_ESP32
-String HN_base = F("HN4");             // Prefix for mac address
+String HN_base = "HN4";             // Prefix for mac address
 #endif
 
-String HN_Id = F("HNx");              // HN address
-String HN_status = F("Online");
+String HN_Id = "HNx";              // HN address
+String HN_status = "Online";
 
 boolean idle_mode = false;         // a boolean representing the idle mode of the HN
 boolean metric = true;             // should values be returned in metric or US customary units
-String inputString = F("");           // A string to hold incoming data
-String inputCommand = F("");          // A string to hold the command
-String inputPort = F("");             // A string to hold the port number of the command
-String inputControl = F("");          // A string to hold the requested action of the command
-String inputTimer = F("0");           // A string to hold the length of time to activate a control
+String inputString = "";           // A string to hold incoming data
+String inputCommand = "";          // A string to hold the command
+String inputPort = "";             // A string to hold the port number of the command
+String inputControl = "";          // A string to hold the requested action of the command
+String inputTimer = "0";           // A string to hold the length of time to activate a control
 boolean stringComplete = false;    // A boolean indicating when received string is complete (a \n was received)
 //**** End Main Variable Definition Section ****
 
@@ -142,12 +142,12 @@ boolean stringComplete = false;    // A boolean indicating when received string 
 // the media access control (ethernet hardware) address for the shield
 // Need to manually change this for USB, Ethernet
 byte mac[] = { 0x55, 0x55, 0x55, 0x55, 0x55, 0x55 };
-char mac_str[16] = F("555555555555");
+char mac_str[16] = "555555555555";
 char hostString[32] = {0};              // for mDNS Hostname
 
 // ntp config
 IPAddress timeServerIP;               // Place to store IP address of mqttbroker.local
-const char* ntpServerName = F("mqttbroker"); // Assume mqttbroker is also the time server
+const char* ntpServerName = "mqttbroker"; // Assume mqttbroker is also the time server
 const int NTP_PACKET_SIZE = 48;       // NTP time stamp is in the first 48 bytes of the message
 byte packetBuffer[ NTP_PACKET_SIZE];  //buffer to hold incoming and outgoing packets
 const unsigned int localPort = UDP_port;    // local port to listen for UDP packets
@@ -176,13 +176,13 @@ EthernetUDP udp;
 //**** End Communications Section ****
 
 //**** Begin MQTT Section ****
-const char* clientID = F("HAPInode");
-const char* mqtt_topic_command = F("COMMAND/");            // General Command topic
-const char* mqtt_topic_status = F("STATUS/RESPONSE/");     // General Status topic
-const char* mqtt_topic_asset = F("ASSET/RESPONSE/");       // Genral Asset topic
-const char* mqtt_topic_exception = F("EXCEPTION/");        // General Exception topic
-const char* mqtt_topic_config = F("CONFIG/");              // General Configuration topic
-char mqtt_topic[256] = F("");                              // Topic for this HN
+const char* clientID = "HAPInode";
+const char* mqtt_topic_command = "COMMAND/";            // General Command topic
+const char* mqtt_topic_status = "STATUS/RESPONSE/";     // General Status topic
+const char* mqtt_topic_asset = "ASSET/RESPONSE/";       // Genral Asset topic
+const char* mqtt_topic_exception = "EXCEPTION/";        // General Exception topic
+const char* mqtt_topic_config = "CONFIG/";              // General Configuration topic
+char mqtt_topic[256] = "";                              // Topic for this HN
 
 #define MAXTOPICS 5
 #define STATUSSTART 0
@@ -190,26 +190,26 @@ char mqtt_topic[256] = F("");                              // Topic for this HN
 #define CONFIGSTART 4
 #define INVALID_VALUE 9999
 const char* mqtt_topic_array[MAXTOPICS] = {
-  F("STATUS/QUERY"),
-  F("ASSET/QUERY"),
-  F("ASSET/QUERY/"),
-  F("ASSET/QUERY/*"),
-  F("CONFIG/QUERY/")
+  "STATUS/QUERY",
+  "ASSET/QUERY",
+  "ASSET/QUERY/",
+  "ASSET/QUERY/*",
+  "CONFIG/QUERY/"
 };
 #define MAXLISTEN 12
 const char* mqtt_listen_array[MAXLISTEN] = {
-  F("COMMAND/"),
-  F("CONFIG/"),
-  F("EXCEPTION/"),
-  F("STATUS/QUERY"),
-  F("STATUS/QUERY/"),
-  F("STATUS/QUERY/#"),
-  F("ASSET/QUERY"),
-  F("ASSET/QUERY/"),
-  F("ASSET/QUERY/#"),
-  F("CONFIG/QUERY"),
-  F("CONFIG/QUERY/"),
-  F("CONFIG/QUERY/#")
+  "COMMAND/",
+  "CONFIG/",
+  "EXCEPTION/",
+  "STATUS/QUERY",
+  "STATUS/QUERY/",
+  "STATUS/QUERY/#",
+  "ASSET/QUERY",
+  "ASSET/QUERY/",
+  "ASSET/QUERY/#",
+  "CONFIG/QUERY",
+  "CONFIG/QUERY/",
+  "CONFIG/QUERY/#"
 };
 
 StaticJsonBuffer<128> hn_topic_exception;               // Exception data for this HN
@@ -268,13 +268,13 @@ struct FuncDef {   //define a structure to associate a Name to generic function 
 #define ArrayLength(x) (sizeof(x)/sizeof(*(x)))
 // Create a FuncDef for each custom function
 // Format: abbreviation, context, pin, data function
-FuncDef sfunc1 = {F("tmp"), F("Env"), F("C"), -1, &readTemperatured};
-FuncDef sfunc2 = {F("hum"), F("Env"), F("%"), -1, &readHumidity};
-FuncDef sfunc3 = {F("lux"), F("Env"), F("lux"), sLux_PIN, &readLightSensor};
-FuncDef sfunc4 = {F("tmw"), F("Water"), F("C"), ONE_WIRE_BUS, &read1WireTemperature};
-FuncDef sfunc5 = {F("phv"), F("Water"), F("pH"), spH_PIN, &readpH};
-FuncDef sfunc6 = {F("tds"), F("Water"), F("ppm"), sTDS_PIN, &readTDS};
-FuncDef sfunc7 = {F("flo"), F("Water"), F("lpm"), sWtrFlow_PIN, &readFlow};
+FuncDef sfunc1 = {"tmp", "Env", "C", -1, &readTemperatured};
+FuncDef sfunc2 = {"hum", "Env", "%", -1, &readHumidity};
+FuncDef sfunc3 = {"lux", "Env", "lux", sLux_PIN, &readLightSensor};
+FuncDef sfunc4 = {"tmw", "Water", "C", ONE_WIRE_BUS, &read1WireTemperature};
+FuncDef sfunc5 = {"phv", "Water", "pH", spH_PIN, &readpH};
+FuncDef sfunc6 = {"tds", "Water", "ppm", sTDS_PIN, &readTDS};
+FuncDef sfunc7 = {"flo", "Water", "lpm", sWtrFlow_PIN, &readFlow};
 FuncDef HapisFunctions[] = {sfunc1, sfunc2, sfunc3, sfunc4, sfunc5, sfunc6, sfunc7};
 
 // Custom control devices
@@ -292,12 +292,12 @@ struct CFuncDef {   //define a structure to associate a Name to generic control 
 
 // Create a FuncDef for each custom control function
 // Format: abbreviation, context, Control data index, control function, data function
-CFuncDef cfunc1 = {F("ppw"), F("Pump"), F("lpm"), 1, &controlPumps, &readSensorPin};
-CFuncDef cfunc2 = {F("ppf"), F("Pump"), F("lpm"), 2, &controlPumps, &readSensorPin};
-CFuncDef cfunc3 = {F("ppn"), F("Pump"), F("lpm"), 3, &controlPumps, &readTDS};
-CFuncDef cfunc4 = {F("pHU"), F("Pump"), F("lpm"), 4, &controlPumps, &readpH};
-CFuncDef cfunc5 = {F("pHD"), F("Pump"), F("lpm"), 5, &controlPumps, &readpH};
-CFuncDef cfunc6 = {F("lmp"), F("Lamp"), F("lpm"), 6, &controlLamps, &readLightSensor};
+CFuncDef cfunc1 = {"ppw", "Pump", "lpm", 1, &controlPumps, &readSensorPin};
+CFuncDef cfunc2 = {"ppf", "Pump", "lpm", 2, &controlPumps, &readSensorPin};
+CFuncDef cfunc3 = {"ppn", "Pump", "lpm", 3, &controlPumps, &readTDS};
+CFuncDef cfunc4 = {"pHU", "Pump", "lpm", 4, &controlPumps, &readpH};
+CFuncDef cfunc5 = {"pHD", "Pump", "lpm", 5, &controlPumps, &readpH};
+CFuncDef cfunc6 = {"lmp", "Lamp", "lpm", 6, &controlLamps, &readLightSensor};
 CFuncDef HapicFunctions[] = {cfunc1, cfunc2, cfunc3, cfunc4, cfunc5, cfunc6};
 
 struct ControlData {
@@ -313,12 +313,12 @@ struct ControlData {
   int hcs_offValue;                 // Sensor value at which control turns Off
 };
 
-ControlData ccontrol1 = {F("ppw"), cWtrPump_PIN, true, 0, 0, 0, false, sWtrFlow_PIN, 0, 0};  // Water
-ControlData ccontrol2 = {F("ppf"), cWtrFill_PIN, true, 0, 0, 0, false, sWtrFloat_PIN, 0, 0}; // Fill
-ControlData ccontrol3 = {F("ppn"), cNutr_PIN, true, 0, 0, 0, false, sTDS_PIN, 0, 0};         // Nutrient
-ControlData ccontrol4 = {F("pHU"), cpHUp_PIN, true, 0, 0, 0, false, spH_PIN, 0, 0};          // pHUp
-ControlData ccontrol5 = {F("pHD"), cpHDn_PIN, true, 0, 0, 0, false, spH_PIN, 0, 0};          // pHDown
-ControlData ccontrol6 = {F("lmp"), cLamp_PIN, true, 0, 0, 0, false, sLux_PIN, 0, 0};         // Lamp
+ControlData ccontrol1 = {"ppw", cWtrPump_PIN, true, 0, 0, 0, false, sWtrFlow_PIN, 0, 0};  // Water
+ControlData ccontrol2 = {"ppf", cWtrFill_PIN, true, 0, 0, 0, false, sWtrFloat_PIN, 0, 0}; // Fill
+ControlData ccontrol3 = {"ppn", cNutr_PIN, true, 0, 0, 0, false, sTDS_PIN, 0, 0};         // Nutrient
+ControlData ccontrol4 = {"pHU", cpHUp_PIN, true, 0, 0, 0, false, spH_PIN, 0, 0};          // pHUp
+ControlData ccontrol5 = {"pHD", cpHDn_PIN, true, 0, 0, 0, false, spH_PIN, 0, 0};          // pHDown
+ControlData ccontrol6 = {"lmp", cLamp_PIN, true, 0, 0, 0, false, sLux_PIN, 0, 0};         // Lamp
 ControlData HapicData[] = {ccontrol1, ccontrol2, ccontrol3, ccontrol4, ccontrol5, ccontrol6};
 
 //**** End Sensors Section ****
@@ -339,7 +339,7 @@ void b2c(byte* bptr, char* cptr, int len) {
 //    Serial.print(c, HEX);
   }
   *cptr++ = '\0';
-//  Serial.println(F(""));
+//  Serial.println("");
 }
 
 int freeRam (){
@@ -367,11 +367,11 @@ void setup() {
   inputString.reserve(200);   // reserve 200 bytes for the inputString
 
 #ifdef HN_WiFi
-  Serial.println(F("Initializing WiFi network...."));
+  Serial.println("Initializing WiFi network....");
   WiFiStatus = WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
-    Serial.print(F("."));
+    Serial.print(".");
   }
   WiFi.macAddress(mac);
 #endif // HN_WiFi
@@ -386,56 +386,56 @@ void setup() {
 #ifdef HN_ESP8266
   Serial.println(WiFi.hostname());
   Serial.println(WiFi.hostname(hostString));
-  Serial.print(F("NewHostname: "));
+  Serial.print("NewHostname: ");
   Serial.println(WiFi.hostname());
 #endif
 #ifdef HN_ESP32
   Serial.println(WiFi.getHostname());
   Serial.println(WiFi.setHostname(hostString));
-  Serial.print(F("NewHostname: "));
+  Serial.print("NewHostname: ");
   Serial.println(WiFi.getHostname());
 #endif
 #if defined(HN_ESP32) || defined(HN_ESP32)
   Serial.println();
-  Serial.print(F("IP  address: "));
+  Serial.print("IP  address: ");
   Serial.println(WiFi.localIP());
-  Serial.print(F("Hostname   : "));
+  Serial.print("Hostname   : ");
 #endif
 
 // Start mDNS support
 // ==================
-  Serial.print(F("HN_Id:      "));
+  Serial.print("HN_Id:      ");
   Serial.println(HN_Id);
-  Serial.print(F("hostString: "));
+  Serial.print("hostString: ");
   Serial.println(hostString);
 
 #if defined(HN_ESP8266) || defined(HN_ESP32)
  if (!MDNS.begin(hostString)) {
-    Serial.println(F("Error setting up MDNS responder!"));
+    Serial.println("Error setting up MDNS responder!");
   }
-  Serial.print(F("Hostname: "));
+  Serial.print("Hostname: ");
   Serial.print(hostString);
-  Serial.println(F(" mDNS responder started"));
+  Serial.println(" mDNS responder started");
 
-  Serial.println(F("Sending mDNS query"));
-  int n = MDNS.queryService(F("workstation"), F("tcp")); // Send out query for workstation tcp services
-  Serial.println(F("mDNS query done"));
+  Serial.println("Sending mDNS query");
+  int n = MDNS.queryService("workstation", "tcp"); // Send out query for workstation tcp services
+  Serial.println("mDNS query done");
   if (n == 0) {
-    Serial.println(F("no services found"));
+    Serial.println("no services found");
   }
   else {
     Serial.print(n);
-    Serial.println(F(" service(s) found"));
+    Serial.println(" service(s) found");
     for (int i = 0; i < n; ++i) {
       // Print details for each service found
       Serial.print(i + 1);
-      Serial.print(F(": "));
+      Serial.print(": ");
       Serial.print(MDNS.hostname(i));
-      Serial.print(F(" ("));
+      Serial.print(" (");
       Serial.print(MDNS.IP(i));
-      Serial.print(F(":"));
+      Serial.print(":");
       Serial.print(MDNS.port(i));
-      Serial.println(F(")"));
+      Serial.println(")");
     }
   }
   Serial.println();
@@ -444,9 +444,9 @@ void setup() {
 
 // Start NTP support
 // =================
-  Serial.println(F("Starting UDP"));                 // Start UDP
+  Serial.println("Starting UDP");                 // Start UDP
   udp.begin(localPort);
-  Serial.print(F("Local port: "));
+  Serial.print("Local port: ");
 #ifdef HN_ESP8266
   Serial.println(udp.localPort());
 #endif
@@ -457,7 +457,7 @@ void setup() {
 #ifdef HN_WiFi
   WiFi.hostByName(ntpServerName, timeServerIP);   // Get mqttbroker's IP address
 #endif
-  Serial.print(F("Local IP:   "));
+  Serial.print("Local IP:   ");
   Serial.println(timeServerIP);
 
   setupTime();          // initialize RTC using ntp, if available
@@ -468,32 +468,32 @@ void setup() {
   MQTTClient.setServer(MQTT_broker_address, MQTT_port);
   MQTTClient.setCallback(MQTTcallback);
 
-  exception_topic[F("Node")] = HN_Id;
+  exception_topic["Node"] = HN_Id;
 
   // Wait until connected to MQTT Broker
   // client.connect returns a boolean value
-  Serial.println(F("Connecting to MQTT broker ..."));
+  Serial.println("Connecting to MQTT broker ...");
   // Poll until connected.
   while (!sendMQTTStatus())
     ;
 
 // Subscribe to the TOPICs
 
-  Serial.println(F("Subscribing to MQTT topics ..."));
+  Serial.println("Subscribing to MQTT topics ...");
   for (int i = 0; i < MAXLISTEN; i++) {
     Serial.print(i+1);
-    Serial.print(F(" - "));
+    Serial.print(" - ");
     Serial.println(mqtt_listen_array[i]);
     do {
       MQTTClient.loop();
-      Serial.print(F(" .. subscribing to "));
+      Serial.print(" .. subscribing to ");
       Serial.println(mqtt_listen_array[i]);
       delay(100);
     } while (!MQTTClient.subscribe(mqtt_listen_array[i]));
   }
   currentTime = now();
 
-  Serial.println(F("Setup Complete. Listening for topics .."));
+  Serial.println("Setup Complete. Listening for topics ..");
 // Create the recuring calls, to trigger after time
   Alarm.timerRepeat(1, flashLED);         // Every    second
   Alarm.timerRepeat(2, checkControls);    // Every  2 seconds

@@ -38,8 +38,8 @@ Communications Protocol: Ethernet, USB
 //#define RTU_ESP           // Define for NodeMCU, or ESP8266-based device
 
 // Required for ESP (WiFi) connection
-//#define HAPI_SSID F("your_ssid")
-//#define HAPI_PWD  F("your_pwd")
+//#define HAPI_SSID "your_ssid"
+//#define HAPI_PWD  "your_pwd"
 
 //**** Begin Board Selection Section ****
 
@@ -298,26 +298,26 @@ OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature wp_sensors(&oneWire);
 
 //**** Begin Main Variable Definition Section ****
-String HAPI_CLI_VERSION = F("v2.2");  // The version of the firmware the RTU is running
+String HAPI_CLI_VERSION = "v2.2";  // The version of the firmware the RTU is running
 #ifdef RTU_ENET
-String RTUID = F("RTU001");             // This RTUs Unique ID Number - unique across site
+String RTUID = "RTU001";             // This RTUs Unique ID Number - unique across site
 #endif
 #ifdef RTU_USB
-String RTUID = F("RTU101");             // This RTUs Unique ID Number - unique across site
+String RTUID = "RTU101";             // This RTUs Unique ID Number - unique across site
 #endif
 #ifdef RTU_ESP
-String RTUID = F("RTU301");             // This RTUs Unique ID Number - unique across site
+String RTUID = "RTU301";             // This RTUs Unique ID Number - unique across site
 #endif
 #ifdef RTU_UNO
-String RTUID = F("RTU201");             // This RTUs Unique ID Number - unique across site
+String RTUID = "RTU201";             // This RTUs Unique ID Number - unique across site
 #endif
 idle_mode = false;         // a boolean representing the idle mode of the RTU
 boolean metric = true;             // should values be returned in metric or US customary units
-String inputString = F("");           // A string to hold incoming data
-String inputCommand = F("");          // A string to hold the command
-String inputPort = F("");             // A string to hold the port number of the command
-String inputControl = F("");          // A string to hold the requested action of the command
-String inputTimer = F("0");           // A string to hold the length of time to activate a control
+String inputString = "";           // A string to hold incoming data
+String inputCommand = "";          // A string to hold the command
+String inputPort = "";             // A string to hold the port number of the command
+String inputControl = "";          // A string to hold the requested action of the command
+String inputTimer = "0";           // A string to hold the length of time to activate a control
 boolean stringComplete = false;    // A boolean indicating when received string is complete (a \n was received)
 //**** End Main Variable Definition Section ****
 
@@ -363,24 +363,24 @@ struct FuncDef {   //define a structure to associate a Name to generic function 
 
 //Create a FuncDef for each custom function
 //Format: abbreviation, context, pin, function
-FuncDef func1 = {F("tmp"), F("dht"), -1, &readTemperature};
-FuncDef func2 = {F("hmd"), F("dht"), -1, &readHumidity};
-FuncDef func3 = {F("trm"), F("thermistor"), 2, &readThermistorTemp};
-FuncDef func4 = {F("res1tmp"), F("DS18B20"), ONE_WIRE_BUS, &readWaterTemperature};
-FuncDef func5 = {F("phl"), F("pH Sensor"), PH_SENSORPIN, &readpH};
+FuncDef func1 = {"tmp", "dht", -1, &readTemperature};
+FuncDef func2 = {"hmd", "dht", -1, &readHumidity};
+FuncDef func3 = {"trm", "thermistor", 2, &readThermistorTemp};
+FuncDef func4 = {"res1tmp", "DS18B20", ONE_WIRE_BUS, &readWaterTemperature};
+FuncDef func5 = {"phl", "pH Sensor", PH_SENSORPIN, &readpH};
 
 FuncDef HapiFunctions[CUSTOM_FUNCTIONS] = {func1, func2, func3, func4, func5};
 //**** End Custom Functions Section ****
 
 String getPinArray() {
   // Returns all pin configuration information
-  String response = F("");
+  String response = "";
   for (int i = 0; i < NUM_DIGITAL+NUM_ANALOG; i++) {
     if (i <= (NUM_DIGITAL-1)) {
       response += String(i) + String(pinControl[i]);
     }
     else {
-      response += F("A") + String(i - NUM_DIGITAL) + String(pinControl[i]);
+      response += "A" + String(i - NUM_DIGITAL) + String(pinControl[i]);
     }
   }
   return response;
@@ -388,18 +388,18 @@ String getPinArray() {
 
 void assembleResponse(String &responseString, String varName, String value) {
   // Helper function for building response strings
-  if (responseString.equals(F(""))) {
-    responseString = F("{");
+  if (responseString.equals("")) {
+    responseString = "{";
   }
 
-  if (!varName.equals(F(""))) {
-    responseString += F("\"") + varName + F("\"") + F(":") + F("\"") + value + F("\"") + F(",");
+  if (!varName.equals("")) {
+    responseString += "\"" + varName + "\"" + ":" + "\"" + value + "\"" + ",";
   }
   else {
-    if (responseString.endsWith(F(","))) {
+    if (responseString.endsWith(",")) {
       responseString = responseString.substring(0, responseString.length() - 1);
     }
-    responseString += F("}");
+    responseString += "}";
   }
 }
 
@@ -424,7 +424,7 @@ void writeLine(String response, boolean EOL) {
     Serial.write(inChar);
 #endif
     }
-  if ((String)inChar != F("\n")) {
+  if ((String)inChar != "\n") {
     if (EOL) {
 #ifdef RTU_ENET
     rtuServer.write(inChar);
@@ -557,7 +557,7 @@ String getCommand(WiFiClient client) {
 // Retrieves a command from the cuurent serial or network connection
   stringComplete = false;
   char inChar;
-  inputString = F("");
+  inputString = "";
 
 #if defined(RTU_USB) || defined(RTU_UNO)
   while (Serial.available() > 0 && !stringComplete) {
@@ -579,11 +579,11 @@ String getCommand(WiFiClient client) {
 
 String buildResponse() {
   // Assembles a response with values from pins and custom functions
-  // Returns a JSON string  (F("pinnumber"):value,F("custom function abbreviation"):value}
-  String response = F("buildResponse\r\n");
-  assembleResponse(response, F("name"), RTUID);
-  assembleResponse(response, F("version"), HAPI_CLI_VERSION);
-//  assembleResponse(response, F("lastcmd"), lastCommand);
+  // Returns a JSON string  ("pinnumber":value,"custom function abbreviation":value}
+  String response = "buildResponse\r\n";
+  assembleResponse(response, "name", RTUID);
+  assembleResponse(response, "version", HAPI_CLI_VERSION);
+//  assembleResponse(response, "lastcmd", lastCommand);
   //Process digital pins
   for (int i = 0; i < NUM_DIGITAL; i++) {
     switch (pinControl[i]) {
@@ -606,7 +606,7 @@ String buildResponse() {
   //Process custom functions
   FuncDef f;
   float funcVal = -1.0;
-  String funcStr = F("");
+  String funcStr = "";
   String tempVal;
   char cFuncVal[10];
   String str;
@@ -614,7 +614,7 @@ String buildResponse() {
   for (int x = 0; x < CUSTOM_FUNCTIONS; x++) {
     f = HapiFunctions[x];
 
-    if (f.fType.equals(F("dht"))) {
+    if (f.fType.equals("dht")) {
       for (int x = 0; x < NUM_DHTS; x++) {
         funcVal = f.fPtr(x);
         assembleResponse(response, f.fName, String((int)funcVal));
@@ -628,63 +628,63 @@ String buildResponse() {
     }
   }
 
-  assembleResponse(response, F(""), F("")); //closes up the response string
+  assembleResponse(response, "", ""); //closes up the response string
   return response;
 }
 
 String getStatus() {
   // Returns the current status of the RTU itself
   // Includes firmware version, MAC address, IP Address, Free RAM and Idle Mode
-  String retval = F("getStatus\r\n");
+  String retval = "getStatus\r\n";
   String macstring = (char*)mac;
 
-  retval = RTUID + F("\r\n");
-  retval += F("Firmware ") + HAPI_CLI_VERSION + F("\r\n");
+  retval = RTUID + "\r\n";
+  retval += "Firmware " + HAPI_CLI_VERSION + "\r\n";
   Serial.println(retval);
 #ifdef RTU_USB
-  retval += F("Connected on USB\r\n");
+  retval += "Connected on USB\r\n";
 #endif
 #ifdef RTU_UNO
-  retval += F("Connected on USB\r\n");
+  retval += "Connected on USB\r\n";
 #endif
 #ifdef RTU_ENET
-  retval += F("MAC=");
-  retval += F("0x") + String(mac[0], HEX) + F(":");
-  retval += F("0x") + String(mac[1], HEX) + F(":");
-  retval += F("0x") + String(mac[2], HEX) + F(":");
-  retval += F("0x") + String(mac[3], HEX) + F(":");
-  retval += F("0x") + String(mac[4], HEX) + F(":");
-  retval += F("0x") + String(mac[5], HEX) + F("\n");
+  retval += "MAC=";
+  retval += "0x" + String(mac[0], HEX) + ":";
+  retval += "0x" + String(mac[1], HEX) + ":";
+  retval += "0x" + String(mac[2], HEX) + ":";
+  retval += "0x" + String(mac[3], HEX) + ":";
+  retval += "0x" + String(mac[4], HEX) + ":";
+  retval += "0x" + String(mac[5], HEX) + "\n";
   Serial.println(retval);
-  retval += F("IP=");
-  retval += String(Ethernet.localIP()[0]) + F(".");
-  retval += String(Ethernet.localIP()[1]) + F(".");
-  retval += String(Ethernet.localIP()[2]) + F(".");
-  retval += String(Ethernet.localIP()[3]) + F("\n");
+  retval += "IP=";
+  retval += String(Ethernet.localIP()[0]) + ".";
+  retval += String(Ethernet.localIP()[1]) + ".";
+  retval += String(Ethernet.localIP()[2]) + ".";
+  retval += String(Ethernet.localIP()[3]) + "\n";
   Serial.println(retval);
 #endif
 #ifdef RTU_ESP
-  retval += F("MAC=");
-  retval += F("0x") + String(mac[0], HEX) + F(":");
-  retval += F("0x") + String(mac[1], HEX) + F(":");
-  retval += F("0x") + String(mac[2], HEX) + F(":");
-  retval += F("0x") + String(mac[3], HEX) + F(":");
-  retval += F("0x") + String(mac[4], HEX) + F(":");
-  retval += F("0x") + String(mac[5], HEX) + F("\n");
+  retval += "MAC=";
+  retval += "0x" + String(mac[0], HEX) + ":";
+  retval += "0x" + String(mac[1], HEX) + ":";
+  retval += "0x" + String(mac[2], HEX) + ":";
+  retval += "0x" + String(mac[3], HEX) + ":";
+  retval += "0x" + String(mac[4], HEX) + ":";
+  retval += "0x" + String(mac[5], HEX) + "\n";
   Serial.println(retval);
-  retval += F("IP=");
-  retval += String(WiFi.localIP()[0]) + F(".");
-  retval += String(WiFi.localIP()[1]) + F(".");
-  retval += String(WiFi.localIP()[2]) + F(".");
-  retval += String(WiFi.localIP()[3]) + F("\n");
+  retval += "IP=";
+  retval += String(WiFi.localIP()[0]) + ".";
+  retval += String(WiFi.localIP()[1]) + ".";
+  retval += String(WiFi.localIP()[2]) + ".";
+  retval += String(WiFi.localIP()[3]) + "\n";
   Serial.println(retval);
 #endif
 
-  retval += F("Digital= ") + String(NUM_DIGITAL) + F("\n");
-  retval += F("Analog= ") + String(NUM_ANALOG) + F("\n");
-  retval += F("Free SRAM: ") + String(freeRam()) + F("k\n");
+  retval += "Digital= " + String(NUM_DIGITAL) + "\n";
+  retval += "Analog= " + String(NUM_ANALOG) + "\n";
+  retval += "Free SRAM: " + String(freeRam()) + "k\n";
 
-  retval += F("Idle Mode: ") + (idle_mode ? F("True") : F("False"));
+  retval += "Idle Mode: " + (idle_mode ? "True" : "False");
 
   return retval;
 
@@ -739,32 +739,32 @@ void setup() {
   Serial.begin(115200);
 
 #ifdef RTU_ENET
-  Serial.println(F("Initializing network...."));
+  Serial.println("Initializing network....");
   if (Ethernet.begin(mac) == 0) {
-    Serial.println(F("Failed to obtain IP address  ..."));
+    Serial.println("Failed to obtain IP address  ...");
   } else
   {
-    Serial.print(F("IP address: "));
+    Serial.print("IP address: ");
     Serial.println(Ethernet.localIP());
   }
   rtuServer.begin();
 #endif
 #ifdef RTU_ESP
-  Serial.println(F("Initializing WiFi network...."));
+  Serial.println("Initializing WiFi network....");
   WiFiStatus = WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
-    Serial.print(F("."));
+    Serial.print(".");
   }
   WiFi.macAddress(mac);
-    Serial.print(F("IP address: "));
+    Serial.print("IP address: ");
     Serial.println(WiFi.localIP());
     rtuServer.begin();
 #endif
 
-  Serial.println(F("Starting communications  ..."));
+  Serial.println("Starting communications  ...");
   Serial.println(getStatus()); //Send Status (incl. IP Address) to the Serial Monitor
-  Serial.println(F("Setup Complete. Listening for connections."));
+  Serial.println("Setup Complete. Listening for connections.");
 
 }
 
@@ -780,15 +780,15 @@ void loop() {
 #endif
     inputString.trim();
     inputString.toLowerCase();
-    inputTimer = F("0");
+    inputTimer = "0";
 
-    if (inputString != F("") && inputString != F("\r\n")) {
+    if (inputString != "" && inputString != "\r\n") {
       inputCommand = inputString.substring(0, 3);
       boolean cmdFound = false;
 
       Serial.println(inputCommand);
 
-      if ((inputCommand == F("aoc")) && !idle_mode) {
+      if ((inputCommand == "aoc") && !idle_mode) {
         cmdFound = true;
         inputPort = inputString.substring(3, 6);
         inputControl = inputString.substring(6, 9);
@@ -798,7 +798,7 @@ void loop() {
       }  // END Of aoc
 
       // doc (Digital Output Control) Sets a single digital output
-      if ((inputCommand == F("doc")) && !idle_mode) {
+      if ((inputCommand == "doc") && !idle_mode) {
         cmdFound = true;
         inputPort = inputString.substring(4, 6);
         inputControl = inputString.substring(6, 7);
@@ -818,25 +818,25 @@ void loop() {
       }  // END Of doc
 
       // Get pin modes
-      if (inputCommand == F("gpm")) {
+      if (inputCommand == "gpm") {
         cmdFound = true;
         String response = getPinArray();
         writeLine(response, true); //Send pin mode information back to client
       }
 
       // Enable/Disable Idle Mode
-      if (inputCommand == F("idl")) {
+      if (inputCommand == "idl") {
         cmdFound = true;
-        if (inputString.substring(3, 4) == F("0")) {
+        if (inputString.substring(3, 4) == "0") {
           idle_mode = false;
         }
-        else if (inputString.substring(3, 4) == F("1")) {
+        else if (inputString.substring(3, 4) == "1") {
           idle_mode = true;
         }
       }
 
       // res  - resets the Arduino
-      if ((inputCommand == F("res")) && !idle_mode) {
+      if ((inputCommand == "res") && !idle_mode) {
         cmdFound = true;
         for (int x = 0; x < NUM_DIGITAL+NUM_ANALOG; x++) {
           if (pinControl[x] == 3) {
@@ -851,7 +851,7 @@ void loop() {
       }
 
       // Get the RTU Status
-      if (inputCommand == F("sta")) {
+      if (inputCommand == "sta") {
         cmdFound = true;
         writeLine(getStatus(), true);
       }
