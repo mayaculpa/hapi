@@ -232,7 +232,6 @@ class SmartModule(object):
         Create database if it does not already exist.
         Return the connection to the database."""
 
-        self.ifconn = InfluxDBClient("127.0.0.1", 8086, "root", "root")
         databases = self.ifconn.get_list_database()
         for db in databases:
             if database_name in db.values():
