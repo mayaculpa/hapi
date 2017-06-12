@@ -3,7 +3,6 @@
 
 """
 HAPI Smart Module v2.1.2
-Authors: Tyler Reed, Pedro Freitas
 Release: April 2017 Beta Milestone
 
 Copyright 2016 Maya Culpa, LLC
@@ -143,27 +142,29 @@ class SmartModule(object):
             asset_type=self.asset.type,
             asset_context=self.asset.context))
 
-        zeroconf = Zeroconf()
-        for x in range(0, 5):
-            # Try to locate the MQTT Broker. If can't find, become one.
-            self.log.info("Performing Discovery...")
+        try:
+            # Using two different call to 'time.sleep()'. We should consider a better approach.
+            # I'm totally open for new ideas on this.
+            max_sleep_time = 3
+            zeroconf = Zeroconf()
+            self.log.info("Performing Broker discovery...")
             self.find_broker(zeroconf)
-            self.log.info("Waiting Broker information on attempt: %d." % (x + 1))
-            time.sleep(1)
+            time.sleep(max_sleep_time)
             if self.comm.broker_name or self.comm.broker_ip:
                 self.log.info("MQTT Broker: {broker_name} IP: {broker_ip}.".format(
                     broker_name=self.comm.broker_name,
                     broker_ip=self.comm.broker_ip))
-                break
             else:
+                self.log.info("Broker not found. Becoming the broker.")
                 self.become_broker()
-        else:
-            self.log.info("[Exiting] Couldn't find or become the broker.")
-            sys.exit(-1)
+            time.sleep(max_sleep_time)
+            self.comm.connect()
+        except Exception as excpt:
+            self.log.exceptions("[Exiting] Trying to find or become the broker.");
+        finally:
+            self.log.info("Closing Zeroconf connection.")
+            zeroconf.close()
 
-        self.comm.connect()
-        # we could leave it open to handle removed MQTT service, if that was the broker
-        zeroconf.close()
         t_end = time.time() + 10
         while (time.time() < t_end) and not self.comm.is_connected:
             time.sleep(1)
@@ -220,17 +221,17 @@ class SmartModule(object):
             for row in db_elements:
                 for field_name, field_value in zip(field_names, row):
                     setattr(self, field_name, field_value)
-            database.close()
             self.log.info("Site data loaded.")
         except Exception as excpt:
             self.log.exception("Error loading site data: %s.", excpt)
+        finally:
+            database.close()
 
     def connect_influx(self, database_name):
         """Connect to database named database_name on InfluxDB server.
         Create database if it does not already exist.
         Return the connection to the database."""
 
-        self.ifconn = InfluxDBClient("127.0.0.1", 8086, "root", "root")
         databases = self.ifconn.get_list_database()
         for db in databases:
             if database_name in db.values():
@@ -394,13 +395,14 @@ class SmartModule(object):
                 INSERT INTO command_log (timestamp, command, result)
                 VALUES (?, ?, ?)
             ''', (now, job.name, result)
-            self.log.info("Executed %s." % job.name)
+            self.log.info("Executed %s.", job.name)
             database = sqlite3.connect(utilities.DB_HIST)
             database.cursor().execute(*command)
             database.commit()
-            database.close()
         except Exception as excpt:
             self.log.exception("Error logging command: %s.", excpt)
+        finally:
+            database.close()
 
     def get_env(self):
         now = datetime.datetime.now()
@@ -502,10 +504,11 @@ class Scheduler(object):
                 for field_name, field_value in zip(field_names, row):
                     setattr(job, field_name, field_value)
                 jobs.append(job)
-            database.close()
             self.log.info("Schedule Data Loaded.")
         except Exception as excpt:
             self.log.exception("Error loading schedule. %s.", excpt)
+        finally:
+            database.close()
 
         return jobs
 
@@ -529,16 +532,14 @@ class Scheduler(object):
                 plural_interval_name = interval_name + 's'
                 d = getattr(schedule.every(job.interval), plural_interval_name)
                 d.do(self.run_job, job)
-                self.log.info("  Loading %s job: %s." % (
-                    suffixed_names[interval_name],
-                    job.name))
+                self.log.info("  Loading %s job: %s.", suffixed_names[interval_name], job.name)
             elif interval_name == 'day':
                 schedule.every().day.at(job.at_time).do(self.run_job, job)
                 self.log.info("  Loading time-based job: " + job.name)
             else:
                 d = getattr(schedule.every(), interval_name)
                 d.do(self.run_job, job)
-                self.log.info("  Loading %s job: %s" % (interval_name, job.name))
+                self.log.info("  Loading %s job: %s", interval_name, job.name)
 
     def run_job(self, job):
         if not self.running or not job.enabled:
@@ -605,11 +606,12 @@ class DataSync(object):
             data = database.cursor().execute(sql)
             for element in data:
                 version = element[0]
-            database.close()
-            DataSync.log.info("Read database version: %s." % version)
+            DataSync.log.info("Read database version: %s.", version)
             return version
         except Exception as excpt:
             DataSync.log.exception("Error reading database version: %s.", excpt)
+        finally:
+            database.close()
 
     @staticmethod
     def write_db_version():
@@ -619,10 +621,11 @@ class DataSync(object):
             database = sqlite3.connect(utilities.DB_CORE)
             database.cursor().execute(*command)
             database.commit()
-            database.close()
-            DataSync.log.info("Wrote database version: %s." % version)
+            DataSync.log.info("Wrote database version: %s.", version)
         except Exception as excpt:
             DataSync.log.exception("Error writing database version: %s.", excpt)
+        finally:
+            database.close()
 
     @staticmethod
     def publish_core_db(comm):

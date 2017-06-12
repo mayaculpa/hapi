@@ -3,7 +3,6 @@
 
 """
 HAPI Smart Module v2.1.2
-Authors: Tyler Reed, Pedro Freitas
 Release: April 2017 Beta Milestone
 
 Copyright 2016 Maya Culpa, LLC

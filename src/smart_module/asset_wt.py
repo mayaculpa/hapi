@@ -3,7 +3,6 @@
 
 '''
 HAPI Asset Interface for the DS18B20 Temperature Sensor
-Authors: Tyler Reed
 Release: April 2017, Alpha Milestone
 Version: 1.0
 Copyright 2016 Maya Culpa, LLC

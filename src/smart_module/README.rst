@@ -1,5 +1,5 @@
-The smart modules run on [Raspberry Pi](https://www.raspberrypi.org/) 
-[3B](https://www.raspberrypi.org/products/raspberry-pi-3-model-b/) or 
+The smart modules run on [Raspberry Pi](https://www.raspberrypi.org/)
+[3B](https://www.raspberrypi.org/products/raspberry-pi-3-model-b/) or
 [Zero W](https://www.raspberrypi.org/products/pi-zero-w/).
 
 See INSTALL.rst for installation instructions.
@@ -26,9 +26,14 @@ The system needs the following packages installed and properly configured:
 
 Usage:
 ======
-```python smart_module.py```
+.. code:: shell
+
+    python smart_module.py
+
 
 **You should get something like this:**
+
+.. code:: shell
 
     $ python smart_module.py
     2017-05-15 22:37:55.089210 - communicator.log - INFO - Communicator initialized
@@ -56,6 +61,8 @@ Usage:
     2017-05-15 22:38:13.892977 - alert.log - INFO - Fetching alert param. from database
     2017-05-15 22:38:13.893555 - alert.log - INFO - ALERT DETECTED. Value: 8.0.
     2017-05-15 22:38:14.283729 - smartmodule.log - INFO - Wrote to analytic database: [{'fields': {'unit': 'C', 'value': '8.0'}, 'tags': {'site': u'HPF-0', 'asset': 'Indoor Temperature'}, 'time': '2017-05-15 22:38:14.010127', 'measurement': 'Environment'}].
+
+
 
 An important note: we're currently using sqlite3 database to load schedule jobs and others information.
 You can check/use a demo of the database here: ![Database example](/readme/database-example)

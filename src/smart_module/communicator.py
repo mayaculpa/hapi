@@ -3,7 +3,6 @@
 
 """
 HAPI Master Controller v1.0
-Author: Tyler Reed
 Release: March 2017 Alpha
 
 Copyright 2016 Maya Culpa, LLC
@@ -47,7 +46,7 @@ class Communicator(object):
 
     def connect(self):
         try:
-            self.logger.info("Connecting to %s at %s." % (self.broker_name, self.broker_ip))
+            self.logger.info("Connecting to %s at %s.", self.broker_name, self.broker_ip)
             self.client.connect(host=self.broker_ip, port=1883, keepalive=60)
             self.client.loop_start()
         except Exception as excpt:
@@ -65,10 +64,9 @@ class Communicator(object):
     def on_disconnect(self, client, userdata, rc):
         # We could implement a reconnect call.
         self.is_connected = False
-        self.logger.info("[Exiting] Disconnected: %s" % mqtt.error_string(rc))
+        self.logger.info("[Exiting] Disconnected: %s", mqtt.error_string(rc))
         self.client.loop_stop()
-        self.connect()
-        #sys.exit(-1)
+        sys.exit(-1)
 
     # The callback for when the client receives a CONNACK response from the server.
     #@staticmethod
