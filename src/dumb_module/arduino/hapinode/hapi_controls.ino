@@ -33,7 +33,7 @@ void setupControls(void){
   // Initialize
 }
 
-boolean checkControls(void) {
+void checkControls(void) {
   CFuncDef c;
   for (int i=0;i<ArrayLength(HapicFunctions);i++) {
     c = HapicFunctions[i];                // initialize access structure
@@ -46,10 +46,17 @@ float poll_on_off_thing_controller(int i) {
   ControlData d;
   c = HapicFunctions[i];
   d = HapicData[i];
+/*
+  Serial.print("device:pin -> ");
+  Serial.print(i);
+  Serial.print(" :  ");
+  Serial.println(d.hc_controlpin);
+  delay(5000);
+*/
   if (d.hc_active) { // is it on?
-    if (d.hc_end > epoch) {     // Yes, should it be turned off?
+    if (d.hc_end > currentTime) {     // Yes, should it be turned off?
       d.hc_active = false;
-      digitalWrite(d.hc_controlpin, !(d.hc_polarity));
+      digitalWrite(d.hc_controlpin, !d.hc_polarity);
       if (d.hc_repeat != 0) {   // Is repeat active?
         d.hc_start += d.hc_repeat;
         d.hc_end += d.hc_repeat;
@@ -59,7 +66,7 @@ float poll_on_off_thing_controller(int i) {
       d.hc_active = false;
       digitalWrite(d.hc_controlpin, !d.hc_polarity);
     }
-  } else if (d.hc_start >= epoch || c.iPtr(i) > d.hcs_onValue) {
+  } else if (d.hc_start >= currentTime || c.iPtr(i) > d.hcs_onValue) {
     d.hc_active = true;        // Turn it on
     digitalWrite(d.hc_controlpin, d.hc_polarity);
   }
