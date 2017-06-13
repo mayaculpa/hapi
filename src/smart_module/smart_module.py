@@ -49,20 +49,44 @@ reload(sys)
 class Asset(object):
     """Hold Asset (sensor) information."""
     def __init__(self):
-        self.id = "1"
-        self.name = "Indoor Temperature"
-        self.unit = "C"
-        self.type = "wt"
+        self.id = ""
+        self.name = ""
+        self.unit = ""
         self.virtual = 0
-        self.context = "Environment"
-        self.system = "Test"
-        self.enabled = True
-        self.value = None
-        self.alert = Alert(self.id)
+        self.context = ""
+        self.system = ""
+        self.enabled = False
+        self.type = ""
+        self.value_current = None
+        self.alert = None
 
     def __str__(self):
         """Return Asset information in JSON."""
-        return str([{"id": self.id, "name": self.name, "value": self.value}])
+        return str([{"id": self.id, "name": self.name, "value": self.value_current}])
+
+    def load_asset_info(self):
+        """Load asset information based on dabase."""
+        field_names = '''
+            name
+            unit
+            virtual
+            context
+            system
+            enabled
+        '''.split()
+        try:
+            sql = 'SELECT {fields} FROM assets WHERE id = {asset} LIMIT 1;'.format(
+                fields=', '.join(field_names), asset=str(self.id))
+            database = sqlite3.connect(utilities.DB_CORE)
+            db_elements = database.cursor().execute(sql).fetchone()
+            for row in db_elements:
+                for field_name, field_value in zip(field_names, row):
+                    setattr(self, field_name, field_value)
+            self.log.info("Asset information loaded.")
+        except Exception as excpt:
+            self.log.exception("Error trying to load asset information: %s.", excpt)
+        finally:
+            database.close()
 
 class SmartModule(object):
     """Represents a HAPI Smart Module (Implementation).
@@ -102,6 +126,7 @@ class SmartModule(object):
         self.launch_time = self.rtc.get_datetime()
         self.asset = Asset()
         self.asset.id = self.rtc.get_id()
+        self.asset.alert = Alert(self.asset.id)
         self.asset.context = self.rtc.get_context()
         self.asset.type = self.rtc.get_type()
         self.ai = asset_interface.AssetInterface(self.asset.type, self.rtc.mock)
@@ -193,8 +218,9 @@ class SmartModule(object):
                 self.comm.unsubscribe("SCHEDULER/RESPONSE")
                 self.comm.subscribe("STATUS/RESPONSE")
                 self.comm.subscribe("ASSET/RESPONSE" + "/#")
-                self.comm.send("SCHEDULER/RESPONSE", self.hostname + ".local")
-                self.comm.send("ANNOUNCE", self.hostname + ".local is running the Scheduler.")
+                self.comm.subscribe("ALERT")
+                self.comm.send("SCHEDULER/RESPONSE", self.hostname)
+                self.comm.send("ANNOUNCE", self.hostname + " is running the Scheduler.")
                 self.log.info("Scheduler program loaded.")
             except Exception as excpt:
                 self.log.exception("Error initializing scheduler. %s.", excpt)
@@ -316,12 +342,12 @@ class SmartModule(object):
 
     def get_asset_data(self):
         try:
-            value = str(self.ai.read_value())
+            self.asset.value_current = str(self.ai.read_value())
         except Exception as excpt:
             self.log.exception("Error getting asset data: %s.", excpt)
-            value = -1000
+            self.asset.value_current = -1000
 
-        return value
+        return self.asset.value_current
 
     def log_sensor_data(self, data, virtual):
         if not virtual:

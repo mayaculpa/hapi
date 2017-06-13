@@ -47,23 +47,18 @@ class Alert(object):
                      "response": self.response_type
                     }])
 
-    def __del__(self):
-        """Close all connections on object deletion."""
-        # This should be important regarding email and sms notifications.
-        pass
-
     def update_alert(self):
         """Fetch alert parameters from database."""
         try:
-            self.logger.info("Fetching alert parameters from database")
+            self.logger.info("Fetching alert parameters from database.")
             field_names = '''
                 lower_threshold
                 upper_threshold
                 message
                 response_type
             '''.split()
-            sql = 'SELECT {fields} FROM alert_params WHERE asset_id={asset};'.format(
-                fields=', '.join(field_names), asset=int(self.alert_id))
+            sql = "SELECT {fields} FROM alert_params WHERE asset_id = '{asset}' LIMIT 1;".format(
+                fields=', '.join(field_names), asset=str(self.alert_id))
             database = sqlite3.connect(DB_CORE)
             row = database.cursor().execute(sql).fetchone()
             for key, value in zip(field_names, row):
@@ -77,5 +72,8 @@ class Alert(object):
 
     def check_alert(self, current_value):
         """Check for alert to a given _value_."""
-        if not self.lower_threshold <= float(current_value) <= self.upper_threshold:
-            self.logger.info("[!] ALERT DETECTED. Value: %s.", current_value)
+        if self.lower_threshold <= float(current_value) <= self.upper_threshold:
+            return False
+
+        self.logger.info("[!] ALERT DETECTED. Value: %s.", current_value)
+        return True

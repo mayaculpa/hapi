@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-'''
-HAPI Generic Asset Interface
-Release: April 2017, Alpha Milestone
+"""
+HAPI Smart Module v2.1.2
+Release: April 2017 Beta Milestone
+
 Copyright 2016 Maya Culpa, LLC
 
 This program is free software: you can redistribute it and/or modify
@@ -18,23 +19,19 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
-'''
+"""
 
-import importlib
-import random
-import asset_wt
+from __future__ import print_function
 
-class AssetInterface(object):
-    def __init__(self, asset_type, mock):
-        """Determine the correct asset library and import it."""
-        self.mock = mock
-        if asset_type.lower() == "mock":
-            self.mock = True
-        else:
-            self.asset_lib = importlib.import_module("asset_" + str(asset_type))
+class Notification(object):
+    """Hold information about nofication that can be sent via SMS or email."""
 
-    def read_value(self):
-        if self.mock:
-            return float(random.randrange(8, 34, 1))
+    def __init__(self):
+        pass
 
-        return asset_wt.AssetImpl().read_value()
+    def __del__(self):
+
+        pass
+
+    def __str__(self):
+        pass

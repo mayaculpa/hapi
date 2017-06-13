@@ -98,10 +98,14 @@ class Communicator(object):
                       self.smart_module.get_asset_data())
 
         elif "ASSET/RESPONSE" in msg.topic:
-            if self.smart_module.asset.id == msg.topic.split("/")[2]:
+            asset_id = self.smart_module.asset.id
+            if asset_id == msg.topic.split("/")[2]:
                 value = msg.payload
                 self.smart_module.asset.alert.update_alert()
-                self.smart_module.asset.alert.check_alert(value)
+                if self.smart_module.asset.alert.check_alert(value):
+                    alert_msg = [{"asset_id": asset_id, "value": value,
+                                  "alert": str(self.smart_module.asset.alert)}]
+                    self.send("ALERT", str(alert_msg))
                 self.smart_module.push_data(
                     self.smart_module.asset.name,
                     self.smart_module.asset.context,
@@ -138,6 +142,9 @@ class Communicator(object):
 
         elif "$SYS/broker/clients/total" in msg.topic:
             self.broker_connections = int(msg.payload)
+
+        elif "ALERT" in msg.topic:
+            self.logger.info("Got an alert: %s", msg.payload)
 
         # elif "SYNCHRONIZE/TEST" in msg.topic:
         #     self.send("SYNCHRONIZE/RESPONSE", self.smart_module.data_sync.read_db_version())
