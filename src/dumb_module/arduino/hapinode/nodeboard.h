@@ -16,12 +16,12 @@
 #along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #*********************************************************************
 
-HAPI Remote Terminal Unit Firmware Code v3.0.0
+HAPI Remote Terminal Unit Firmware Code V3.1.0
 Authors: Tyler Reed, Mark Miller
 ESP Modification: John Archbold
 
-Sketch Date: May 2nd 2017
-Sketch Version: v3.0.0
+Sketch Date: June 13th, 2017
+Sketch Version: V3.1.0
 Implement of MQTT-based HAPInode (HN) for use in Monitoring and Control
 Implements mDNS discovery of MQTT broker
 Implements definitions for 
@@ -37,14 +37,24 @@ Communications Method
 #ifndef HAPIBOARD_H
 #define HAPIBOARD_H
 
+enum pin_control_enum {
+    UNUSED_PIN, // or reserved
+    DIGITAL_INPUT_PIN,
+    DIGITAL_INPUT_PULLUP_PIN,
+    DIGITAL_OUTPUT_PIN,
+    ANALOG_OUTPUT_PIN,
+    ANALOG_INPUT_PIN
+};
+
+
 #ifdef HN_ENET             // Mega256
 #define NUM_DIGITAL 54    // Number of digital I/O pins
 #define NUM_ANALOG  16    // Number of analog I/O pins
 #define PIN_MAP_SIZE NUM_DIGITAL*2   // Array size for default digital state data
                                      // 2 bytes per digital I/O pin, 1st byte = State, 2nd byte = Value
 // Default pin allocation
-#define DHT_SENSORPIN 12  // Reserved pin for DHT-22 sensor
-#define ONE_WIRE_BUS 13   // Reserved pin for 1-Wire bus
+#define DHT_PIN 12        // Reserved pin for DHT-22 sensor
+#define WIRE_PIN  13      // Reserved pin for 1-Wire bus
 #define LED_PIN 2         // Use the built-in led for visual feedback
 #define TDS_DRIVE1 33     // Reserved pin for TDS probe
 #define TDS_INPUT1 25     // Reserved pin for TDS probe
@@ -175,8 +185,8 @@ int pinDefaults[NUM_DIGITAL+NUM_ANALOG] = {
 // Default pin allocation
 #define LIGHT_SENSORPIN 2 // Reserved pin for a Light sensor
 #define FLOW_SENSORPIN 4  // Reserved pin for a flow sensor
-#define DHT_SENSORPIN 12  // Reserved pin for DHT-22 sensor
-#define ONE_WIRE_BUS 13   // Reserved pin for 1-Wire bus
+#define DHT_PIN 12        // Reserved pin for DHT-22 sensor
+#define WIRE_PIN  13      // Reserved pin for 1-Wire bus
 #define PH_SENSORPIN 14   // Reserved pin for pH probe
 #define TDS_SENSORPIN 15  // Reserved pin for TDS probe
 #define LED_PIN 5         // Use the built-in led for visual feedback
@@ -192,7 +202,7 @@ int pinDefaults[NUM_DIGITAL+NUM_ANALOG] = {
 #define cpHDn_PIN 12      // pHDown pump control pin
 #define spHDn_PIN A0      // pHDown pump sensor pin
 #define cLamp_PIN 12      // Lamp control pin
-#define sLamp_PIN A0      // Lamp sensor pin
+#define sLamp_PIN A0      // Analog Lamp sensor pin
 
 // Default pin modes
 // Analog input pins are assumed to be used as analog input pins
@@ -215,8 +225,7 @@ int pinControl[NUM_DIGITAL+NUM_ANALOG] = {
   DIGITAL_OUTPUT_PIN, // 14
   DIGITAL_OUTPUT_PIN, // 15
   DIGITAL_OUTPUT_PIN, // 16
-
-  ANALOG_INPUT_PIN    // 17 // A0 Analog Input ^^^ what does A0 mean?
+  ANALOG_INPUT_PIN    // 17
 };
 
 // Default pin states
@@ -238,8 +247,8 @@ int pinDefaults[NUM_DIGITAL+NUM_ANALOG] = {
 // Default pin allocation
 #define LED_PIN 2         // Use the built-in led for visual feedback
 
-#define DHT_SENSORPIN 12  // Reserved pin for DHT-22 sensor
-#define ONE_WIRE_BUS 14   // Reserved pin for 1-Wire bus
+#define DHT_PIN 13        // Reserved pin for DHT-22 sensor
+#define WIRE_PIN 14       // Reserved pin for 1-Wire bus
 #define SCL_PIN 22        // Default pin for I2C
 #define SDA_PIN 21        // Default pin for I2C
 
@@ -249,17 +258,17 @@ int pinDefaults[NUM_DIGITAL+NUM_ANALOG] = {
 #define sWtrFloat_PIN 39  // Fill float sensor pin
 
 #define cNutr_PIN 15      // Nutrient pump control pin
-#define sTDS_PIN 25       // Analog TDS sensor pin
-#define TDS_DRIVE1 33     // Reserved pin for TDS probe
-#define TDS_INPUT1 25     // Reserved pin for TDS probe
-#define TDS_INPUT2 26     // Reserved pin for TDS probe
-#define TDS_DRIVE2 27     // Reserved pin for TDS probe
+#define sTDS_PIN 34       // Analog TDS sensor pin
+#define cTDSO1_PIN 33     // Drive1 pin for TDS probe
+#define sTDSI1_PIN 25     // Input1 pin for TDS probe
+#define sTDSI2_PIN 26     // Input2 pin for TDS probe
+#define cTDSO2_PIN 27     // Drive2 pin for TDS probe
 
 #define cpHUp_PIN 17      // pHUp pump control pin
 #define cpHDn_PIN 16      // pHDown pump control pin
 #define spH_PIN   35      // pH sensor pin
 
-#define cLamp_PIN 13      // Lamp control pin
+#define cLamp_PIN 12      // Lamp control pin
 #define sLux_PIN  32      // Light sensor pin
 
 // Default pin modes

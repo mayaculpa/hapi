@@ -16,12 +16,12 @@
 #along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #*********************************************************************
 
-HAPI Remote Terminal Unit Firmware Code v3.0.0
+HAPI Remote Terminal Unit Firmware Code V3.1.0
 Authors: Tyler Reed, Mark Miller
 ESP Modification: John Archbold
 
-Sketch Date: May 2nd 2017
-Sketch Version: v3.0.0
+Sketch Date: June 13th, 2017
+Sketch Version: V3.1.0
 Implement of MQTT-based HAPInode (HN) for use in Monitoring and Control
 Implements mDNS discovery of MQTT broker
 Implements definitions for
@@ -37,22 +37,23 @@ Communications Method
 void setupSensors(void){
 // Initialize Digital Pins for Input or Output - From the arrays pinControl and pinDefaults
   for (int i = 0; i < ArrayLength(pinControl); i++) {
-    switch (pinControl[i])
-    case DIGITAL_INPUT_PIN:
-      pinMode(i, INPUT);
-      break;
-    case DIGITAL_INPUT_PULLUP_PIN:
-      pinMode(i, INPUT_PULLUP);
-      break;
-    case DIGITAL_OUTPUT_PIN:
-      pinMode(i, OUTPUT);
-      digitalWrite(i, (pinDefaults[i] ? HIGH : LOW));
-      break;
-    case ANALOG_OUTPUT_PIN:
-      pinMode(i, OUTPUT);
-      break;
-    default:
-      break;
+    switch (pinControl[i]) {
+      case DIGITAL_INPUT_PIN:
+        pinMode(i, INPUT);
+        break;
+      case DIGITAL_INPUT_PULLUP_PIN:
+        pinMode(i, INPUT_PULLUP);
+        break;
+      case DIGITAL_OUTPUT_PIN:
+        pinMode(i, OUTPUT);
+        digitalWrite(i, (pinDefaults[i] ? HIGH : LOW));
+        break;
+      case ANALOG_OUTPUT_PIN:
+        pinMode(i, OUTPUT);
+        break;
+      default:
+        break;
+    }
   }
 
 // Start the DHT-22
@@ -72,7 +73,7 @@ void setupSensors(void){
 // Start the I2C
   Wire.begin(SDA_PIN,SCL_PIN);      // Default
   Wire.setClock(400000);  // choose 400 kHz I2C rate
-  delay(1000);
+  Alarm.delay(100);
 }
 
 String getPinArray() {
@@ -102,7 +103,7 @@ float readHumidity(int iDevice) {
   else {
     returnValue = h;
   }
-//  Serial.print("DHT Humidity: ");
+//  Serial.print(F("DHT Humidity: "));
 //  Serial.println(returnValue);
   return returnValue;
 }
@@ -123,7 +124,7 @@ float readTemperatured(int iDevice) {
       returnValue = (returnValue * 9.0)/ 5.0 + 32.0; // Convert Celsius to Fahrenheit
     }
   }
-//  Serial.print("DHT Temperature: ");
+//  Serial.print(F("DHT Temperature: "));
 //  Serial.println(returnValue);
   return returnValue;
 }
@@ -143,7 +144,7 @@ float read1WireTemperature(int iDevice) {
       returnValue = (returnValue * 9.0)/ 5.0 + 32.0; // Convert Celsius to Fahrenheit
     }
   }
-//  Serial.print("18B20 Temperature: ");
+//  Serial.print(F("18B20 Temperature: "));
 //  Serial.println(returnValue);
   return returnValue;
 }
@@ -179,7 +180,7 @@ float readpH(int Device) {
   float phValue = ((((float)avgValue * 5.0) / 1024) / 6); // Convert the analog into millivolt
 
   phValue = 3.5 * phValue;                  //convert the millivolt into pH value
-//  Serial.print("pH: ");
+//  Serial.print(F("pH: "));
 //  Serial.println(phValue);
   return phValue;
 }
@@ -216,7 +217,7 @@ float readTDS(int Device) {
 
 //TODO Need temperature compensation for TDS
   TDSValue = 1.0 * TDSValue;                  // Convert the millivolt into TDS value
-//  Serial.print("TDS: ");
+//  Serial.print(F("TDS: "));
 //  Serial.println(TDSValue);
   return TDSValue;
 }
@@ -258,8 +259,9 @@ float readSensorPin(int Device) {
 }
 
 void hapiSensors(void) {
-  for (int i = 0; i < ArrayLength(HapisFunctions); i++) {
-    sendMQTTAsset(SENSORID_FN, i);         // Sensor values
+  for (int device = 0; device < ArrayLength(HapisFunctions); device++) {
+    currentTime = now();                  // Set the time
+    sendMQTTAsset(SENSORID_FN, device);   // Read the sensor value
   }
 }
 

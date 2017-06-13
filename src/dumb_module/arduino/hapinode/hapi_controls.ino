@@ -16,12 +16,14 @@
 #along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #*********************************************************************
 
-HAPI Remote Terminal Unit Firmware Code v3.0.0
+HAPI Remote Terminal Unit Firmware Code V3.1.0
 Authors: Tyler Reed, Mark Miller
 ESP Modification: John Archbold
 
-Sketch Date: May 2nd 2017
-Sketch Version: v3.0.0
+Sketch Date: June 13th, 2017
+Sketch Version: V3.1.0
+Implement of MQTT-based HAPInode (HN) for use in Monitoring and Control
+Implements mDNS discovery of MQTT broker
 Implements definitions for
   ESP-NodeMCU
   ESP8266
@@ -35,25 +37,21 @@ void setupControls(void){
 
 void checkControls(void) {
   CFuncDef c;
-  for (int i=0;i<ArrayLength(HapicFunctions);i++) {
-    c = HapicFunctions[i];                // initialize access structure
-    c.oPtr(i);                            // call the check function
+  currentTime = now();            // Update currentTime and ..
+                                  //  check all the control functions
+  for (int device=0;device<ArrayLength(HapicFunctions);device++) { // For each device
+    c = HapicFunctions[device];                //  initialize access structure
+    c.oPtr(device);                            //  call the check function
   }
 }
 
 float poll_on_off_thing_controller(int i) {
   CFuncDef c;
   ControlData d;
-  c = HapicFunctions[i];
-  d = HapicData[i];
-/*
-  Serial.print("device:pin -> ");
-  Serial.print(i);
-  Serial.print(" :  ");
-  Serial.println(d.hc_controlpin);
-  delay(5000);
-*/
-  if (d.hc_active) { // is it on?
+  c = HapicFunctions[Device];
+  d = HapicData[Device];
+ 
+  if (d.hc_active) {                  // Is the pump running?
     if (d.hc_end > currentTime) {     // Yes, should it be turned off?
       d.hc_active = false;
       digitalWrite(d.hc_controlpin, !d.hc_polarity);
@@ -72,8 +70,29 @@ float poll_on_off_thing_controller(int i) {
   }
 }
 
-float controlPumps(int Device) {
-  poll_on_off_thing_controller(Device);
+float controlLamps(int Device){
+  CFuncDef c;
+  ControlData d;
+  c = HapicFunctions[Device];
+  d = HapicData[Device];
+  
+  if (d.hc_active) {                  // Is the Lamp On?
+    if (d.hc_end > currentTime) {     // Yes, should it be turned off?
+      d.hc_active = false;
+      digitalWrite(d.hc_controlpin, !d.hc_polarity);
+      if (d.hc_repeat != 0) {   // Is repeat active?
+        d.hc_start += d.hc_repeat;
+        d.hc_end += d.hc_repeat;
+      }
+    }
+    if (c.iPtr(Device) < d.hcs_offValue) { // Is the TurnOff value exceeded?
+      d.hc_active = false;
+      digitalWrite(d.hc_controlpin, !d.hc_polarity);
+    }
+  } else if (d.hc_start >= currentTime || c.iPtr(Device) > d.hcs_onValue) { // Is the turnOn value exceeded?
+    d.hc_active = true;        // Turn it On, Lamp is now on
+    digitalWrite(d.hc_controlpin, d.hc_polarity);
+  }
 }
 
 float controlLamps(int Device) {
