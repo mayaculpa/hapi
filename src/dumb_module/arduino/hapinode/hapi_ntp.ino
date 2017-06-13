@@ -37,13 +37,13 @@ Communications Method
 time_t getNtpTime()
 {
   while (udp.parsePacket() > 0) ; // discard any previously received packets
-  Serial.println("Transmit NTP Request");
+  Serial.println(F("Transmit NTP Request"));
   sendNTPpacket(timeServerIP);
   uint32_t beginWait = millis();
   while (millis() - beginWait < 1500) {
     int size = udp.parsePacket();
     if (size >= NTP_PACKET_SIZE) {
-      Serial.println("Receive NTP Response");
+      Serial.println(F("Receive NTP Response"));
       udp.read(packetBuffer, NTP_PACKET_SIZE);  // read packet into the buffer
       unsigned long secsSince1900;
 
@@ -56,14 +56,14 @@ time_t getNtpTime()
       return secsSince1900 - 2208988800UL + timeZone * SECS_PER_HOUR;
     }
   }
-  Serial.println("No NTP Response :-(");
+  Serial.println(F("No NTP Response :-("));
   return 0; // return 0 if unable to get the time
 }
 
 // send an NTP request to the time server at the given address
 unsigned long sendNTPpacket(IPAddress& address)
 {
-  Serial.println("sending NTP packet...");
+  Serial.println(F("sending NTP packet..."));
   // set all bytes in the buffer to 0
   memset(packetBuffer, 0, NTP_PACKET_SIZE);
   // Initialize values needed to form NTP request

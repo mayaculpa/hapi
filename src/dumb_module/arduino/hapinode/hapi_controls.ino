@@ -41,9 +41,11 @@ void setupControls(void){
 
 void checkControls(void) {
   CFuncDef c;
-  for (int i=0;i<ArrayLength(HapicFunctions);i++) {
-    c = HapicFunctions[i];                // initialize access structure
-    c.oPtr(i);                            // call the check function
+  currentTime = now();            // Update currentTime and ..
+                                  //  check all the control functions
+  for (int device=0;device<ArrayLength(HapicFunctions);device++) { // For each device
+    c = HapicFunctions[device];                //  initialize access structure
+    c.oPtr(device);                            //  call the check function
   }
 }
 
@@ -52,14 +54,8 @@ float controlPumps(int Device){
   ControlData d;
   c = HapicFunctions[Device];
   d = HapicData[Device];
-/*
-  Serial.print("Pump checking device:pin -> ");
-  Serial.print(Device);
-  Serial.print(" :  ");
-  Serial.println(d.hc_controlpin);
-  delay(5000);
-*/  
-  if (d.hc_active) {            // is the pump running?
+ 
+  if (d.hc_active) {                  // Is the pump running?
     if (d.hc_end > currentTime) {     // Yes, should it be turned off?
       d.hc_active = false;
       digitalWrite(d.hc_controlpin, !d.hc_polarity);
@@ -84,7 +80,7 @@ float controlLamps(int Device){
   c = HapicFunctions[Device];
   d = HapicData[Device];
   
-  if (d.hc_active) {           // is the Lamp On?
+  if (d.hc_active) {                  // Is the Lamp On?
     if (d.hc_end > currentTime) {     // Yes, should it be turned off?
       d.hc_active = false;
       digitalWrite(d.hc_controlpin, !d.hc_polarity);
@@ -93,7 +89,7 @@ float controlLamps(int Device){
         d.hc_end += d.hc_repeat;
       }
     }
-    if (c.iPtr(Device) < d.hcs_offValue) { // is the TurnOff value exceeded?
+    if (c.iPtr(Device) < d.hcs_offValue) { // Is the TurnOff value exceeded?
       d.hc_active = false;
       digitalWrite(d.hc_controlpin, !d.hc_polarity);
     }

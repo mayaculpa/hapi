@@ -4,13 +4,13 @@ void setupTime()  {
   epoch = getNtpTime();       // Get the time from ntp (if available)
   if (epoch != 0) {
     setTime(epoch);           // getNtpTime() returns 0 if no ntp server
-    Serial.println("ntp has set the system time");
+    Serial.println(F("ntp has set the system time"));
   }
   if(timeStatus() != timeSet) {   // Has the RTC been set?
-     Serial.println("RTC not set and no ntp server !!");
+     Serial.println(F("RTC not set and no ntp server !!"));
      return;
   }
-  Serial.println("RTC has the system time");          
+  Serial.println(F("RTC has the system time"));          
 }
 
 void updateRTC(void) {
@@ -22,18 +22,18 @@ void digitalClockDisplay(){
   Serial.print(hour());
   printDigits(minute());
   printDigits(second());
-  Serial.print(" ");
+  Serial.print(F(" "));
   Serial.print(day());
-  Serial.print(" ");
+  Serial.print(F(" "));
   Serial.print(month());
-  Serial.print(" ");
+  Serial.print(F(" "));
   Serial.print(year()); 
   Serial.println(); 
 }
 
 void printDigits(int digits){
   // utility function for digital clock display: prints preceding colon and leading 0
-  Serial.print(":");
+  Serial.print(F(":"));
   if(digits < 10)
     Serial.print('0');
   Serial.print(digits);

@@ -42,6 +42,8 @@ boolean sendMQTTStatus(void){
   JsonObject& status_message = hn_topic_status.createObject();
 
 // Publish current status
+  // Set the time
+  currentTime = now();
   // Identify HAPInode
   status_message["Node"] = HN_Id;
   // Returns the current status of the HN itself
@@ -58,7 +60,7 @@ boolean sendMQTTStatus(void){
   strcat(mqtt_topic, hostString);                   // Add the NodeId
 
   Serial.print(mqtt_topic);
-  Serial.print(" : ");
+  Serial.print(F(" : "));
   Serial.println(MQTTOutput);
 
   // PUBLISH to the MQTT Broker
@@ -67,21 +69,21 @@ boolean sendMQTTStatus(void){
   }
   // If the message failed to send, try again, as the connection may have broken.
   else {
-    Serial.println("Status Message failed to publish. Reconnecting to MQTT Broker and trying again .. ");
+    Serial.println(F("Status Message failed to publish. Reconnecting to MQTT Broker and trying again .. "));
     if (MQTTClient.connect(clientID, MQTT_broker_username, MQTT_broker_password)) {
-      Serial.println("reconnected to MQTT Broker!");
+      Serial.println(F("reconnected to MQTT Broker!"));
       delay(100); // This delay ensures that client.publish doesn't clash with the client.connect call
       if (MQTTClient.publish(mqtt_topic_status, MQTTOutput)) {
-        Serial.println("Status Message published after one retry.");
+        Serial.println(F("Status Message published after one retry."));
         return true;
       }
       else {
-        Serial.println("Status Message failed to publish after one retry.");
+        Serial.println(F("Status Message failed to publish after one retry."));
         return false;
       }
     }
     else {
-      Serial.println("Connection to MQTT Broker failed...");
+      Serial.println(F("Connection to MQTT Broker failed..."));
       return false;
     }
   }
@@ -133,7 +135,7 @@ boolean sendMQTTAsset(int AssetIdx, int Number) {
   publishJSON(mqtt_topic);                          // Publish it
 
   Serial.print(mqtt_topic);
-  Serial.print(" : ");
+  Serial.print(F(" : "));
   Serial.println(MQTTOutput);
 }
 
@@ -157,21 +159,21 @@ boolean createAssetJSON(int AssetIdx, int Number) {
 
   // Assembles a message with values from pins and custom functions
   // Returns a JSON string
-
-  asset_message["t"] = currentTime;                            // UTC time
+  currentTime = now();                            // Get the current time
+  asset_message["t"] = currentTime;               //  into the JSON message
 
   switch(AssetIdx) {
     case SENSORID_DIO:
-      asset_message["Asset"] =  "DIO";            // Asset ID
-      asset_message["ctxt"] =  "PIN";             // Context
-      asset_message["unit"] =  "";                // Units of measurement
+      asset_message["Asset"] = F("DIO");            // Asset ID
+      asset_message["ctxt"] = F("PIN");             // Context
+      asset_message["unit"] = F("");                // Units of measurement
       pinValue = digitalRead(Number);
       asset_message["data"] = pinValue;           // Data
       break;
     case SENSORID_AIO:
-      asset_message["Asset"] =  "AIO";
-      asset_message["ctxt"] =  "PIN";
-      asset_message["unit"] =  "";
+      asset_message["Asset"] = F("AIO");
+      asset_message["ctxt"] = F("PIN");
+      asset_message["unit"] = F("");
       pinValue = analogRead(Number);
       asset_message["data"] = pinValue;
       break;
@@ -218,20 +220,20 @@ boolean publishJSON(const char* topic) {
   }
 // If the message failed to send, try again, as the connection may have broken.
   else {
-    Serial.println("Send Message failed. Reconnecting to MQTT Broker and trying again .. ");
+    Serial.println(F("Send Message failed. Reconnecting to MQTT Broker and trying again .. "));
     if (MQTTClient.connect(clientID, MQTT_broker_username, MQTT_broker_password)) {
-      Serial.println("reconnected to MQTT Broker!");
+      Serial.println(F("reconnected to MQTT Broker!"));
       delay(100); // This delay ensures that client.publish doesn't clash with the client.connect call
       if (MQTTClient.publish(topic, MQTTOutput)) {
         return true;
       }
       else {
-        Serial.println("Send Message failed after one retry.");
+        Serial.println(F("Send Message failed after one retry."));
         return false;
       }
     }
     else {
-      Serial.println("Connection to MQTT Broker failed...");
+      Serial.println(F("Connection to MQTT Broker failed..."));
       return false;
     }
   }
@@ -246,7 +248,7 @@ void MQTTcallback(char* topic, byte* payload, unsigned int length) {
   FuncDef f;                  // Read Data Functions
   CFuncDef c;                 // Control functions
   ControlData cd;             // Data for control functions
-  int AssetIdx;              // Target Sensor Index
+  int AssetIdx;               // Target Sensor Index
   int Number;                 // Target pin# or function#
   int data;                   // Data for output
   boolean succeed;
@@ -270,15 +272,15 @@ void MQTTcallback(char* topic, byte* payload, unsigned int length) {
     return;
   }
   else {
-    Serial.println("Parsing .. ");
+    Serial.println(F("Parsing .. "));
     for (JsonObject::iterator it=command_topic.begin(); it!=command_topic.end(); ++it)
     {
       Serial.print(it->key);
-      Serial.print(":");
+      Serial.print(F(":"));
       Serial.println(it->value.as<char*>());
     }
 
-    Serial.print("Node - ");
+    Serial.print(F("Node - "));
     Serial.println(Node);
 // Check correct Node ID
     if (command_topic.containsKey("Node")) { // NodeId is required for all messages, even if it is "*"
@@ -308,8 +310,8 @@ void MQTTcallback(char* topic, byte* payload, unsigned int length) {
 
 // Commands that do require an Asset ID
 // ------------------------------------
-        if (command_topic.containsKey("Asset")) {     // AssetID is required
-          Serial.println("Processing Asset");
+        if (command_topic.containsKey(F("Asset"))) {     // AssetID is required
+          Serial.println(F("Processing Asset"));
 // Digital IO
           if (strcmp(command_topic["Asset"], "DIO") == 0) { // Digital IO
             if (command_topic.containsKey("pin")) {   // pin - required
@@ -330,7 +332,7 @@ void MQTTcallback(char* topic, byte* payload, unsigned int length) {
               return;
             }
           }
-          Serial.println(" .. not DIO");
+          Serial.println(F(" .. not DIO"));
 
 // Analog IO
           if (strcmp(command_topic["Asset"], "AIO") == 0) { // Analog IO
@@ -354,7 +356,7 @@ void MQTTcallback(char* topic, byte* payload, unsigned int length) {
               return;
             }
           }
-          Serial.println(" .. not AIO");
+          Serial.println(F(" .. not AIO"));
 
 // Function IO
           Number = INVALID_VALUE;
@@ -370,7 +372,7 @@ void MQTTcallback(char* topic, byte* payload, unsigned int length) {
             return;
           }
           else {                                      // Did not find a sensor, so try controls
-            Serial.println(" .. not Sensor Read");
+            Serial.println(F(" .. not Sensor Read"));
             AssetIdx = CONTROLID_FN;                 // Control Function IO
             for (int i=0;i < ArrayLength(HapicFunctions);i++) { // Scan for a match on the control name
               c = HapicFunctions[i];                  // Point to control function structure
@@ -391,7 +393,7 @@ void MQTTcallback(char* topic, byte* payload, unsigned int length) {
                 HapicData[Number].hc_polarity = command_topic["pol"];
               }
               if (command_topic.containsKey("stt")) {  // Start time (unix secs)
-                Serial.println("writing stt");
+                Serial.println(F("writing stt"));
                 HapicData[Number].hc_start = command_topic["stt"];
               }
               if (command_topic.containsKey("end")) {  // End time (unix secs)
@@ -411,12 +413,12 @@ void MQTTcallback(char* topic, byte* payload, unsigned int length) {
             }
             else return;         // Found a valid control name but no valid command or data
           }
-          Serial.println(" .. not Control I/O");
+          Serial.println(F(" .. not Control I/O"));
         } // Command topic contains a SensorId
         else return;
       } // End (strcmp COMMAND/ topic
 
-      Serial.println(" .. not COMMAND/");
+      Serial.println(F(" .. not COMMAND/"));
 
 // Check for CONFIG/ only topic values
 // ===================================
@@ -424,13 +426,15 @@ void MQTTcallback(char* topic, byte* payload, unsigned int length) {
         if (command_topic.containsKey("timeZone")) {  // Time Zone ?
           timeZone = command_topic["timeZone"];
         }
+// Add extra CONFIG values here
+// ----------------------------
         else return;
       }
-      Serial.println(" .. not CONFIG/");
+      Serial.println(F(" .. not CONFIG/"));
         
 // STATUS topics
 // =============
-      Serial.print("Checking .. ");
+      Serial.print(F("Checking .. "));
       Serial.println(topic);
 
       strcpy(hn_topic,mqtt_topic_array[STATUSSTART]);     // Status query, any NodeId
@@ -438,7 +442,7 @@ void MQTTcallback(char* topic, byte* payload, unsigned int length) {
         sendMQTTStatus();
         return;
       }
-      Serial.print(" .. not ");
+      Serial.print(F(" .. not "));
       Serial.println(hn_topic);
 
 // ASSET topics
@@ -451,7 +455,7 @@ void MQTTcallback(char* topic, byte* payload, unsigned int length) {
             sendAllMQTTAssets();
             return;
         }
-        Serial.print(" .. not ");
+        Serial.print(F(" .. not "));
         Serial.println(hn_topic);
       }
 
@@ -472,7 +476,7 @@ void MQTTcallback(char* topic, byte* payload, unsigned int length) {
         sendMQTTAsset(AssetIdx, Number);         // Publish sensor or control function data
         return;                                   //  and exit
       }
-      Serial.print(" .. not ");
+      Serial.print(F(" .. not "));
       Serial.println(hn_topic);
 // Handle Controls
       AssetIdx = CONTROLID_FN;                   // Control Function IO
@@ -490,7 +494,7 @@ void MQTTcallback(char* topic, byte* payload, unsigned int length) {
         sendMQTTAsset(AssetIdx, Number);         // Publish sensor or control function data
         return;                                   //  and exit
       }
-      Serial.print(" .. not ");
+      Serial.print(F(" .. not "));
       Serial.println(hn_topic);
 
 // CONFIG topic
@@ -532,7 +536,7 @@ void MQTTcallback(char* topic, byte* payload, unsigned int length) {
         }
         return;
     }
-      Serial.print(" .. not ");
+      Serial.print(F(" .. not "));
       Serial.println(hn_topic);
 
 // Other topics go here
