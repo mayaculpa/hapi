@@ -16,12 +16,12 @@
 #along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #*********************************************************************
 
-HAPI Remote Terminal Unit Firmware Code v3.0.0
+HAPI Remote Terminal Unit Firmware Code V3.1.0
 Authors: Tyler Reed, Mark Miller
 ESP Modification: John Archbold
 
-Sketch Date: May 2nd 2017
-Sketch Version: v3.0.0
+Sketch Date: June 13th, 2017
+Sketch Version: V3.1.0
 Implement of MQTT-based HAPInode (HN) for use in Monitoring and Control
 Implements mDNS discovery of MQTT broker
 Implements definitions for
@@ -114,7 +114,7 @@ unsigned long mscount;      // millisecond counter
 time_t epoch;               // UTC seconds
 time_t currentTime;         // Local value
 
-String HAPI_FW_VERSION = F("v3.1");    // The version of the firmware the HN is running
+String HAPI_FW_VERSION = F("v3.1.0");    // The version of the firmware the HN is running
 #ifdef HN_ENET
 String HN_base = F("HN2");             // Prefix for mac address
 #endif
