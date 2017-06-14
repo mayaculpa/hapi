@@ -50,7 +50,7 @@ float poll_on_off_thing_controller(int i) {
   ControlData d;
   c = HapicFunctions[Device];
   d = HapicData[Device];
- 
+
   if (d.hc_active) {                  // Is the pump running?
     if (d.hc_end > currentTime) {     // Yes, should it be turned off?
       d.hc_active = false;
@@ -75,7 +75,7 @@ float controlLamps(int Device){
   ControlData d;
   c = HapicFunctions[Device];
   d = HapicData[Device];
-  
+
   if (d.hc_active) {                  // Is the Lamp On?
     if (d.hc_end > currentTime) {     // Yes, should it be turned off?
       d.hc_active = false;

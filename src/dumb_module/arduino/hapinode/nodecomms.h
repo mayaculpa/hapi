@@ -24,7 +24,7 @@ Sketch Date: June 13th, 2017
 Sketch Version: V3.1.0
 Implement of MQTT-based HAPInode (HN) for use in Monitoring and Control
 Implements mDNS discovery of MQTT broker
-Implements definitions for 
+Implements definitions for
   ESP-NodeMCU
   ESP8266
   WROOM32

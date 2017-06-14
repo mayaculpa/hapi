@@ -431,7 +431,7 @@ void MQTTcallback(char* topic, byte* payload, unsigned int length) {
         else return;
       }
       Serial.println(F(" .. not CONFIG/"));
-        
+
 // STATUS topics
 // =============
       Serial.print(F("Checking .. "));
