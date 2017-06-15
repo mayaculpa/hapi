@@ -25,6 +25,7 @@ from __future__ import print_function
 import sys
 import log
 import paho.mqtt.client as mqtt
+import notification
 
 class Communicator(object):
     def __init__(self, sm):
@@ -94,27 +95,23 @@ class Communicator(object):
             self.smart_module.get_env()
 
         elif "ASSET/QUERY" in msg.topic:
+            value = self.smart_module.get_asset_data()
             self.send("ASSET/RESPONSE/" + self.smart_module.asset.id,
-                      self.smart_module.get_asset_data())
+                      value)
+            self.smart_module.asset.alert.update_alert()
+            if self.smart_module.asset.alert.check_alert(value):
+                self.send("ALERT", str([{"asset_id": self.smart_module.asset.id, "value": value,
+                    "alert": str(self.smart_module.asset.alert)}]))
 
         elif "ASSET/RESPONSE" in msg.topic:
-            asset_id = self.smart_module.asset.id
-            if asset_id == msg.topic.split("/")[2]:
-                value = msg.payload
-                self.smart_module.asset.alert.update_alert()
-                if self.smart_module.asset.alert.check_alert(value):
-                    alert_msg = [{"asset_id": asset_id, "value": value,
-                                  "alert": str(self.smart_module.asset.alert)}]
-                    self.send("ALERT", str(alert_msg))
-                self.smart_module.push_data(
-                    self.smart_module.asset.name,
-                    self.smart_module.asset.context,
-                    value, self.smart_module.asset.unit
-                )
+            self.smart_module.push_data(
+                self.smart_module.asset.name, self.smart_module.asset.context, msg.payload,
+                self.smart_module.asset.unit)
 
         elif "STATUS/QUERY" in msg.topic:
             self.smart_module.last_status = self.smart_module.get_status(self.broker_connections)
-            self.send("STATUS/RESPONSE", str(self.smart_module.last_status))
+            self.send("STATUS/RESPONSE/" + self.smart_module.hostname,
+                str(self.smart_module.last_status))
 
         elif "STATUS/RESPONSE" in msg.topic:
             self.smart_module.push_sysinfo("system", self.smart_module.last_status)
@@ -144,6 +141,11 @@ class Communicator(object):
             self.broker_connections = int(msg.payload)
 
         elif "ALERT" in msg.topic:
+            #args = {"sender": None, "receiver": None,
+            #        "subject": "HAPI Alert!", "message": msg.payload, "server": None
+            #        "username": None, "password": None}
+            #email = notification.Email(**args)
+            #email.send("Got an alert on asset")
             self.logger.info("Got an alert: %s", msg.payload)
 
         # elif "SYNCHRONIZE/TEST" in msg.topic:
