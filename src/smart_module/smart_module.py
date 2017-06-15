@@ -74,19 +74,14 @@ class Asset(object):
             system
             enabled
         '''.split()
-        try:
-            sql = 'SELECT {fields} FROM assets WHERE id = {asset} LIMIT 1;'.format(
-                fields=', '.join(field_names), asset=str(self.id))
-            database = sqlite3.connect(utilities.DB_CORE)
-            db_elements = database.cursor().execute(sql).fetchone()
-            for row in db_elements:
-                for field_name, field_value in zip(field_names, row):
-                    setattr(self, field_name, field_value)
-            self.log.info("Asset information loaded.")
-        except Exception as excpt:
-            self.log.exception("Error trying to load asset information: %s.", excpt)
-        finally:
-            database.close()
+        sql = "SELECT {fields} FROM assets WHERE id = '{asset}' LIMIT 1;".format(
+            fields=', '.join(field_names), asset=str(self.id))
+        database = sqlite3.connect(utilities.DB_CORE)
+        db_elements = database.cursor().execute(sql)
+        for row in db_elements:
+            for field_name, field_value in zip(field_names, row):
+                setattr(self, field_name, field_value)
+        database.close()
 
 class SmartModule(object):
     """Represents a HAPI Smart Module (Implementation).
@@ -216,7 +211,7 @@ class SmartModule(object):
                 self.comm.scheduler_found = True
                 self.comm.subscribe("SCHEDULER/QUERY")
                 self.comm.unsubscribe("SCHEDULER/RESPONSE")
-                self.comm.subscribe("STATUS/RESPONSE")
+                self.comm.subscribe("STATUS/RESPONSE" + "/#")
                 self.comm.subscribe("ASSET/RESPONSE" + "/#")
                 self.comm.subscribe("ALERT")
                 self.comm.send("SCHEDULER/RESPONSE", self.hostname)
@@ -320,8 +315,7 @@ class SmartModule(object):
                         "clients": information.clients
                     }
                    }]
-        json = cpuinfo + meminfo + netinfo + botinfo + diskinf + tempinf + ctsinfo
-        conn.write_points(json)
+        conn.write_points(cpuinfo + meminfo + netinfo + botinfo + diskinf + tempinf + ctsinfo)
 
     def get_status(self, brokerconnections):
         """Fetch system information (stats)."""
@@ -338,7 +332,7 @@ class SmartModule(object):
 
     def on_check_alert(self):
         """It'll called by the Scheduler to ask for Alert Conditions."""
-        self.comm.send("ASSET/QUERY/" + self.asset.id, "Is it warm here?")
+        self.comm.send("ASSET/QUERY", "Is it warm here?")
 
     def get_asset_data(self):
         try:
@@ -712,6 +706,7 @@ def main():
     try:
         smart_module = SmartModule()
         smart_module.discover()
+        smart_module.asset.load_asset_info()
         smart_module.load_site_data()
 
     except Exception as excpt:
