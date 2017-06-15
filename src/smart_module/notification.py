@@ -22,16 +22,73 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 from __future__ import print_function
+from abc import abstractmethod
+import smtplib
+import log
 
 class Notification(object):
     """Hold information about nofication that can be sent via SMS or email."""
 
-    def __init__(self):
-        pass
+    def __init__(self, **kwargs):
+        self.logging = log.Log("notification.log")
+        self.sender = ""
+        self.receiver = ""
+        self.message = ""
 
-    def __del__(self):
+        if kwargs is not None:
+            try:
+                for key, value in kwargs.iteritems():
+                    setattr(self, key, value)
+            except Exception as excpt:
+                self.logging.exception("Error setting parameters to Notification: %s", excpt)
 
-        pass
+    @abstractmethod
+    def send(self, msg):
+        """Send notification."""
 
-    def __str__(self):
+class Email(Notification):
+    """Email notification."""
+
+    def __init__(self, **kwargs):
+        Notification.__init__(self, **kwargs)
+        try:
+            self.username = kwargs["username"]
+            self.password = kwargs["password"]
+            self.serveraddr = kwargs["server"]
+            self.subject = kwargs["subject"]
+        except Exception as excpt:
+            self.logging.exception("Trying to set username and password: %s.", excpt)
+
+    def build_message(self, alert):
+        """Build message body for e-mail."""
+
+        message = "\r\n".join([
+            "From: " + self.sender,
+            "To: " + self.receiver,
+            "Subject: " + self.subject,
+            "",
+            alert + " : " + self.message])
+
+        return message
+
+    def send(self, alert):
+        try:
+            self.logging.info("Sending email notification.")
+            server = smtplib.SMTP(self.serveraddr)
+            server.ehlo()
+            server.starttls()
+            server.login(self.username, self.password)
+            server.sendmail(self.sender, self.receiver, self.build_message(alert))
+        except Exception as excpt:
+            self.logging.exception("Trying to send notificaton via e-mail: %s.", excpt)
+        finally:
+            server.quit()
+
+class SMS(Notification):
+    """SMS notification."""
+
+    def __init__(self, **kwargs):
+        Notification.__init__(self, **kwargs)
+
+    def send(self, msg):
         pass
