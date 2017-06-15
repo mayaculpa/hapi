@@ -13,5 +13,6 @@ Contents:
    :maxdepth: 2
 
    system_overview
-   smart_module
-   dumb_module
+   HAPImodule
+   HAPInode
+   MQTT_topics
