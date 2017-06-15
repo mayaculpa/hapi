@@ -106,3 +106,8 @@ ENV/
 *.log
 *.pyc
 SDL_DS3231.py
+
+# Sphinx
+docs/_build/
+docs/_static/
+docs/_templates/
