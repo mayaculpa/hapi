@@ -34,7 +34,7 @@ Communications Method
   MQTT        Listens for messages on Port 1883
 */
 
-#ifndef HAPIWiFi_H
+#if !defined(HAPIWiFi_H)
 #define HAPIWiFi_H
 
 // ==============================================================
@@ -48,7 +48,7 @@ Communications Method
 
 #define UDP_port 2390
 
-#ifdef HN_WiFi
+#if defined(HN_WiFi)
 #define HAPI_SSID "HAPInet"
 #define HAPI_PWD  "HAPIconnect"
 #endif

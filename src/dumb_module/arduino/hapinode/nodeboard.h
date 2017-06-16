@@ -34,7 +34,7 @@ Communications Method
   MQTT        Listens for messages on Port 1883
 */
 
-#ifndef HAPIBOARD_H
+#if !defined(HAPIBOARD_H)
 #define HAPIBOARD_H
 
 enum pin_control_enum {
@@ -47,7 +47,7 @@ enum pin_control_enum {
 };
 
 
-#ifdef HN_ENET             // Mega256
+#if defined(HN_ENET)             // Mega256
 #define NUM_DIGITAL 54    // Number of digital I/O pins
 #define NUM_ANALOG  16    // Number of analog I/O pins
 #define PIN_MAP_SIZE NUM_DIGITAL*2   // Array size for default digital state data
@@ -176,7 +176,7 @@ int pinDefaults[NUM_DIGITAL+NUM_ANALOG] = {
 
 #endif
 
-#ifdef HN_ESP8266
+#if defined(HN_ESP8266)
 #define NUM_DIGITAL 17    // Number of digital I/O pins
 #define NUM_ANALOG  1     // Number of analog I/O pins
 #define PIN_MAP_SIZE NUM_DIGITAL*2   // Array size for default state data
@@ -239,7 +239,7 @@ int pinDefaults[NUM_DIGITAL+NUM_ANALOG] = {
 };
 #endif
 
-#ifdef HN_ESP32
+#if defined(HN_ESP32)
 #define NUM_DIGITAL 54    // Number of digital I/O pins
 #define NUM_ANALOG  16    // Number of analog I/O pins
 #define PIN_MAP_SIZE NUM_DIGITAL*2   // Array size for default digital state data

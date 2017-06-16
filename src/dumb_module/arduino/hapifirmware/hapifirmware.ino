@@ -46,10 +46,10 @@ Communications Protocol: Ethernet, USB
 
 #include <DHT.h>
 #include <SPI.h>
-#ifdef RTU_ESP
+#if defined(RTU_ESP)
 #include <ESP8266WiFi.h>
 #endif
-#ifdef RTU_ENET
+#if defined(RTU_ENET)
 #include <Ethernet.h>
 #endif
 #include <stdlib.h>
@@ -58,7 +58,7 @@ Communications Protocol: Ethernet, USB
 #include <OneWire.h>
 #include <DallasTemperature.h>
 
-#ifdef RTU_ENET
+#if defined(RTU_ENET)
 #define NUM_DIGITAL 54    // Number of digital I/O pins
 #define NUM_ANALOG  16    // Number of analog I/O pins
 #define PIN_MAP_SIZE NUM_DIGITAL*2   // Array size for default digital state data
@@ -174,7 +174,7 @@ int pinDefaults[NUM_DIGITAL+NUM_ANALOG] = {
 #endif
 
 
-#ifdef RTU_USB
+#if defined(RTU_USB)
 #define NUM_DIGITAL 54    // Number of digital I/O pins
 #define NUM_ANALOG  16    // Number of analog I/O pins
 #define PIN_MAP_SIZE NUM_DIGITAL*2   // Array size for default digital state data
@@ -222,7 +222,7 @@ int pinDefaults[NUM_DIGITAL+NUM_ANALOG] = {
 #endif
 
 
-#ifdef RTU_UNO
+#if defined(RTU_UNO)
 #define NUM_DIGITAL 14    // Number of digital I/O pins
 #define NUM_ANALOG   6    // Number of analog I/O pins
 #define PIN_MAP_SIZE NUM_DIGITAL*2   // Array size for default digital state data
@@ -259,7 +259,7 @@ int pinDefaults[NUM_DIGITAL+NUM_ANALOG] = {
 };
 #endif
 
-#ifdef RTU_ESP
+#if defined(RTU_ESP)
 #define NUM_DIGITAL 17    // Number of digital I/O pins
 #define NUM_ANALOG  1     // Number of analog I/O pins
 #define PIN_MAP_SIZE NUM_DIGITAL*2   // Array size for default state data
@@ -299,16 +299,16 @@ DallasTemperature wp_sensors(&oneWire);
 
 //**** Begin Main Variable Definition Section ****
 String HAPI_CLI_VERSION = "v2.2";  // The version of the firmware the RTU is running
-#ifdef RTU_ENET
+#if defined(RTU_ENET)
 String RTUID = "RTU001";             // This RTUs Unique ID Number - unique across site
 #endif
-#ifdef RTU_USB
+#if defined(RTU_USB)
 String RTUID = "RTU101";             // This RTUs Unique ID Number - unique across site
 #endif
-#ifdef RTU_ESP
+#if defined(RTU_ESP)
 String RTUID = "RTU301";             // This RTUs Unique ID Number - unique across site
 #endif
-#ifdef RTU_UNO
+#if defined(RTU_UNO)
 String RTUID = "RTU201";             // This RTUs Unique ID Number - unique across site
 #endif
 idle_mode = false;         // a boolean representing the idle mode of the RTU
@@ -324,11 +324,11 @@ boolean stringComplete = false;    // A boolean indicating when received string 
 //**** Begin Communications Section ****
 // the media access control (ethernet hardware) address for the shield:
 byte mac[] = { 0x55, 0x55, 0x55, 0x55, 0x55, 0x55 };
-#ifdef RTU_ENET
+#if defined(RTU_ENET)
 EthernetServer rtuServer = EthernetServer(80);
 EthernetClient client;
 #endif
-#ifdef RTU_ESP
+#if defined(RTU_ESP)
 const char* ssid = HAPI_SSID;
 const char* password = HAPI_PWD;
 int WiFiStatus = 0;
@@ -411,31 +411,31 @@ void writeLine(String response, boolean EOL) {
   for (int i = 0; i < response.length(); i++)
     {
     inChar = (char)response.charAt(i);
-#ifdef RTU_ENET
+#if defined(RTU_ENET)
     rtuServer.write(inChar);
 #endif
-    #ifdef RTU_ESP
+    #if defined(RTU_ESP)
     rtuServer.write(inChar);
 #endif
-#ifdef RTU_USB
+#if defined(RTU_USB)
     Serial.write(inChar);
 #endif
-    #ifdef RTU_UNO
+    #if defined(RTU_UNO)
     Serial.write(inChar);
 #endif
     }
   if ((String)inChar != "\n") {
     if (EOL) {
-#ifdef RTU_ENET
+#if defined(RTU_ENET)
     rtuServer.write(inChar);
 #endif
-    #ifdef RTU_ESP
+    #if defined(RTU_ESP)
     rtuServer.write(inChar);
 #endif
-#ifdef RTU_USB
+#if defined(RTU_USB)
     Serial.write(inChar);
 #endif
-    #ifdef RTU_UNO
+    #if defined(RTU_UNO)
     Serial.write(inChar);
 #endif
     }
@@ -541,16 +541,16 @@ float readThermistorTemp(int iDevice) {
   return Temp;
 }
 
-#ifdef RTU_USB
+#if defined(RTU_USB)
 String getCommand() {
 #endif
-#ifdef RTU_UNO
+#if defined(RTU_UNO)
 String getCommand() {
 #endif
-#ifdef RTU_ENET
+#if defined(RTU_ENET)
 String getCommand(EthernetClient client) {
 #endif
-#ifdef RTU_ESP
+#if defined(RTU_ESP)
 String getCommand(WiFiClient client) {
 #endif
 
@@ -641,13 +641,13 @@ String getStatus() {
   retval = RTUID + "\r\n";
   retval += "Firmware " + HAPI_CLI_VERSION + "\r\n";
   Serial.println(retval);
-#ifdef RTU_USB
+#if defined(RTU_USB)
   retval += "Connected on USB\r\n";
 #endif
-#ifdef RTU_UNO
+#if defined(RTU_UNO)
   retval += "Connected on USB\r\n";
 #endif
-#ifdef RTU_ENET
+#if defined(RTU_ENET)
   retval += "MAC=";
   retval += "0x" + String(mac[0], HEX) + ":";
   retval += "0x" + String(mac[1], HEX) + ":";
@@ -663,7 +663,7 @@ String getStatus() {
   retval += String(Ethernet.localIP()[3]) + "\n";
   Serial.println(retval);
 #endif
-#ifdef RTU_ESP
+#if defined(RTU_ESP)
   retval += "MAC=";
   retval += "0x" + String(mac[0], HEX) + ":";
   retval += "0x" + String(mac[1], HEX) + ":";
@@ -692,7 +692,7 @@ String getStatus() {
 
 
 int freeRam (){
-#ifdef RTU_ESP
+#if defined(RTU_ESP)
 // Gets free ram on the ESP8266
   return ESP.getFreeHeap();
 #else
@@ -738,7 +738,7 @@ void setup() {
 
   Serial.begin(115200);
 
-#ifdef RTU_ENET
+#if defined(RTU_ENET)
   Serial.println("Initializing network....");
   if (Ethernet.begin(mac) == 0) {
     Serial.println("Failed to obtain IP address  ...");
@@ -749,7 +749,7 @@ void setup() {
   }
   rtuServer.begin();
 #endif
-#ifdef RTU_ESP
+#if defined(RTU_ESP)
   Serial.println("Initializing WiFi network....");
   WiFiStatus = WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) {
@@ -858,10 +858,10 @@ void loop() {
 
       String response = buildResponse();
       writeLine(response, true);
-#ifdef RTU_ENET
+#if defined(RTU_ENET)
       client.stop();
 #endif
-#ifdef RTU_ESP
+#if defined(RTU_ESP)
       client.stop();
 #endif
     }
