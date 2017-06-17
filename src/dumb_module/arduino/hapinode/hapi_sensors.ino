@@ -80,7 +80,7 @@ String getPinArray() {
   // Returns all pin configuration information
   String response = "";
   for (int i = 0; i < NUM_DIGITAL+NUM_ANALOG; i++) {
-    if (i <= (NUM_DIGITAL-1)) {
+    if (i < NUM_DIGITAL) {
       response += String(i) + String(pinControl[i]);
     }
     else {
