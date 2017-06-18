@@ -79,7 +79,7 @@ void setupSensors(void){
 String getPinArray() {
   // Returns all pin configuration information
   String response = "";
-  for (int i = 0; i < NUM_DIGITAL+NUM_ANALOG; i++) {
+  for (int i = 0; i < ArrayLength(pinControl); i++) {
     if (i <= (NUM_DIGITAL-1)) {
       response += String(i) + String(pinControl[i]);
     }
