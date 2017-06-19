@@ -2,7 +2,7 @@
 Enclosure Requirements
 ======================
 
-.. image:: hapi.png
+.. image:: ../img/hapi.png
 
 Physical Requirements
 =====================
@@ -27,11 +27,10 @@ Functional Requirements
 - Unit should have a push-button on/off power button (grommetted/watertight)
 - Unit should have an led (grommetted/watertight)Illustration 1: Mock Side View
 
-..
 
-    .. image:: mock-side-view.png
+    .. image:: img/mock-side-view.png
 - Illustration 1: Mock Side View
-    .. image:: mock-split-view.png
+    .. image:: img/mock-split-view.png
 - Illustration 2: Mock Split View
-    .. image:: bottom-view-random-positioning.png
+    .. image:: img/bottom-view-random-positioning.png
 - Illustration 3: Bottom View (random positioning)
