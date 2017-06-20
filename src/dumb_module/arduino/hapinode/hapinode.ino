@@ -59,21 +59,21 @@ Communications Method
 #include <DHT.h>
 #include <SPI.h>
 
-#ifdef HN_ESP8266
+#if defined(HN_ESP8266)
 #include <ESP8266WiFi.h>
 #include <ESP8266mDNS.h>        // for avahi
 #endif
 
-#ifdef HN_ESP32
+#if defined(HN_ESP32)
 #include <WiFi.h>
 #include <ESPmDNS.h>            // for avahi
 #endif
 
-#ifdef HN_WiFi
+#if defined(HN_WiFi)
 #include <WiFiUdp.h>            // For ntp
 #endif
 
-#ifdef HN_ENET
+#if defined(HN_ENET)
 #include <Ethernet.h>
 #include <EthernetBonjour.h>
 #include <EthernetUdp.h>
@@ -83,10 +83,10 @@ Communications Method
 #include <ArduinoJson.h>  // JSON library for MQTT strings
 #include <math.h>
 
-#ifndef HN_ESP32
+#if !defined(HN_ESP32)
 #include <EEPROM.h>
 #endif
-#ifdef HN_ESP32
+#if defined(HN_ESP32)
 #include <Preferences.h>
 #endif
 
@@ -115,13 +115,13 @@ time_t epoch;               // UTC seconds
 time_t currentTime;         // Local value
 
 String HAPI_FW_VERSION = F("v3.1.0");    // The version of the firmware the HN is running
-#ifdef HN_ENET
+#if defined(HN_ENET)
 String HN_base = F("HN2");             // Prefix for mac address
 #endif
-#ifdef HN_ESP8266
+#if defined(HN_ESP8266)
 String HN_base = F("HN3");             // Prefix for mac address
 #endif
-#ifdef HN_ESP32
+#if defined(HN_ESP32)
 String HN_base = F("HN4");             // Prefix for mac address
 #endif
 
@@ -159,7 +159,7 @@ int timeZone = +10; // Eastern Standard Time (Au)
 //int timeZone = -7;  // Pacific Daylight Time (USA)
 
 
-#ifdef HN_WiFi
+#if defined(HN_WiFi)
 // Local wifi network parameters (set in nodewifi.h)
 const char* ssid = HAPI_SSID;
 const char* password = HAPI_PWD;
@@ -168,7 +168,7 @@ WiFiClient HNClient;
 WiFiUDP udp;                          // A UDP instance to let us send and receive packets over UDP
 #endif // HN_WiFi
 
-#ifdef HN_ENET
+#if defined(HN_ENET)
 EthernetClient HNClient;
 EthernetUDP udp;
 #endif  // HN_ENET
@@ -366,7 +366,7 @@ void setup() {
   setupSensors();             // Initialize I/O and start devices
   inputString.reserve(200);   // reserve 200 bytes for the inputString
 
-#ifdef HN_WiFi
+#if defined(HN_WiFi)
   Serial.println(F("Initializing WiFi network...."));
   WiFiStatus = WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) {
@@ -380,16 +380,16 @@ void setup() {
   HN_Id = HN_base + String(mac_str);
   HN_Id.toCharArray(hostString,(HN_Id.length()+1));
 
-#ifdef HN_2560
+#if defined(HN_2560)
   Serial.println(hostString);
 #endif
-#ifdef HN_ESP8266
+#if defined(HN_ESP8266)
   Serial.println(WiFi.hostname());
   Serial.println(WiFi.hostname(hostString));
   Serial.print(F("NewHostname: "));
   Serial.println(WiFi.hostname());
 #endif
-#ifdef HN_ESP32
+#if defined(HN_ESP32)
   Serial.println(WiFi.getHostname());
   Serial.println(WiFi.setHostname(hostString));
   Serial.print(F("NewHostname: "));
@@ -447,14 +447,14 @@ void setup() {
   Serial.println(F("Starting UDP"));                 // Start UDP
   udp.begin(localPort);
   Serial.print(F("Local port: "));
-#ifdef HN_ESP8266
+#if defined(HN_ESP8266)
   Serial.println(udp.localPort());
 #endif
-#ifdef HN_2560
+#if defined(HN_2560)
   Serial.println(udp.remoteIP());
   //TODO get timeServerIP
 #endif
-#ifdef HN_WiFi
+#if defined(HN_WiFi)
   WiFi.hostByName(ntpServerName, timeServerIP);   // Get mqttbroker's IP address
 #endif
   Serial.print(F("Local IP:   "));
