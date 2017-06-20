@@ -364,10 +364,10 @@ void MQTTcallback(char* topic, byte* payload, unsigned int length) {
           for (int i=0;i < ArrayLength(HapisFunctions);i++) {    // Scan for a match on the sensor name
             f = HapisFunctions[i];                    // Point to Asset read function structure
             if (strcmp(command_topic["Asset"],f.fName) == 0) {  // Asset match?
-              Number = i;                             // Match for Sensor name
+              break;                             // Match for Sensor name
             }
           }
-          if (Number != INVALID_VALUE) {
+          if (i < ArrayLength(HapisFunctions)) {
             sendMQTTAsset(AssetIdx, Number);         // Publish sensor or control function data
             return;
           }
