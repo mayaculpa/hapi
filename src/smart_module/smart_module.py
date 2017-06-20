@@ -213,7 +213,7 @@ class SmartModule(object):
                 self.comm.unsubscribe("SCHEDULER/RESPONSE")
                 self.comm.subscribe("STATUS/RESPONSE" + "/#")
                 self.comm.subscribe("ASSET/RESPONSE" + "/#")
-                self.comm.subscribe("ALERT")
+                self.comm.subscribe("ALERT" + "/#")
                 self.comm.send("SCHEDULER/RESPONSE", self.hostname)
                 self.comm.send("ANNOUNCE", self.hostname + " is running the Scheduler.")
                 self.log.info("Scheduler program loaded.")

@@ -88,25 +88,34 @@ class Communicator(object):
         self.subscribe("STATUS/QUERY")
         self.subscribe("ENV/#")
 
-    # The callback when a message is received
     def on_message(self, client, userdata, msg):
         print(msg.topic, msg.payload)
         if "ENV/QUERY" in msg.topic:
             self.smart_module.get_env()
 
         elif "ASSET/QUERY" in msg.topic:
-            value = self.smart_module.get_asset_data()
-            self.send("ASSET/RESPONSE/" + self.smart_module.asset.id,
-                      value)
-            self.smart_module.asset.alert.update_alert()
-            if self.smart_module.asset.alert.check_alert(value):
-                self.send("ALERT", str([{"asset_id": self.smart_module.asset.id, "value": value,
-                    "alert": str(self.smart_module.asset.alert)}]))
+            asset_value = self.smart_module.get_asset_data()
+            self.send("ASSET/RESPONSE/" + self.smart_module.asset.id, asset_value)
 
         elif "ASSET/RESPONSE" in msg.topic:
-            self.smart_module.push_data(
-                self.smart_module.asset.name, self.smart_module.asset.context, msg.payload,
-                self.smart_module.asset.unit)
+            asset_id = msg.topic.split("/")[2]
+            asset_value = msg.payload
+            self.smart_module.asset.alert.update_alert()
+            if self.smart_module.asset.alert.check_alert(asset_value):
+                self.send("ALERT/" + asset_id, "Alert value: " + asset_value)
+
+            self.smart_module.push_data(self.smart_module.asset.name,
+                self.smart_module.asset.context, asset_value, self.smart_module.asset.unit)
+
+        elif "ALERT" in msg.topic:
+            alert = self.smart_module.asset.alert
+            asset_id = msg.topic.split("/")[1]
+            asset_alert = msg.payload + " on Asset ID: " + asset_id
+            self.logger.info("Got an %s", asset_alert)
+            if "email" in alert.response_type:
+                print("Got alert with email response type.")
+            if "sms" in alert.response_type:
+                print("Got alert with sms response type.")
 
         elif "STATUS/QUERY" in msg.topic:
             self.smart_module.last_status = self.smart_module.get_status(self.broker_connections)
@@ -116,7 +125,6 @@ class Communicator(object):
         elif "STATUS/RESPONSE" in msg.topic:
             self.smart_module.push_sysinfo("system", self.smart_module.last_status)
 
-        # Scheduler messages
         elif "SCHEDULER/RESPONSE" in msg.topic:
             self.scheduler_found = True
             self.logger.info(msg.payload + " has identified itself as the Scheduler.")
@@ -126,7 +134,6 @@ class Communicator(object):
                 self.send("SCHEDULER/RESPONSE", self.smart_module.hostname)
                 self.logger.info("Sent SCHEDULER/RESPONSE")
 
-        # Database synchronization messages
         elif "SYNCHRONIZE/VERSION" in msg.topic:
             self.send("SYNCHRONIZE/RESPONSE", self.smart_module.data_sync.read_db_version())
 
@@ -139,17 +146,6 @@ class Communicator(object):
 
         elif "$SYS/broker/clients/total" in msg.topic:
             self.broker_connections = int(msg.payload)
-
-        elif "ALERT" in msg.topic:
-            #args = {"sender": None, "receiver": None,
-            #        "subject": "HAPI Alert!", "message": msg.payload, "server": None
-            #        "username": None, "password": None}
-            #email = notification.Email(**args)
-            #email.send("Got an alert on asset")
-            self.logger.info("Got an alert: %s", msg.payload)
-
-        # elif "SYNCHRONIZE/TEST" in msg.topic:
-        #     self.send("SYNCHRONIZE/RESPONSE", self.smart_module.data_sync.read_db_version())
 
     def send(self, topic, message):
         try:
