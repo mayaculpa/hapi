@@ -179,7 +179,7 @@ float readpH(int Device) {
     avgValue += buf[i];
   float phValue = ((((float)avgValue * 5.0) / 1024) / 6); // Convert the analog into millivolt
 
-  phValue = 3.5 * phValue;                  //convert the millivolt into pH value
+  phValue *= 3.5; //convert the millivolt into pH value ^^^ magic number
 //  Serial.print(F("pH: "));
 //  Serial.println(phValue);
   return phValue;
@@ -216,7 +216,7 @@ float readTDS(int Device) {
   float TDSValue = ((((float)avgValue * 5.0) / 1024) / 6); // Convert the analog into millivolt
 
 //TODO Need temperature compensation for TDS
-  TDSValue = 1.0 * TDSValue;                  // Convert the millivolt into TDS value
+  TDSValue *= 1.0; //convert the millivolt into TDS value ^^^ magic number
 //  Serial.print(F("TDS: "));
 //  Serial.println(TDSValue);
   return TDSValue;

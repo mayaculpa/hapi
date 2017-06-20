@@ -522,7 +522,7 @@ float readpH(int iDevice) {
   for (int i = 2; i < 8; i++)               //take the average value of 6 center sample
     avgValue += buf[i];
   float phValue = (float)avgValue * 5.0 / 1024 / 6; //convert the analog into millivolt
-  phValue = 3.5 * phValue;                  //convert the millivolt into pH value
+  phValue *= 3.5; //convert the millivolt into pH value ^^^ magic number
   return phValue;
 }
 
