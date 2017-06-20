@@ -49,7 +49,6 @@ enum pin_control_enum {
 
 #ifdef HN_ENET             // Mega256
 #define NUM_DIGITAL 54    // Number of digital I/O pins
-#define NUM_ANALOG  16    // Number of analog I/O pins
 #define PIN_MAP_SIZE NUM_DIGITAL*2   // Array size for default digital state data
                                      // 2 bytes per digital I/O pin, 1st byte = State, 2nd byte = Value
 // Default pin allocation
@@ -83,7 +82,7 @@ enum pin_control_enum {
 };
 // Default pin modes
 // Analog input pins are assumed to be used as analog input pins
-int pinControl[NUM_DIGITAL+NUM_ANALOG] = {
+int pinControl[] = {
   // digital
   UNUSED_PIN,               //  0
   UNUSED_PIN,               //  1
@@ -161,7 +160,7 @@ int pinControl[NUM_DIGITAL+NUM_ANALOG] = {
 // Default pin states
 // Defaults determine the value of output pins with the HN initializes
 // 0 = LOW, 1 = HIGH
-int pinDefaults[NUM_DIGITAL+NUM_ANALOG] = {
+int pinDefaults[] = {
                                   // DIGITAL
   0, 0, 1, 1, 0, 1, 1, 1, 1, 1,   //  0 -  9
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   // 10 - 19
@@ -178,7 +177,6 @@ int pinDefaults[NUM_DIGITAL+NUM_ANALOG] = {
 
 #ifdef HN_ESP8266
 #define NUM_DIGITAL 17    // Number of digital I/O pins
-#define NUM_ANALOG  1     // Number of analog I/O pins
 #define PIN_MAP_SIZE NUM_DIGITAL*2   // Array size for default state data
                                      // 2 bytes per digital I/O pin, 1st byte = State, 2nd byte = Value
 
@@ -206,7 +204,7 @@ int pinDefaults[NUM_DIGITAL+NUM_ANALOG] = {
 
 // Default pin modes
 // Analog input pins are assumed to be used as analog input pins
-int pinControl[NUM_DIGITAL+NUM_ANALOG] = {
+int pinControl[] = {
   // digital
   DIGITAL_OUTPUT_PIN, //  0
   DIGITAL_OUTPUT_PIN, //  1
@@ -231,7 +229,7 @@ int pinControl[NUM_DIGITAL+NUM_ANALOG] = {
 // Default pin states
 // Defaults determine the value of output pins with the HN initializes
 // 0 = LOW, 1 = HIGH
-int pinDefaults[NUM_DIGITAL+NUM_ANALOG] = {
+int pinDefaults[] = {
   1, 1, 1, 1, 1, 1, 0, 0,   //  0 -  7  // Digital i/o
   0, 0, 0, 0, 1, 1, 1, 1,   //  8 - 15
   1,                        // 16
@@ -241,7 +239,6 @@ int pinDefaults[NUM_DIGITAL+NUM_ANALOG] = {
 
 #ifdef HN_ESP32
 #define NUM_DIGITAL 54    // Number of digital I/O pins
-#define NUM_ANALOG  16    // Number of analog I/O pins
 #define PIN_MAP_SIZE NUM_DIGITAL*2   // Array size for default digital state data
                                      // 2 bytes per digital I/O pin, 1st byte = State, 2nd byte = Value
 // Default pin allocation
@@ -273,7 +270,7 @@ int pinDefaults[NUM_DIGITAL+NUM_ANALOG] = {
 
 // Default pin modes
 // Analog input pins are assumed to be used as analog input pins
-int pinControl[NUM_DIGITAL+NUM_ANALOG] = {
+int pinControl[] = {
   // digital
   UNUSED_PIN,         //  0
   UNUSED_PIN,         //  1
@@ -351,7 +348,7 @@ int pinControl[NUM_DIGITAL+NUM_ANALOG] = {
 // Default pin states
 // Defaults determine the value of output pins with the HN initializes
 // 0 = LOW, 1 = HIGH
-int pinDefaults[NUM_DIGITAL+NUM_ANALOG] = {
+int pinDefaults[] = {
                                   // DIGITAL
   0, 0, 1, 1, 0, 1, 1, 1, 1, 1,   //  0 -  9
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   // 10 - 19
@@ -364,5 +361,11 @@ int pinDefaults[NUM_DIGITAL+NUM_ANALOG] = {
   0, 0, 0, 0, 0, 0                // 64 - 69
 };
 #endif
+
+#if ArrayLength(pinControl) != ArrayLength(pinDefaults)
+#error ArrayLength(pinControl) != ArrayLength(pinDefaults)
+#endif
+
+#define NUM_ANALOG (ArrayLength(pinControl) - NUM_DIGITAL)
 
 #endif //HAPIBOARD_H
