@@ -60,7 +60,6 @@ Communications Protocol: Ethernet, USB
 
 #ifdef RTU_ENET
 #define NUM_DIGITAL 54    // Number of digital I/O pins
-#define NUM_ANALOG  16    // Number of analog I/O pins
 #define PIN_MAP_SIZE NUM_DIGITAL*2   // Array size for default digital state data
                                      // 2 bytes per digital I/O pin, 1st byte = State, 2nd byte = Value
 
@@ -81,7 +80,7 @@ enum pin_control_enum {
 };
 // Default pin modes
 // Analog input pins are assumed to be used as analog input pins
-enum pin_control_enum pinControl[NUM_DIGITAL+NUM_ANALOG] = {
+enum pin_control_enum pinControl[] = {
   // DIGITAL
   UNUSED_PIN,                //  0
   UNUSED_PIN,                //  1
@@ -159,7 +158,7 @@ enum pin_control_enum pinControl[NUM_DIGITAL+NUM_ANALOG] = {
 // Default pin states
 // Defaults determine the value of output pins with the RTU initializes
 // 0 = LOW, 1 = HIGH
-int pinDefaults[NUM_DIGITAL+NUM_ANALOG] = {
+int pinDefaults[] = {
                                   // DIGITAL
   0, 0, 1, 1, 0, 1, 1, 1, 1, 1,   //  0 -  9
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   // 10 - 19
@@ -176,7 +175,6 @@ int pinDefaults[NUM_DIGITAL+NUM_ANALOG] = {
 
 #ifdef RTU_USB
 #define NUM_DIGITAL 54    // Number of digital I/O pins
-#define NUM_ANALOG  16    // Number of analog I/O pins
 #define PIN_MAP_SIZE NUM_DIGITAL*2   // Array size for default digital state data
                                      // 2 bytes per digital I/O pin, 1st byte = State, 2nd byte = Value
 
@@ -190,7 +188,7 @@ int pinDefaults[NUM_DIGITAL+NUM_ANALOG] = {
 // Default pin modes
 // 0 not used or reserved;  1 digital input; 2 digital input_pullup; 3 digital output; 4 analog output; 5 analog input;
 // Analog input pins are assumed to be used as analog input pins
-int pinControl[NUM_DIGITAL+NUM_ANALOG] = {
+int pinControl[] = {
                                   // DIGITAL
   0, 0, 3, 3, 0, 3, 3, 3, 3, 3,   //  0 -  9
   0, 2, 1, 3, 0, 0, 0, 0, 0, 0,   // 10 - 19
@@ -206,7 +204,7 @@ int pinControl[NUM_DIGITAL+NUM_ANALOG] = {
 // Default pin states
 // Defaults determine the value of output pins with the RTU initializes
 // 0 = LOW, 1 = HIGH
-int pinDefaults[NUM_DIGITAL+NUM_ANALOG] = {
+int pinDefaults[] = {
                                   // DIGITAL
   0, 0, 1, 1, 0, 1, 1, 1, 1, 1,   //  0 -  9
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   // 10 - 19
@@ -224,7 +222,6 @@ int pinDefaults[NUM_DIGITAL+NUM_ANALOG] = {
 
 #ifdef RTU_UNO
 #define NUM_DIGITAL 14    // Number of digital I/O pins
-#define NUM_ANALOG   6    // Number of analog I/O pins
 #define PIN_MAP_SIZE NUM_DIGITAL*2   // Array size for default digital state data
                                      // 2 bytes per digital I/O pin, 1st byte = State, 2nd byte = Value
 
@@ -238,7 +235,7 @@ int pinDefaults[NUM_DIGITAL+NUM_ANALOG] = {
 // Default pin modes
 // 0 not used or reserved;  1 digital input; 2 digital input_pullup; 3 digital output; 4 analog output; 5 analog input;
 // Analog input pins are assumed to be used as analog input pins
-int pinControl[NUM_DIGITAL+NUM_ANALOG] = {
+int pinControl[] = {
                                   // DIGITAL
   0, 0, 3, 3, 3, 3, 3, 0, 2, 1, 	//  0 -  9
 
@@ -250,7 +247,7 @@ int pinControl[NUM_DIGITAL+NUM_ANALOG] = {
 // Default pin states
 // Defaults determine the value of output pins with the RTU initializes
 // 0 = LOW, 1 = HIGH
-int pinDefaults[NUM_DIGITAL+NUM_ANALOG] = {
+int pinDefaults[] = {
                                   // DIGITAL
   0, 0, 1, 1, 0, 1, 1, 1, 1, 1,   //  0 -  9
   0, 0, 0, 0,                     // 10 - 13
@@ -261,7 +258,6 @@ int pinDefaults[NUM_DIGITAL+NUM_ANALOG] = {
 
 #ifdef RTU_ESP
 #define NUM_DIGITAL 17    // Number of digital I/O pins
-#define NUM_ANALOG  1     // Number of analog I/O pins
 #define PIN_MAP_SIZE NUM_DIGITAL*2   // Array size for default state data
                                      // 2 bytes per digital I/O pin, 1st byte = State, 2nd byte = Value
 
@@ -274,7 +270,7 @@ int pinDefaults[NUM_DIGITAL+NUM_ANALOG] = {
 // Default pin modes
 // 0 not used or reserved;  1 digital input; 2 digital input_pullup; 3 digital output; 4 analog output; 5 analog input;
 // Analog input pins are assumed to be used as analog input pins
-int pinControl[NUM_DIGITAL+NUM_ANALOG] = {
+int pinControl[] = {
   3, 3, 3, 1, 3, 3, 0, 0,   //  0 -  8  // Digital i/o
   0, 0, 0, 0, 3, 3, 3, 3,   //  9 - 15
   3,                        // 16
@@ -284,7 +280,7 @@ int pinControl[NUM_DIGITAL+NUM_ANALOG] = {
 // Default pin states
 // Defaults determine the value of output pins with the RTU initializes
 // 0 = LOW, 1 = HIGH
-int pinDefaults[NUM_DIGITAL+NUM_ANALOG] = {
+int pinDefaults[] = {
   1, 1, 1, 1, 1, 1, 0, 0,   //  0 -  8  // Digital i/o
   0, 0, 0, 0, 1, 1, 1, 1,   //  9 - 15
   1,                        // 16
@@ -292,6 +288,12 @@ int pinDefaults[NUM_DIGITAL+NUM_ANALOG] = {
 };
 
 #endif
+
+#if ArrayLength(pinControl) != ArrayLength(pinDefaults)
+#error ArrayLength(pinControl) != ArrayLength(pinDefaults)
+#endif
+
+#define NUM_ANALOG (ArrayLength(pinControl) - NUM_DIGITAL)
 
 
 OneWire oneWire(ONE_WIRE_BUS);
