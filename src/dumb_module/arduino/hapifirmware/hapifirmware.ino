@@ -375,7 +375,7 @@ FuncDef HapiFunctions[CUSTOM_FUNCTIONS] = {func1, func2, func3, func4, func5};
 String getPinArray() {
   // Returns all pin configuration information
   String response = "";
-  for (int i = 0; i < NUM_DIGITAL+NUM_ANALOG; i++) {
+  for (int i = 0; i < ArrayLength(pinControl); i++) {
     if (i <= (NUM_DIGITAL-1)) {
       response += String(i) + String(pinControl[i]);
     }
@@ -706,7 +706,7 @@ int freeRam (){
 void setup() {
 
   // Initialize Digital Pins for Input or Output - From the arrays pinControl and pinDefaults
-  for (int x = 0; x < (NUM_DIGITAL+NUM_ANALOG); x++) {
+  for (int x = 0; x < ArrayLength(pinControl); x++) {
     if (pinControl[x] == 1) {
       pinMode(x, INPUT); // Digital Input
     }
@@ -838,7 +838,7 @@ void loop() {
       // res  - resets the Arduino
       if ((inputCommand == "res") && !idle_mode) {
         cmdFound = true;
-        for (int x = 0; x < NUM_DIGITAL+NUM_ANALOG; x++) {
+        for (int x = 0; x < ArrayLength(pinControl); x++) {
           if (pinControl[x] == 3) {
             digitalWrite(x, LOW); // If this Pin is a Digital Output Turn it off
           }
