@@ -48,16 +48,16 @@ class Log(object):
         )
         return str(string)
 
-    def info(self, format, *values):
+    def info(self, format_str, *values):
         """Append INFO in format % values to file."""
-        string = self.build_string("INFO", format % values)
+        string = self.build_string("INFO", format_str % values)
         with open(self.log_file, "a") as log:
             log.write(string + "\n")
         print(string)
 
-    def exception(self, format, *values):
+    def exception(self, format_str, *values):
         """Append ERROR in format % values to file."""
-        string = self.build_string("[!!] ERROR", format % values)
+        string = self.build_string("[!!] ERROR", format_str % values)
         with open(self.log_file, "a") as log:
             log.write(string + "\n")
         print(string)
