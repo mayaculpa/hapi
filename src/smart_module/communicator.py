@@ -23,12 +23,17 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import print_function
 import sys
+import json
+import smtplib
+import datetime
 import log
 import paho.mqtt.client as mqtt
 import notification
+from alert import Alert
 
 class Communicator(object):
     def __init__(self, sm):
+        self.logger = log.Log("communicator.log")
         self.rtuid = ""
         self.name = ""
         self.broker_name = None
@@ -41,18 +46,25 @@ class Communicator(object):
         self.is_connected = False
         self.scheduler_found = False
         self.broker_connections = -1
-        self.logger = log.Log("communicator.log")
-
         self.logger.info("Communicator initialized")
 
     def connect(self):
+        """Connect to the broker."""
         try:
             self.logger.info("Connecting to %s at %s.", self.broker_name, self.broker_ip)
             self.client.connect(host=self.broker_ip, port=1883, keepalive=60)
             self.client.loop_start()
         except Exception as excpt:
             self.logger.exception("[Exiting] Error connecting to broker: %s", excpt)
+            self.client.loop_stop()
             sys.exit(-1)
+
+    def send(self, topic, message):
+        try:
+            if self.client:
+                self.client.publish(topic, message)
+        except Exception as excpt:
+            self.logger.info("Error publishing message: %s.", excpt)
 
     def subscribe(self, topic):
         """Subscribe to a topic (QoS = 0)."""
@@ -63,7 +75,6 @@ class Communicator(object):
         self.client.unsubscribe(topic)
 
     def on_disconnect(self, client, userdata, rc):
-        # We could implement a reconnect call.
         self.is_connected = False
         self.logger.info("[Exiting] Disconnected: %s", mqtt.error_string(rc))
         self.client.loop_stop()
@@ -95,35 +106,54 @@ class Communicator(object):
 
         elif "ASSET/QUERY" in msg.topic:
             asset_value = self.smart_module.get_asset_data()
-            self.send("ASSET/RESPONSE/" + self.smart_module.asset.id, asset_value)
+            json_asset = str(self.smart_module.asset).replace("u'", "'").replace("'", "\"")
+            self.send("ASSET/RESPONSE/" + self.smart_module.asset.id, json_asset)
 
         elif "ASSET/RESPONSE" in msg.topic:
             asset_id = msg.topic.split("/")[2]
-            asset_value = msg.payload
-            self.smart_module.asset.alert.update_alert()
-            if self.smart_module.asset.alert.check_alert(asset_value):
-                self.send("ALERT/" + asset_id, "Alert value: " + asset_value)
+            asset_info = json.loads(msg.payload)
+            self.smart_module.push_data(asset_info["name"], asset_info["context"],
+                asset_info["value_current"], asset_info["unit"])
 
-            self.smart_module.push_data(self.smart_module.asset.name,
-                self.smart_module.asset.context, asset_value, self.smart_module.asset.unit)
+            alert = Alert()
+            alert.update_alert(asset_id)
+            if alert.check_alert(asset_info["value_current"]):
+                json_alert = str(alert).replace("u'", "'").replace("'", "\"")
+                self.send("ALERT/" + asset_id, json_alert)
 
         elif "ALERT" in msg.topic:
-            alert = self.smart_module.asset.alert
+            self.logger.info("Got an alert from %s", msg.topic)
             asset_id = msg.topic.split("/")[1]
-            asset_alert = msg.payload + " on Asset ID: " + asset_id
-            self.logger.info("Got an %s", asset_alert)
-            if "email" in alert.response_type:
-                print("Got alert with email response type.")
-            if "sms" in alert.response_type:
-                print("Got alert with sms response type.")
+            asset_payload = json.loads(msg.payload)
+            try:
+                if "email" in asset_payload["response"]:
+                    site_name = self.smart_module.name
+                    notify = notification.Email()
+                    # Email.send expects two parameters: Subject and Message.
+                    notify.send(
+                        "Alert - {site}: {asset}.".format(
+                            site=site_name,
+                            asset=asset_id),
+                        "{time}: an alert was triggered at {site}, {asset}, value: {value}.".format(
+                            time=datetime.datetime.now(),
+                            site=site_name,
+                            asset=asset_id,
+                            value=asset_payload["value_current"])
+                    )
+                if "sms" in asset_payload["response"]:
+                    self.logger.info("Sending an SMS notification.")
+                    self.logger.info("Done sending SMS notification.")
+            except Exception as excpt:
+                self.logger.exception("Trying to send notification: %s.", excpt)
 
         elif "STATUS/QUERY" in msg.topic:
-            self.smart_module.last_status = self.smart_module.get_status(self.broker_connections)
-            self.send("STATUS/RESPONSE/" + self.smart_module.hostname,
-                str(self.smart_module.last_status))
+            self.smart_module.last_status = self.smart_module.get_status()
+            json_payload = str(self.smart_module.last_status).replace("'", "\"")
+            self.send("STATUS/RESPONSE/" + self.smart_module.hostname, json_payload)
 
         elif "STATUS/RESPONSE" in msg.topic:
-            self.smart_module.push_sysinfo("system", self.smart_module.last_status)
+            status_payload = json.loads(msg.payload.replace("'", "\""))
+            self.smart_module.push_sysinfo("system", status_payload)
 
         elif "SCHEDULER/RESPONSE" in msg.topic:
             self.scheduler_found = True
@@ -145,11 +175,5 @@ class Communicator(object):
             self.smart_module.data_sync.synchronize_core_db(msg.payload)
 
         elif "$SYS/broker/clients/total" in msg.topic:
-            self.broker_connections = int(msg.payload)
-
-    def send(self, topic, message):
-        try:
-            if self.client:
-                self.client.publish(topic, message)
-        except Exception as excpt:
-            self.logger.info("Error publishing message: %s.", excpt)
+            if self.smart_module.scheduler:
+                self.broker_connections = int(msg.payload)

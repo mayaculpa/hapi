@@ -59,13 +59,13 @@ class Asset(object):
         self.value_current = None
 
     def __str__(self):
-        """Return Asset information in JSON."""
+        """Return Asset information in (almost) JSON."""
         return str({"id": self.id, "name": self.name, "unit": self.unit, "virtual": self.virtual,
                      "context": self.context, "system": self.system, "enabled": self.enabled,
                      "type": self.type, "value_current": self.value_current})
 
     def load_asset_info(self):
-        """Load asset information based on dabase."""
+        """Load asset information based on database."""
         field_names = '''
             name
             unit
@@ -97,6 +97,7 @@ class SmartModule(object):
     """
 
     def __init__(self):
+        self.log = log.Log("smartmodule.log")
         self.mock = True
         self.comm = communicator.Communicator(self)
         self.data_sync = DataSync()
@@ -114,8 +115,7 @@ class SmartModule(object):
         self.scheduler = None
         self.hostname = ""
         self.last_status = ""
-        self.ifconn = InfluxDBClient("127.0.0.1", 8086, "root", "root")
-        self.log = log.Log("smartmodule.log")
+        self.ifconn = None
         self.rtc = rtc_interface.RTCInterface()
         self.rtc.power_on_rtc()
         self.launch_time = self.rtc.get_datetime()
@@ -126,11 +126,35 @@ class SmartModule(object):
         self.ai = asset_interface.AssetInterface(self.asset.type, self.rtc.mock)
         self.rtc.power_off_rtc()
 
-    def become_broker(self):
-        """If no broker found. SM performs operation to become the broker."""
+    def load_influx_settings(self):
+        """Load Influxdb server information stored in database base."""
         try:
-            # We will change it soon!
-            os.system("sudo systemctl start avahi-daemon.service")
+            settings = {}
+            field_names = '''
+                server
+                port
+                username
+                password
+            '''.split()
+            sql = 'SELECT {fields} FROM influx_settings LIMIT 1;'.format(
+                fields=', '.join(field_names))
+            database = sqlite3.connect(utilities.DB_CORE)
+            db_elements = database.cursor().execute(sql).fetchone()
+            for field, value in zip(field_names, db_elements):
+                settings[field] = value
+            self.ifconn = InfluxDBClient(
+                settings["server"], settings["port"], settings["username"], settings["password"]
+            )
+            self.log.info("Influxdb information loaded.")
+        except Exception as excpt:
+            self.log.exception("Trying to load Influx server information: %s.", excpt)
+        finally:
+            database.close()
+
+    def become_broker(self):
+        """If no broker found SM performs operation(s) to become the broker."""
+        try:
+            os.system("sudo systemctl start avahi-daemon.service") # We will change it soon!
         except Exception as excpt:
             self.log.info("Error trying to become the Broker: %s.", excpt)
 
@@ -151,7 +175,7 @@ class SmartModule(object):
             pass
 
     def find_broker(self, zeroconf):
-        """Create zeroconf object, if needed, and browser for services."""
+        """Browser for our (MQTT) services using Zeroconf."""
         browser = ServiceBrowser(zeroconf, "_mqtt._tcp.local.", handlers=[self.find_service])
 
     def discover(self):
@@ -162,22 +186,20 @@ class SmartModule(object):
             asset_context=self.asset.context))
 
         try:
-            # Using two different call to 'time.sleep()'. We should consider a better approach.
-            # I'm totally open for new ideas on this.
-            max_sleep_time = 3
+            max_sleep_time = 3 # Calling sleep should be reviewed.
             zeroconf = Zeroconf()
             self.log.info("Performing Broker discovery...")
             self.find_broker(zeroconf)
-            time.sleep(max_sleep_time)
-            if self.comm.broker_name or self.comm.broker_ip:
+            time.sleep(max_sleep_time) # Wait for max_sleep_time to see if we found it.
+            if self.comm.broker_name or self.comm.broker_ip: # Found it.
                 self.log.info("MQTT Broker: {broker_name} IP: {broker_ip}.".format(
                     broker_name=self.comm.broker_name,
                     broker_ip=self.comm.broker_ip))
-            else:
+            else: # Make necessary actions to become the broker.
                 self.log.info("Broker not found. Becoming the broker.")
                 self.become_broker()
             time.sleep(max_sleep_time)
-            self.comm.connect()
+            self.comm.connect() # Now it's time to connect to the broker.
         except Exception as excpt:
             self.log.exceptions("[Exiting] Trying to find or become the broker.");
         finally:
@@ -190,8 +212,7 @@ class SmartModule(object):
 
         self.comm.subscribe("SCHEDULER/RESPONSE")
         self.comm.send("SCHEDULER/QUERY", "Where are you?")
-        # Just wait for reply... We must review it.
-        time.sleep(2)
+        time.sleep(2) # Just wait for reply... Need a review?
 
         self.hostname = socket.gethostname()
         self.comm.send("ANNOUNCE", self.hostname + " is online.")
@@ -200,8 +221,7 @@ class SmartModule(object):
         while (time.time() < t_end) and not self.comm.is_connected:
             time.sleep(1)
 
-        if not self.comm.scheduler_found:
-            # Loading scheduled jobs
+        if not self.comm.scheduler_found: # Become the Scheduler (necessary actions as Scheduler)
             try:
                 self.log.info("No Scheduler found. Becoming the Scheduler.")
                 self.scheduler = Scheduler()
@@ -519,22 +539,19 @@ class Scheduler(object):
         return jobs
 
     def prepare_jobs(self, jobs):
-        # It still has space for improvements.
         suffixed_names = {
-            # 'year': 'yearly',  # Not supported by schedule library.
-            # 'month': 'monthly',  # Not supported by schedule library.
             'week': 'weekly',
             'day': 'daily',
             'hour': 'hourly',
-            'minute': 'minutes',  # What would be better? Need to change log string also?
-            'second': 'seconds',  # What would be better? Need to change log string also?
+            'minute': 'minutes',
+            'second': 'seconds',
         }
         for job in jobs:
             if not job.enabled:
                 continue
 
             interval_name = job.time_unit.lower()
-            if job.interval > -1:  # What does -1 mean?
+            if job.interval > 0: # There can't be a job less than 0 (0 minutes? 0 seconds?)
                 plural_interval_name = interval_name + 's'
                 d = getattr(schedule.every(job.interval), plural_interval_name)
                 d.do(self.run_job, job)
@@ -666,32 +683,11 @@ class DataSync(object):
             DataSync.log.exception("Error synchronizing database: %s.", excpt)
 
 def main():
-    #max_log_size = 1000000
-
-    # # Setup Logging
-    # logger_level = logging.DEBUG
-    # logger = logging.getLogger(utilities.SM_LOGGER)
-    # logger.setLevel(logger_level)
-    #
-    # # create logging file handler
-    # file_handler = logging.FileHandler('hapi_sm.log', 'a')
-    # file_handler.setLevel(logger_level)
-    #
-    # # create logging console handler
-    # console_handler = logging.StreamHandler()
-    # console_handler.setLevel(logger_level)
-    #
-    # #Set logging format
-    # formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    # file_handler.setFormatter(formatter)
-    # console_handler.setFormatter(formatter)
-    # logger.addHandler(file_handler)
-    # logger.addHandler(console_handler)
-
     logging = log.Log("smartmodule.log")
     try:
         smart_module = SmartModule()
         smart_module.discover()
+        smart_module.load_influx_settings()
         smart_module.asset.load_asset_info()
         smart_module.load_site_data()
 

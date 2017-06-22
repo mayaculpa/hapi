@@ -45,9 +45,8 @@ class SystemStatus(object):
             self.update()
 
     def __str__(self):
-        return str({"time": self.timestamp, "memory": self.memory,
-                    "cpu": self.cpu, "boot": self.boot, "network": self.network, "disk": self.disk,
-                   })
+        return str({"time": self.timestamp, "memory": self.memory, "cpu": self.cpu,
+                    "boot": self.boot, "network": self.network, "disk": self.disk})
 
     def update(self):
         """Function to update the entire class information."""
