@@ -43,7 +43,7 @@ class Notification(object):
                 self.logging.exception("Error setting parameters to Notification: %s", excpt)
 
     @abstractmethod
-    def send(self, msg):
+    def send(self, notification_msg):
         """Send notification."""
 
 class Email(Notification):
@@ -71,14 +71,14 @@ class Email(Notification):
 
         return message
 
-    def send(self, alert):
+    def send(self, notification_msg):
         try:
             self.logging.info("Sending email notification.")
             server = smtplib.SMTP(self.serveraddr)
             server.ehlo()
             server.starttls()
             server.login(self.username, self.password)
-            server.sendmail(self.sender, self.receiver, self.build_message(alert))
+            server.sendmail(self.sender, self.receiver, self.build_message(notification_msg))
         except Exception as excpt:
             self.logging.exception("Trying to send notificaton via e-mail: %s.", excpt)
         finally:
@@ -90,5 +90,5 @@ class SMS(Notification):
     def __init__(self, **kwargs):
         Notification.__init__(self, **kwargs)
 
-    def send(self, msg):
+    def send(self, notification_msg):
         pass
