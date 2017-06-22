@@ -40,7 +40,6 @@ from influxdb import InfluxDBClient
 from status import SystemStatus
 import asset_interface
 import rtc_interface
-from alert import Alert
 import utilities
 from zeroconf import ServiceBrowser, ServiceStateChange, Zeroconf
 
@@ -58,11 +57,12 @@ class Asset(object):
         self.enabled = False
         self.type = ""
         self.value_current = None
-        self.alert = None
 
     def __str__(self):
         """Return Asset information in JSON."""
-        return str([{"id": self.id, "name": self.name, "value": self.value_current}])
+        return str({"id": self.id, "name": self.name, "unit": self.unit, "virtual": self.virtual,
+                     "context": self.context, "system": self.system, "enabled": self.enabled,
+                     "type": self.type, "value_current": self.value_current})
 
     def load_asset_info(self):
         """Load asset information based on dabase."""
@@ -121,7 +121,6 @@ class SmartModule(object):
         self.launch_time = self.rtc.get_datetime()
         self.asset = Asset()
         self.asset.id = self.rtc.get_id()
-        self.asset.alert = Alert(self.asset.id)
         self.asset.context = self.rtc.get_context()
         self.asset.type = self.rtc.get_type()
         self.ai = asset_interface.AssetInterface(self.asset.type, self.rtc.mock)
@@ -270,58 +269,45 @@ class SmartModule(object):
         cpuinfo = [{"measurement": "cpu", "tags": {"asset": self.name}, "time": timestamp,
                     "fields": {
                         "unit": "percentage",
-                        "load": information.cpu["percentage"]
-                    }
-                   }]
+                        "load": information["cpu"]["percentage"]
+                    }}]
         meminfo = [{"measurement": "memory", "tags": {"asset": self.name}, "time": timestamp,
                     "fields": {
                         "unit": "bytes",
-                        "free": information.memory["free"],
-                        "used": information.memory["used"],
-                        "cached": information.memory["cached"]
-                    }
-                   }]
+                        "free": information["memory"]["free"],
+                        "used": information["memory"]["used"],
+                        "cached": information["memory"]["cached"]
+                    }}]
         netinfo = [{"measurement": "network", "tags": {"asset": self.name}, "time": timestamp,
                     "fields": {
                         "unit": "packets",
-                        "packet_recv": information.network["packet_recv"],
-                        "packet_sent": information.network["packet_sent"]
-                    }
-                   }]
+                        "packet_recv": information["network"]["packet_recv"],
+                        "packet_sent": information["network"]["packet_sent"]
+                    }}]
         botinfo = [{"measurement": "boot", "tags": {"asset": self.name}, "time": timestamp,
                     "fields": {
                         "unit": "timestamp",
-                        "date": information.boot
-                    }
-                   }]
+                        "date": information["boot"]
+                    }}]
         diskinf = [{"measurement": "disk", "tags": {"asset": self.name}, "time": timestamp,
                     "fields": {
                         "unit": "bytes",
-                        "total": information.disk["total"],
-                        "free": information.disk["free"],
-                        "used": information.disk["used"]
-                    }
-                   }]
+                        "total": information["disk"]["total"],
+                        "free": information["disk"]["free"],
+                        "used": information["disk"]["used"]
+                    }}]
         tempinf = [{"measurement": "internal", "tags": {"asset": self.name}, "time": timestamp,
                     "fields": {
                     "unit": "C",
                     "unit temp": str(self.rtc.get_temp()),
-                    }
-                   }]
+                    }}]
 
-        ctsinfo = [{"measurement": "clients", "tags": {"asset": self.name}, "time": timestamp,
-                    "fields": {
-                        "unit": "integer",
-                        "clients": information.clients
-                    }
-                   }]
-        conn.write_points(cpuinfo + meminfo + netinfo + botinfo + diskinf + tempinf + ctsinfo)
+        conn.write_points(cpuinfo + meminfo + netinfo + botinfo + diskinf + tempinf)
 
-    def get_status(self, brokerconnections):
+    def get_status(self):
         """Fetch system information (stats)."""
         try:
             sysinfo = SystemStatus(update=True)
-            sysinfo.clients = brokerconnections
             return sysinfo
         except Exception as excpt:
             self.log.exception("Error getting System Status: %s.", excpt)
