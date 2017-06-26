@@ -360,7 +360,7 @@ void setup() {
 //  digitalWrite(LED_PIN, HIGH);
   Serial.begin(115200);       // Debug port
   while (!Serial) ;           //  wait for Arduino Serial Monitor
-  
+
 // Start Debug port and sensors
 // ============================
   setupSensors();             // Initialize I/O and start devices

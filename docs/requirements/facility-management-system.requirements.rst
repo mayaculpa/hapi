@@ -1,8 +1,8 @@
-==============
-FMS Activities
-==============
+===========================================
+Facility Management System (FMS) Activities
+===========================================
 
-.. image:: hapi-four-leaf-square.png
+.. image:: ../img/hapi-four-leaf-square.png
 
 Home Screen
 ===========
