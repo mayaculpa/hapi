@@ -14,3 +14,4 @@ CREATE TABLE schedule(id int PRIMARY KEY NOT NULL, name TEXT, asset_id int, comm
 CREATE TABLE assets (id text PRIMARY KEY NOT NULL, name text, unit text, virtual int, context text, system text, enabled int);
 CREATE TABLE alert_params(asset_id text, lower_threshold real, upper_threshold real, message text, response_type text);
 CREATE TABLE mail_settings(id INT PRIMARY KEY NOT NULL, serveraddr TEXT NOT NULL, serverport TEXT NOT NULL, username TEXT NOT NULL, password TEXT NOT NULL, sender TEXT, receiver TEXT NOT NULL, tls INT);
+CREATE TABLE influx_settings(id INT PRIMARY KEY NOT NULL, server TEXT NOT NULL, port INT NOT NULL, username TEXT NOT NULL, password TEXT NOT NULL);

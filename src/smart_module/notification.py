@@ -25,6 +25,7 @@ from __future__ import print_function
 from abc import abstractmethod
 import smtplib
 import sqlite3
+from twilio.rest import Client as TWClient
 import log
 from utilities import DB_CORE
 
@@ -33,11 +34,11 @@ class Notification(object):
 
     def __init__(self):
         self.logging = log.Log("notification.log")
-        self.sender = ""
-        self.receiver = ""
+        self.subject = "Alert - {site}: {asset}."
+        self.message = "{time}: an alert was triggered at {site}, {asset}, value: {value}."
 
     @abstractmethod
-    def send(self, subject, message):
+    def send(self):
         """Send notification."""
 
     @abstractmethod
@@ -49,6 +50,8 @@ class Email(Notification):
 
     def __init__(self):
         Notification.__init__(self)
+        self.sender = ""
+        self.receiver = ""
         self.serveraddr = ""
         self.serverport = ""
         self.username = ""
@@ -113,9 +116,35 @@ class SMS(Notification):
 
     def __init__(self):
         Notification.__init__(self)
+        self.twilio_acct_sid = ""
+        self.twilio_auth_token = ""
 
-    def send(self, subject, message):
-        pass
+    def send(self, sender, receiver, message):
+        """Send SMS Notification via Twilio."""
+        try:
+            self.logging.info("Sending SMS notification.")
+            self.load_settings()
+            client = TWClient(self.twilio_acct_sid, self.twilio_auth_token)
+            message = client.messages.create(to=sender, from_=receiver, body=message)
+            self.logging.info("SMS notification sent: %s", message.sid)
+        except Exception as excpt:
+            self.logging.exception("Trying to send notificaton via SMS: %s.", excpt)
 
     def load_settings(self):
-        pass
+        """Load SMS settings from the core database."""
+        try:
+            field_names = '''
+                twilio_acct_sid
+                twilio_auth_token
+            '''.split()
+            sql = 'SELECT {fields} FROM site LIMIT 1;'.format(
+                fields=', '.join(field_names))
+            database = sqlite3.connect(DB_CORE)
+            db_elements = database.cursor().execute(sql).fetchone()
+            for field, value in zip(field_names, db_elements):
+                setattr(self, field, value)
+            self.logging.info("SMS settings loaded.")
+        except Exception as excpt:
+            self.logging.exception("Trying to load SMS settings: %s.", excpt)
+        finally:
+            database.close()

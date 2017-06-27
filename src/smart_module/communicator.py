@@ -111,40 +111,13 @@ class Communicator(object):
         elif "ASSET/RESPONSE" in msg.topic:
             asset_id = msg.topic.split("/")[2]
             asset_info = json.loads(msg.payload)
-            self.smart_module.push_data(
-                asset_info["name"], asset_info["context"], asset_info["value_current"],
-                asset_info["unit"]
-            )
+            self.smart_module.push_data(asset_info["name"], asset_info["context"],
+                asset_info["value_current"], asset_info["unit"])
             alert = Alert()
             alert.update_alert(asset_id)
             if alert.check_alert(asset_info["value_current"]):
                 json_alert = str(alert).replace("u'", "'").replace("'", "\"")
                 self.send("ALERT/" + asset_id, json_alert)
-
-        elif "ALERT" in msg.topic:
-            self.logger.info("Got an alert from %s", msg.topic)
-            asset_id = msg.topic.split("/")[1]
-            asset_payload = json.loads(msg.payload)
-            try:
-                if "email" in asset_payload["response"]:
-                    site_name = self.smart_module.name
-                    notify = notification.Email()
-                    # Email.send expects two parameters: Subject and Message.
-                    notify.send(
-                        "Alert - {site}: {asset}.".format(
-                            site=site_name,
-                            asset=asset_id),
-                        "{time}: an alert was triggered at {site}, {asset}, value: {value}.".format(
-                            time=datetime.datetime.now(),
-                            site=site_name,
-                            asset=asset_id,
-                            value=asset_payload["value_current"])
-                    )
-                if "sms" in asset_payload["response"]:
-                    self.logger.info("Sending an SMS notification.")
-                    self.logger.info("Done sending SMS notification.")
-            except Exception as excpt:
-                self.logger.exception("Trying to send notification: %s.", excpt)
 
         elif "STATUS/QUERY" in msg.topic:
             self.smart_module.last_status = self.smart_module.get_status()
@@ -177,3 +150,30 @@ class Communicator(object):
         elif "$SYS/broker/clients/total" in msg.topic:
             if self.smart_module.scheduler:
                 self.broker_connections = int(msg.payload)
+
+        elif "ALERT" in msg.topic:
+            self.logger.info("Got an alert from %s", msg.topic)
+            asset_id = msg.topic.split("/")[1]
+            asset_payload = json.loads(msg.payload)
+            site_name = self.smart_module.name
+            time_now = datetime.datetime.now()
+            value_now = asset_payload["value_current"]
+            try:
+                if "email" in asset_payload["response"]:
+                    notify = notification.Email()
+                    notify.send(
+                        notify.subject.format(site=site_name, asset=asset_id),
+                        notify.message.format(
+                            time=time_now, site=site_name, asset=asset_id, value=value_now)
+                    )
+                if "sms" in asset_payload["response"]:
+                    notify = notification.SMS()
+                    notify.send(
+                        "+5521969731414",
+                        "+5521969731414",
+                        notify.message.format(
+                            time=time_now, site=site_name, asset=asset_id, value=value_now)
+                    )
+                self.logger.info("Done sending notification.")
+            except Exception as excpt:
+                self.logger.exception("Trying to send notification: %s.", excpt)

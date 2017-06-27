@@ -12,7 +12,7 @@ VIRTUAL_PATH=""
 
 # System packages
 NECESSARY_PACKAGES=('avahi-daemon' 'python-dev' 'python-pip' 'mosquitto')
-# We still need influxdb and maybe grafana
+# We still *need* influxdb and *maybe* grafana
 
 # Information output, same as echo but with timestamp
 info() { echo "[*] [$(date)] : $*"; }
@@ -35,7 +35,7 @@ main() {
 
     # Installing necessary system packages. python-dev needed for RPi.GPIO
     info "Installing necessay system packages: ${NECESSARY_PACKAGES[*]}"
-    apt-get install "$*"
+    apt-get install "${NECESSARY_PACKAGES[*]}"
 
     if [ "$VIRTUAL_ENV" == "true" ]; then
         info "Enabling virtualenv at $VIRTUAL_PATH"

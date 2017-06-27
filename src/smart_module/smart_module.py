@@ -110,8 +110,6 @@ class SmartModule(object):
         self.location = ""
         self.longitude = ""
         self.latitude = ""
-        self.twilio_acct_sid = ""
-        self.twilio_auth_token = ""
         self.scheduler = None
         self.hostname = ""
         self.last_status = ""
@@ -250,8 +248,6 @@ class SmartModule(object):
             location
             longitude
             latitude
-            twilio_acct_sid
-            twilio_auth_token
         '''.split()
         try:
             sql = 'SELECT {fields} FROM site LIMIT 1;'.format(
