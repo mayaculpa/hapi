@@ -61,8 +61,8 @@ class Asset(object):
     def __str__(self):
         """Return Asset information in (almost) JSON."""
         return str({"id": self.id, "name": self.name, "unit": self.unit, "virtual": self.virtual,
-                     "context": self.context, "system": self.system, "enabled": self.enabled,
-                     "type": self.type, "value_current": self.value_current})
+                    "context": self.context, "system": self.system, "enabled": self.enabled,
+                    "type": self.type, "value_current": self.value_current})
 
     def load_asset_info(self):
         """Load asset information based on database."""
@@ -201,7 +201,7 @@ class SmartModule(object):
             time.sleep(max_sleep_time)
             self.comm.connect() # Now it's time to connect to the broker.
         except Exception as excpt:
-            self.log.exceptions("[Exiting] Trying to find or become the broker.");
+            self.log.exception("[Exiting] Trying to find or become the broker.")
         finally:
             self.log.info("Closing Zeroconf connection.")
             zeroconf.close()
@@ -318,8 +318,8 @@ class SmartModule(object):
                     }}]
         tempinf = [{"measurement": "internal", "tags": {"asset": self.name}, "time": timestamp,
                     "fields": {
-                    "unit": "C",
-                    "unit temp": str(self.rtc.get_temp()),
+                        "unit": "C",
+                        "unit temp": str(self.rtc.get_temp()),
                     }}]
 
         conn.write_points(cpuinfo + meminfo + netinfo + botinfo + diskinf + tempinf)
@@ -352,7 +352,7 @@ class SmartModule(object):
     def log_sensor_data(self, data, virtual):
         if not virtual:
             try:
-                self.push_data(self.asset.name, self.asset.context, self.asset.value,
+                self.push_data(self.asset.name, self.asset.context, self.asset.value_current,
                                self.asset.unit)
             except Exception as excpt:
                 self.log.exception("Error logging sensor data: %s.", excpt)
@@ -446,8 +446,8 @@ class SmartModule(object):
                - v{sys_version}
                - location: {executable}
               Timestamp: {timestamp}
-              Uptime: This Smart Module has been online for '''
-                  '''{days} days, {hours} hours, {minutes} minutes and {seconds} seconds.
+              Uptime: This Smart Module has been online for:
+              {days} days, {hours} hours, {minutes} minutes and {seconds} seconds.
         ''').format(
             version=utilities.VERSION,
             platform=sys.platform,
@@ -502,7 +502,7 @@ class Scheduler(object):
             )
             command = command.encode("ascii")
             timeout = int(timeout)
-            self.site.comm.send("COMMAND/" + job.rtuid, command)
+            self.smart_module.comm.send("COMMAND/" + job.rtuid, command)
             time.sleep(timeout)
 
     def load_schedule(self):
@@ -592,7 +592,7 @@ class Scheduler(object):
                         ORDER BY step ;
                     ''', (job.sequence,)
                     database = sqlite3.connect(utilities.DB_CORE)
-                    seq_jobs = self.database.cursor().execute(*command)
+                    seq_jobs = database.cursor().execute(*command)
                     #print('len(seq_jobs) =', len(seq_jobs))
                     p = Process(target=self.process_sequence, args=(seq_jobs, job, job_rtu,
                                                                     seq_result,))
@@ -602,11 +602,11 @@ class Scheduler(object):
                     print('Running command', job.command)
                     # Check pre-defined jobs
                     if job.name == "Log Data":
-                        self.site.comm.send("QUERY/#", "query")
+                        self.smart_module.comm.send("QUERY/#", "query")
                         # self.site.log_sensor_data(response, False, self.logger)
 
                     elif job.name == "Log Status":
-                        self.site.comm.send("REPORT/#", "report")
+                        self.smart_module.comm.send("REPORT/#", "report")
 
                     else:
                         eval(job.command)

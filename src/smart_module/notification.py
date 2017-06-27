@@ -116,3 +116,6 @@ class SMS(Notification):
 
     def send(self, subject, message):
         pass
+
+    def load_settings(self):
+        pass

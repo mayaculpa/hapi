@@ -24,7 +24,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import print_function
 import sys
 import json
-import smtplib
 import datetime
 import log
 import paho.mqtt.client as mqtt
@@ -112,9 +111,10 @@ class Communicator(object):
         elif "ASSET/RESPONSE" in msg.topic:
             asset_id = msg.topic.split("/")[2]
             asset_info = json.loads(msg.payload)
-            self.smart_module.push_data(asset_info["name"], asset_info["context"],
-                asset_info["value_current"], asset_info["unit"])
-
+            self.smart_module.push_data(
+                asset_info["name"], asset_info["context"], asset_info["value_current"],
+                asset_info["unit"]
+            )
             alert = Alert()
             alert.update_alert(asset_id)
             if alert.check_alert(asset_info["value_current"]):
