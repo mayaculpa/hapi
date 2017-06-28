@@ -28,14 +28,37 @@ Note: Soon we'll introduce configuration via regular file and/or database. For n
 1. Install `Raspbian <https://www.raspberrypi.org/downloads/raspbian/>`_ on the Raspberry Pi
 
   * `Raspbian installation guide <https://www.raspberrypi.org/documentation/installation/installing-images/README.md>`_.
+  
+  * **Configure Raspbian Jessie**
+  
+      * At minimum, using ssh or graphical shell:
+      
+        .. code:: shell
+        
+            sudo raspi-config      
+      
+      * Set password
+      * Set hostname (e.g.HAPImodule001)
+      * Set locale
+      * Set keyboard
+      * Set timezone
+      * Set wifi - country, ssid, and password
+      
+      * Reboot
 
 2. Install dependencies on the Pi
 
   * Dependencies:
 
-    * **Avahi** (daemon) configured to publish MQTT service.
+    * **Avahi** (daemon) configured to publish MQTT service. avahi is already installed on Raspi Jessie.
 
       * :download:`Example config <example_configs/avahi-example>`
+      * Copy the file to the config directory and rename it:
+      
+        .. code:: shell
+        
+            sudo cp ~/Downloads/avahi-example /etc/avahi/services/multiple.service
+            
       * Restart to apply changes:
 
         .. code:: shell
@@ -44,12 +67,89 @@ Note: Soon we'll introduce configuration via regular file and/or database. For n
 
     * **MQTT Mosquitto** with default configuration.
 
+      * Install mosquitto
+       
+        .. code:: shell
+        
+            sudo apt-get install mosquitto     
+
       * :download:`Example config <example_configs/mosquitto-example>`
+      * Copy the file to the config directory and rename it:
+      
+        .. code:: shell
+        
+            sudo cp ~/Downloads/mosquitto-example /etc/mosquitto/conf.d/mosquitto.conf
+            
+      * Start mosquitto to apply config, and set mosquitto to start on boot:
+
+        .. code:: shell
+
+            sudo systemctl start mosquitto
+            sudo systemctl enable mosquitto
 
     * **Influxdb** with default configuration.
-    * **Grafana** [Optional] (highly recommended).
+        `https://easysquirrel.io/index.php/2017/03/20/influxdb-and-telegraf-on-raspberry-pi-3/`
+        `http://docs.influxdata.com/influxdb/v1.2/introduction/installation`
+        
+        * the configuration file is located at /etc/influxdb/influxdb.conf for default installations  
+        * test by typing 'influx' at the command line  
 
-  * There is also a script from the repo for installing the first two system dependencies and then setup the python environment:
+      * **add influxdb repository**
+
+        .. code:: shell
+
+          curl -sL https://repos.influxdata.com/influxdb.key | sudo apt-key add -
+          source /etc/os-release
+          test $VERSION_ID = "7" && echo "deb https://repos.influxdata.com/debian wheezy stable" | sudo tee /etc/apt/sources.list.d/influxdb.list
+          test $VERSION_ID = "8" && echo "deb https://repos.influxdata.com/debian jessie stable" | sudo tee /etc/apt/sources.list.d/influxdb.list
+
+      * Install libfontconfig1 (required)
+
+        .. code:: shell
+
+          sudo apt-get install libfontconfig1
+          sudo apt-get -f install
+            
+      * **influxdb**
+
+        .. code:: shell
+
+          sudo apt-get update && sudo apt-get install influxdb
+          sudo service influxdb start 
+
+      * **Telegraf**
+
+        .. code:: shell
+
+          sudo apt-get update && sudo apt-get install telegraf
+          sudo service telegraf start
+
+    * **Grafana** [Optional] (highly recommended)
+    
+        .. code:: shell
+        
+          cd ~
+          wget --output-document=grafana_4.2.0-beta1_armhf.deb https://bintray.com/fg2it/deb/download_file?file_path=testing%2Fg%2Fgrafana_4.2.0-beta1_armhf.deb
+          sudo dpkg -i grafana_4.2.0-beta1_armhf.deb
+          sudo apt-get install -f
+
+    * Enable Grafana for automatic start on boot and start the server
+    
+        .. code:: shell
+        
+          sudo systemctl enable grafana-server
+          sudo systemctl start grafana-server
+
+    * Reboot your Raspberry Pi
+
+        .. code:: shell
+        
+          sudo reboot    
+ 
+3. Install hapi
+
+  * **Install hapi dependencies on the Pi** 
+    * There is also a script from the repo for installing the first two system dependencies and then setup the python environment:
 
       .. code:: shell
 
