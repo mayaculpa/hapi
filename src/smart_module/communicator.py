@@ -169,8 +169,8 @@ class Communicator(object):
                 if "sms" in asset_payload["response"]:
                     notify = notification.SMS()
                     notify.send(
-                        "+5521969731414",
-                        "+5521969731414",
+                        "from",
+                        "to",
                         notify.message.format(
                             time=time_now, site=site_name, asset=asset_id, value=value_now)
                     )
