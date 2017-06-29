@@ -1,3 +1,5 @@
+#include <Arduino.h>
+
 /*
 #*********************************************************************
 #Copyright 2016 Maya Culpa, LLC
@@ -545,4 +547,3 @@ void MQTTcallback(char* topic, byte* payload, unsigned int length) {
     }   // end strcmp NodeId
   }     // end Valid JSON object
 }
-

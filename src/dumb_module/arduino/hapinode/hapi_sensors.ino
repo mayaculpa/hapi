@@ -1,3 +1,5 @@
+#include <Arduino.h>
+
 /*
 #*********************************************************************
 #Copyright 2016 Maya Culpa, LLC
@@ -237,7 +239,7 @@ float readLightSensor(int Device) {
   d = HapicData[Device];
 
   int RawADC = analogRead(d.hcs_sensepin);
-  //TODO
+//TODO
   Lux = (float)RawADC; // Need to do some processing to get lux from CDS reading
   return Lux;
 }
@@ -247,14 +249,13 @@ float readFlow(int Device) {
   //                      The averaging is done in software and stores a 30second rolling count
   ControlData d;
   d = HapicData[Device];
-
-  //TODO
+//TODO
   return (float)WaterFlowRate;
 }
 
 float readSensorPin(int Device) {
   float pinData;
-  //TODO
+//TODO
   return pinData;
 }
 

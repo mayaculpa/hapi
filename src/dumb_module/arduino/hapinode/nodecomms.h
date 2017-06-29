@@ -20,8 +20,8 @@ HAPI Remote Terminal Unit Firmware Code V3.1.0
 Authors: Tyler Reed, Mark Miller
 ESP Modification: John Archbold
 
-Sketch Date: June 13th, 2017
-Sketch Version: V3.1.0
+Sketch Date: June 29th, 2017
+Sketch Version: V3.1.1
 Implement of MQTT-based HAPInode (HN) for use in Monitoring and Control
 Implements mDNS discovery of MQTT broker
 Implements definitions for

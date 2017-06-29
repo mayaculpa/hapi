@@ -62,7 +62,7 @@ enum pin_control_enum {
 #define TDS_DRIVE2 27     // Reserved pin for TDS probe
 
 #define cWatr_PIN 4       // Water pump control pin
-#define sWtrFlow_PIN 36   // Water flow sensor pin
+#define sFlow_PIN 36      // Water flow sensor pin
 #define cFill_PIN 2       // Fill pump control pin
 #define sFloat_PIN 39      // Fill float sensor pin
 #define cNutr_PIN 15      // Nutrient pump control pin
@@ -73,14 +73,6 @@ enum pin_control_enum {
 #define cLamp_PIN 14      // Lamp control pin
 #define sLux_PIN  4       // Light sensor pin
 
-enum pin_control_enum {
-    UNUSED_PIN, // or reserved
-    DIGITAL_INPUT_PIN,
-    DIGITAL_INPUT_PULLUP_PIN,
-    DIGITAL_OUTPUT_PIN,
-    ANALOG_OUTPUT_PIN,
-    ANALOG_INPUT_PIN
-};
 // Default pin modes
 // Analog input pins are assumed to be used as analog input pins
 int pinControl[NUM_DIGITAL+NUM_ANALOG] = {

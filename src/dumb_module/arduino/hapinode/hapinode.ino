@@ -1,3 +1,5 @@
+#include <Arduino.h>
+
 /*
 #*********************************************************************
 #Copyright 2016 Maya Culpa, LLC
@@ -20,8 +22,8 @@ HAPI Remote Terminal Unit Firmware Code V3.1.0
 Authors: Tyler Reed, Mark Miller
 ESP Modification: John Archbold
 
-Sketch Date: June 13th, 2017
-Sketch Version: V3.1.0
+Sketch Date: June 29th, 2017
+Sketch Version: V3.1.1
 Implement of MQTT-based HAPInode (HN) for use in Monitoring and Control
 Implements mDNS discovery of MQTT broker
 Implements definitions for
@@ -415,10 +417,10 @@ void setup() {
   }
   Serial.print(F("Hostname: "));
   Serial.print(hostString);
-  Serial.println(F(" mDNS responder started"));
+  Serial.println(F(" mDNS responder started for this HAPInode"));
 
-  Serial.println(F("Sending mDNS query"));
-  int n = MDNS.queryService("workstation", "tcp"); // Send out query for workstation tcp services
+  Serial.print(F("Sending mDNS query to find mqtt broker - "));
+  int n = MDNS.queryService("mqtt", "tcp"); // Send out query for workstation tcp services
   Serial.println(F("mDNS query done"));
   if (n == 0) {
     Serial.println(F("no services found"));
