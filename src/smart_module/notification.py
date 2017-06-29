@@ -125,7 +125,7 @@ class SMS(Notification):
             self.logging.info("Sending SMS notification.")
             self.load_settings()
             client = TWClient(self.twilio_acct_sid, self.twilio_auth_token)
-            message = client.messages.create(to=sender, from_=receiver, body=message)
+            message = client.messages.create(to=receiver, from_=sender, body=message)
             self.logging.info("SMS notification sent: %s", message.sid)
         except Exception as excpt:
             self.logging.exception("Trying to send notificaton via SMS: %s.", excpt)
