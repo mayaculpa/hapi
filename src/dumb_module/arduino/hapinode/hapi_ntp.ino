@@ -18,12 +18,12 @@
 #along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #*********************************************************************
 
-HAPI Remote Terminal Unit Firmware Code V3.1.0
+HAPI Remote Terminal Unit Firmware Code V3.1.1
 Authors: Tyler Reed, Mark Miller
 ESP Modification: John Archbold
 
-Sketch Date: June 13th, 2017
-Sketch Version: V3.1.0
+Sketch Date: June 29th, 2017
+Sketch Version: V3.1.1
 Implement of MQTT-based HAPInode (HN) for use in Monitoring and Control
 Implements mDNS discovery of MQTT broker
 Implements definitions for
@@ -40,7 +40,7 @@ time_t getNtpTime()
 {
   while (udp.parsePacket() > 0) ; // discard any previously received packets
   Serial.println(F("Transmit NTP Request"));
-  sendNTPpacket(timeServerIP);
+  sendNTPpacket(ntpServerIP);
   uint32_t beginWait = millis();
   while (millis() - beginWait < 1500) {
     int size = udp.parsePacket();

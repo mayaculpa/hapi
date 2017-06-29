@@ -18,7 +18,7 @@
 #along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #*********************************************************************
 
-HAPI Remote Terminal Unit Firmware Code V3.1.0
+HAPI Remote Terminal Unit Firmware Code V3.1.1
 Authors: Tyler Reed, Mark Miller
 ESP Modification: John Archbold
 
@@ -116,7 +116,7 @@ unsigned long mscount;      // millisecond counter
 time_t epoch;               // UTC seconds
 time_t currentTime;         // Local value
 
-String HAPI_FW_VERSION = F("v3.1.0");    // The version of the firmware the HN is running
+String HAPI_FW_VERSION = F("V3.1.1");    // The version of the firmware the HN is running
 #ifdef HN_ENET
 String HN_base = F("HN2");             // Prefix for mac address
 #endif
@@ -144,12 +144,12 @@ boolean stringComplete = false;    // A boolean indicating when received string 
 // the media access control (ethernet hardware) address for the shield
 // Need to manually change this for USB, Ethernet
 byte mac[] = { 0x55, 0x55, 0x55, 0x55, 0x55, 0x55 };
-char mac_str[16] = "555555555555";
-char hostString[32] = {0};              // for mDNS Hostname
+char mac_str[16] = "555555555555";  // Default mac id      
+char hostString[64] = {0};          // mDNS Hostname for this HAPInode
 
 // ntp config
-IPAddress timeServerIP;               // Place to store IP address of mqttbroker.local
-const char* ntpServerName = "mqttbroker"; // Assume mqttbroker is also the time server
+IPAddress ntpServerIP;                // Place to store IP address of mqttbroker.local
+char ntpServer_hostname[64] = MQTT_broker_default;    // Assume mqttbroker is also the time server
 const int NTP_PACKET_SIZE = 48;       // NTP time stamp is in the first 48 bytes of the message
 byte packetBuffer[ NTP_PACKET_SIZE];  //buffer to hold incoming and outgoing packets
 const unsigned int localPort = UDP_port;    // local port to listen for UDP packets
@@ -178,6 +178,7 @@ EthernetUDP udp;
 //**** End Communications Section ****
 
 //**** Begin MQTT Section ****
+char MQTT_broker_hostname[64] = MQTT_broker_default;    // Space to hold mqtt broker hostname
 const char* clientID = "HAPInode";
 const char* mqtt_topic_command = "COMMAND/";            // General Command topic
 const char* mqtt_topic_status = "STATUS/RESPONSE/";     // General Status topic
@@ -398,10 +399,8 @@ void setup() {
   Serial.println(WiFi.getHostname());
 #endif
 #if defined(HN_ESP32) || defined(HN_ESP32)
-  Serial.println();
   Serial.print(F("IP  address: "));
   Serial.println(WiFi.localIP());
-  Serial.print(F("Hostname   : "));
 #endif
 
 // Start mDNS support
@@ -438,8 +437,19 @@ void setup() {
       Serial.print(F(":"));
       Serial.print(MDNS.port(i));
       Serial.println(F(")"));
+      if (MDNS.port(i) == MQTT_port) {
+        MDNS.hostname(i).toCharArray(MQTT_broker_hostname,(MDNS.hostname(i).length()+1));
+// TODO check for separate ntp server
+        MDNS.hostname(i).toCharArray(ntpServer_hostname,(MDNS.hostname(i).length()+1));
+      }
     }
   }
+  Serial.print(F("Hostname: "));
+  Serial.print(MQTT_broker_hostname);
+  Serial.println(F(" being used for MQTT_broker_hostname"));
+  Serial.print(F("Hostname: "));
+  Serial.print(ntpServer_hostname);
+  Serial.println(F(" being used for ntpServer"));
   Serial.println();
 #endif
 
@@ -454,20 +464,20 @@ void setup() {
 #endif
 #ifdef HN_2560
   Serial.println(udp.remoteIP());
-  //TODO get timeServerIP
+  //TODO get ntpServerIP
 #endif
 #ifdef HN_WiFi
-  WiFi.hostByName(ntpServerName, timeServerIP);   // Get mqttbroker's IP address
+  WiFi.hostByName(ntpServer_hostname, ntpServerIP);   // Get mqttbroker's IP address
 #endif
   Serial.print(F("Local IP:   "));
-  Serial.println(timeServerIP);
+  Serial.println(ntpServerIP);
 
   setupTime();          // initialize RTC using ntp, if available
   mscount = millis();   // initialize the millisecond counter
 
 // Start MQTT support
 // ==================
-  MQTTClient.setServer(MQTT_broker_address, MQTT_port);
+  MQTTClient.setServer(MQTT_broker_hostname, MQTT_port);
   MQTTClient.setCallback(MQTTcallback);
 
   exception_topic["Node"] = HN_Id;
