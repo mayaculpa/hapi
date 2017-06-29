@@ -1,3 +1,5 @@
+#include <Arduino.h>
+
 /*
 #*********************************************************************
 #Copyright 2016 Maya Culpa, LLC
@@ -16,18 +18,22 @@
 #along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #*********************************************************************
 
-HAPI Remote Terminal Unit Firmware Code V3.1.0
+HAPI Remote Terminal Unit Firmware Code V3.1.1
 Authors: Tyler Reed, Mark Miller
 ESP Modification: John Archbold
 
-Sketch Date: June 13th, 2017
-Sketch Version: V3.1.0
+Sketch Date: June 29th, 2017
+Sketch Version: V3.1.1
 Implement of MQTT-based HAPInode (HN) for use in Monitoring and Control
 Implements mDNS discovery of MQTT broker
 Implements definitions for
   ESP-NodeMCU
   ESP8266
   WROOM32
+Communications Protocol
+  WiFi
+Communications Method
+  MQTT        Listens for messages on Port 1883
 */
 
 void setupControls(void){
@@ -45,7 +51,7 @@ void checkControls(void) {
   }
 }
 
-float poll_on_off_thing_controller(int i) {
+float controlPumps(int Device){
   CFuncDef c;
   ControlData d;
   c = HapicFunctions[Device];
@@ -60,12 +66,12 @@ float poll_on_off_thing_controller(int i) {
         d.hc_end += d.hc_repeat;
       }
     }
-    if (c.iPtr(i) < d.hcs_offValue) { // is the TurnOff value exceeded?
+    if (c.iPtr(Device) < d.hcs_offValue) { // is the TurnOff value exceeded?
       d.hc_active = false;
       digitalWrite(d.hc_controlpin, !d.hc_polarity);
     }
-  } else if (d.hc_start >= currentTime || c.iPtr(i) > d.hcs_onValue) {
-    d.hc_active = true;        // Turn it on
+  } else if (d.hc_start >= currentTime || c.iPtr(Device) > d.hcs_onValue) {
+    d.hc_active = true;        // Turn it On, Pump is now running
     digitalWrite(d.hc_controlpin, d.hc_polarity);
   }
 }
@@ -95,6 +101,3 @@ float controlLamps(int Device){
   }
 }
 
-float controlLamps(int Device) {
-  poll_on_off_thing_controller(Device);
-}
