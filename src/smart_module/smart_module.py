@@ -77,10 +77,9 @@ class Asset(object):
         sql = "SELECT {fields} FROM assets WHERE id = '{asset}' LIMIT 1;".format(
             fields=', '.join(field_names), asset=str(self.id))
         database = sqlite3.connect(utilities.DB_CORE)
-        db_elements = database.cursor().execute(sql)
-        for row in db_elements:
-            for field_name, field_value in zip(field_names, row):
-                setattr(self, field_name, field_value)
+        db_elements = database.cursor().execute(sql).fetchone()
+        for field_name, field_value in zip(field_names, db_elements):
+            setattr(self, field_name, field_value)
         database.close()
 
 class SmartModule(object):
@@ -686,7 +685,6 @@ def main():
         smart_module.load_influx_settings()
         smart_module.asset.load_asset_info()
         smart_module.load_site_data()
-
     except Exception as excpt:
         logging.exception("Error initializing Smart Module. %s.", excpt)
 
