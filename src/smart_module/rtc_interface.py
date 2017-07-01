@@ -24,7 +24,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import random
 import datetime
 import time
-import log
+from log import Log
 
 some_import_failed = False
 try:
@@ -56,8 +56,6 @@ class RTCInterface(object):
     def __init__(self):
         self.mock = some_import_failed
 
-        self.logger = log.Log("rtc.log")
-
         if self.mock:
             return
 
@@ -67,7 +65,7 @@ class RTCInterface(object):
         try:
             self.ds3231 = SDL_DS3231.SDL_DS3231(1, 0x68, 0x57)
         except Exception as excpt:
-            self.logger.exception("Error initializing RTC. %s.", excpt)
+            Log.exception("Error initializing RTC. %s.", excpt)
 
     def power_on_rtc(self):
         if self.mock:
@@ -94,7 +92,7 @@ class RTCInterface(object):
         try:
             return self.ds3231.read_datetime()
         except Exception as excpt:
-            self.logger.exception("Error getting RTC date/time. %s.", excpt)
+            Log.exception("Error getting RTC date/time. %s.", excpt)
 
     def set_datetime(self):
         '''Writes the system datetime to the attached RTC if not mock.
@@ -106,7 +104,7 @@ class RTCInterface(object):
         try:
             self.ds3231.write_now()
         except Exception as excpt:
-            self.logger.exception("Error writing date/time to RTC. %s.", excpt)
+            Log.exception("Error writing date/time to RTC. %s.", excpt)
 
     def get_temp(self):
         '''Gets the internal temperature from the RTC component
@@ -124,7 +122,7 @@ class RTCInterface(object):
             self.power_off_rtc()
             return internal_temp
         except Exception as excpt:
-            self.logger.exception("Error getting the temperature from the RTC. %s.", excpt)
+            Log.exception("Error getting the temperature from the RTC. %s.", excpt)
 
     def read_eeprom(self, address, n, name, mock_value):
         '''Return string of n bytes from EEPROM starting at address.
@@ -141,7 +139,7 @@ class RTCInterface(object):
                 for i in range(n)
             ]
         except Exception as excpt:
-            self.logger.exception("Error reading %s from EEPROM. %s.", name, excpt)
+            Log.exception("Error reading %s from EEPROM. %s.", name, excpt)
 
         s = ''.join(chr(c) for c in bytes_)
         return s.strip()
@@ -162,7 +160,7 @@ class RTCInterface(object):
             try:
                 self.ds3231.write_AT24C32_byte(address + i, ord(c))
             except Exception as excpt:
-                self.logger.exception("Error writing %s to EEPROM. %s.", name, excpt)
+                Log.exception("Error writing %s to EEPROM. %s.", name, excpt)
                 return
 
     def get_type(self):

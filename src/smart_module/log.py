@@ -35,7 +35,7 @@ class Log(object):
     """Write logging information."""
 
     @staticmethod
-    def build_string(self, log_type, information):
+    def build_string(log_type, information):
         """Build string with mask and return it."""
         mask = "{date} - {name} - {log_type} - {string}"
         string = mask.format(
@@ -47,17 +47,17 @@ class Log(object):
         return str(string)
 
     @staticmethod
-    def info(self, format_str, *values):
+    def info(format_str, *values):
         """Append INFO in format % values to file."""
-        string = self.build_string("INFO", format_str % values)
+        string = Log.build_string("[*] INFO", format_str % values)
         with open(LOGGING_FILE, "a") as log:
             log.write(string + "\n")
         print(string)
 
     @staticmethod
-    def exception(self, format_str, *values):
+    def exception(format_str, *values):
         """Append ERROR in format % values to file."""
-        string = self.build_string("[!!] ERROR", format_str % values)
+        string = Log.build_string("[!!] ERROR", format_str % values)
         with open(LOGGING_FILE, "a") as log:
             log.write(string + "\n")
         print(string)

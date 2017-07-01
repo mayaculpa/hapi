@@ -23,7 +23,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import print_function
 import sqlite3
-import log
+from log import Log
 from utilities import DB_CORE
 
 class Alert(object):
@@ -31,7 +31,6 @@ class Alert(object):
 
     def __init__(self, asset_id=""):
         """Create object with null values."""
-        self.logger = log.Log("alert.log")
         self.alert_id = asset_id
         self.lower_threshold = 0.0
         self.upper_threshold = 0.0
@@ -54,7 +53,7 @@ class Alert(object):
         """Fetch alert parameters from database."""
         self.alert_id = asset_id
         try:
-            self.logger.info("Fetching alert parameters from database.")
+            Log.info("Fetching alert parameters from database.")
             field_names = '''
                 lower_threshold
                 upper_threshold
@@ -71,10 +70,10 @@ class Alert(object):
             self.lower_threshold = float(self.lower_threshold)
             self.upper_threshold = float(self.upper_threshold)
         except Exception as excpt:
-            self.logger.exception("Error fetching alert parameters from database: %s.", excpt)
+            Log.exception("Error fetching alert parameters from database: %s.", excpt)
         finally:
             database.close()
-            self.logger.info("Closing Alert database connection.")
+            Log.info("Closing Alert database connection.")
 
     def check_alert(self, current_value):
         """Check for alert to a given _value_."""
@@ -82,5 +81,5 @@ class Alert(object):
         if self.lower_threshold <= float(current_value) <= self.upper_threshold:
             return False
 
-        self.logger.info("[!] ALERT DETECTED. Value: %s.", current_value)
+        Log.info("[!] ALERT DETECTED. Value: %s.", current_value)
         return True

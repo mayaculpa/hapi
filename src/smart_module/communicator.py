@@ -25,14 +25,13 @@ from __future__ import print_function
 import sys
 import json
 import datetime
-import log
+from log import Log
 import paho.mqtt.client as mqtt
 import notification
 from alert import Alert
 
 class Communicator(object):
     def __init__(self, sm):
-        self.logger = log.Log("communicator.log")
         self.rtuid = ""
         self.name = ""
         self.broker_name = None
@@ -45,16 +44,16 @@ class Communicator(object):
         self.is_connected = False
         self.scheduler_found = False
         self.broker_connections = -1
-        self.logger.info("Communicator initialized")
+        Log.info("Communicator initialized")
 
     def connect(self):
         """Connect to the broker."""
         try:
-            self.logger.info("Connecting to %s at %s.", self.broker_name, self.broker_ip)
+            Log.info("Connecting to %s at %s.", self.broker_name, self.broker_ip)
             self.client.connect(host=self.broker_ip, port=1883, keepalive=60)
             self.client.loop_start()
         except Exception as excpt:
-            self.logger.exception("[Exiting] Error connecting to broker: %s", excpt)
+            Log.exception("[Exiting] Error connecting to broker: %s", excpt)
             self.client.loop_stop()
             sys.exit(-1)
 
@@ -63,7 +62,7 @@ class Communicator(object):
             if self.client:
                 self.client.publish(topic, message)
         except Exception as excpt:
-            self.logger.info("Error publishing message: %s.", excpt)
+            Log.info("Error publishing message: %s.", excpt)
 
     def subscribe(self, topic):
         """Subscribe to a topic (QoS = 0)."""
@@ -75,14 +74,14 @@ class Communicator(object):
 
     def on_disconnect(self, client, userdata, rc):
         self.is_connected = False
-        self.logger.info("[Exiting] Disconnected: %s", mqtt.error_string(rc))
+        Log.info("[Exiting] Disconnected: %s", mqtt.error_string(rc))
         self.client.loop_stop()
         sys.exit(-1)
 
     # The callback for when the client receives a CONNACK response from the server.
     #@staticmethod
     def on_connect(self, client, userdata, flags, rc):
-        self.logger.info("Connected with result code %s", rc)
+        Log.info("Connected with result code %s", rc)
         # Subscribing in on_connect() means if we lose connection and reconnect, subscriptions will
         # be renewed.
         #self.client.subscribe("SCHEDULER/LOCATE")
@@ -130,12 +129,12 @@ class Communicator(object):
 
         elif "SCHEDULER/RESPONSE" in msg.topic:
             self.scheduler_found = True
-            self.logger.info(msg.payload + " has identified itself as the Scheduler.")
+            Log.info(msg.payload + " has identified itself as the Scheduler.")
 
         elif "SCHEDULER/QUERY" in msg.topic:
             if self.smart_module.scheduler:
                 self.send("SCHEDULER/RESPONSE", self.smart_module.hostname)
-                self.logger.info("Sent SCHEDULER/RESPONSE")
+                Log.info("Sent SCHEDULER/RESPONSE")
 
         elif "SYNCHRONIZE/VERSION" in msg.topic:
             self.send("SYNCHRONIZE/RESPONSE", self.smart_module.data_sync.read_db_version())
@@ -176,4 +175,4 @@ class Communicator(object):
                             time=time_now, site=site_name, asset=asset_id, value=value_now)
                     )
             except Exception as excpt:
-                self.logger.exception("Trying to send notification: %s.", excpt)
+                Log.exception("Trying to send notification: %s.", excpt)

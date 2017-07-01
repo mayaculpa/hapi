@@ -26,14 +26,13 @@ from abc import abstractmethod
 import smtplib
 import sqlite3
 from twilio.rest import Client as TWClient
-import log
+from log import Log
 from utilities import DB_CORE
 
 class Notification(object):
     """Hold information about nofication that can be sent via SMS or email."""
 
     def __init__(self):
-        self.logging = log.Log("notification.log")
         self.subject = "Alert - {site}: {asset}."
         self.message = "{time}: an alert was triggered at {site}, {asset}, value: {value}."
         self.sender = ""
@@ -76,9 +75,9 @@ class Email(Notification):
             db_elements = database.cursor().execute(sql).fetchone()
             for field, value in zip(field_names, db_elements):
                 setattr(self, field, value)
-            self.logging.info("Mail settings loaded.")
+            Log.info("Mail settings loaded.")
         except Exception as excpt:
-            self.logging.exception("Trying to load mail settings: %s.", excpt)
+            Log.exception("Trying to load mail settings: %s.", excpt)
         finally:
             database.close()
 
@@ -97,17 +96,17 @@ class Email(Notification):
     def send(self, subject, message):
         """Send email notification using paremeters from the database."""
         try:
-            self.logging.info("Sending email notification.")
+            Log.info("Sending email notification.")
             self.load_settings()
-            server = smtplib.SMTP(self.serveraddr, self.serverport)
+            server = smtplib.SMTP(str(self.serveraddr), str(self.serverport))
             server.ehlo()
             if self.tls:
                 server.starttls()
             server.login(self.username, self.password)
             server.sendmail(self.sender, self.receiver, self.build_message(subject, message))
-            self.logging.info("Email notification sent.")
+            Log.info("Email notification sent.")
         except Exception as excpt:
-            self.logging.exception("Trying to send notificaton via e-mail: %s.", excpt)
+            Log.exception("Trying to send notificaton via e-mail: %s.", excpt)
         finally:
             server.quit()
 
@@ -122,13 +121,13 @@ class SMS(Notification):
     def send(self, sender, receiver, message):
         """Send SMS Notification via Twilio."""
         try:
-            self.logging.info("Sending SMS notification.")
+            Log.info("Sending SMS notification.")
             self.load_settings()
             client = TWClient(self.twilio_acct_sid, self.twilio_auth_token)
             message = client.messages.create(to=receiver, from_=sender, body=message)
-            self.logging.info("SMS notification sent: %s", message.sid)
+            Log.info("SMS notification sent: %s", message.sid)
         except Exception as excpt:
-            self.logging.exception("Trying to send notificaton via SMS: %s.", excpt)
+            Log.exception("Trying to send notificaton via SMS: %s.", excpt)
 
     def load_settings(self):
         """Load SMS settings from the core database."""
@@ -145,8 +144,8 @@ class SMS(Notification):
             db_elements = database.cursor().execute(sql).fetchone()
             for field, value in zip(field_names, db_elements):
                 setattr(self, field, value)
-            self.logging.info("SMS settings loaded.")
+            Log.info("SMS settings loaded.")
         except Exception as excpt:
-            self.logging.exception("Trying to load SMS settings: %s.", excpt)
+            Log.exception("Trying to load SMS settings: %s.", excpt)
         finally:
             database.close()
