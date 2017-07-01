@@ -692,7 +692,6 @@ def main():
         try:
             time.sleep(0.5)
             schedule.run_pending()
-
         except Exception as excpt:
             logging.exception("Error in Smart Module main loop. %s.", excpt)
             break

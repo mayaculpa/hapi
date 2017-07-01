@@ -31,13 +31,14 @@ class Alert(object):
 
     def __init__(self, asset_id=""):
         """Create object with null values."""
+        self.logger = log.Log("alert.log")
         self.alert_id = asset_id
         self.lower_threshold = 0.0
         self.upper_threshold = 0.0
         self.message = ""
         self.response_type = ""
         self.value_current = 0.0
-        self.logger = log.Log("alert.log")
+        self.notify_enabled = False
 
     def __str__(self):
         """Use to pass Alert information in JSON."""
@@ -46,7 +47,8 @@ class Alert(object):
                     "upper": self.upper_threshold,
                     "message": self.message,
                     "response": self.response_type,
-                    "value_current": self.value_current})
+                    "value_current": self.value_current,
+                    "notify_enabled": self.notify_enabled})
 
     def update_alert(self, asset_id):
         """Fetch alert parameters from database."""
@@ -58,6 +60,7 @@ class Alert(object):
                 upper_threshold
                 message
                 response_type
+                notify_enabled
             '''.split()
             sql = "SELECT {fields} FROM alert_params WHERE asset_id = '{asset}' LIMIT 1;".format(
                 fields=', '.join(field_names), asset=str(asset_id))

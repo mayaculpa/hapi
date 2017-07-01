@@ -152,9 +152,10 @@ class Communicator(object):
                 self.broker_connections = int(msg.payload)
 
         elif "ALERT" in msg.topic:
-            self.logger.info("Got an alert from %s", msg.topic)
-            asset_id = msg.topic.split("/")[1]
             asset_payload = json.loads(msg.payload)
+            if not asset_payload["notify_enabled"]:
+                return
+            asset_id = msg.topic.split("/")[1]
             site_name = self.smart_module.name
             time_now = datetime.datetime.now()
             value_now = asset_payload["value_current"]
@@ -174,6 +175,5 @@ class Communicator(object):
                         notify.message.format(
                             time=time_now, site=site_name, asset=asset_id, value=value_now)
                     )
-                self.logger.info("Done sending notification.")
             except Exception as excpt:
                 self.logger.exception("Trying to send notification: %s.", excpt)

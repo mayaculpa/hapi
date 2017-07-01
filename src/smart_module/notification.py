@@ -36,6 +36,8 @@ class Notification(object):
         self.logging = log.Log("notification.log")
         self.subject = "Alert - {site}: {asset}."
         self.message = "{time}: an alert was triggered at {site}, {asset}, value: {value}."
+        self.sender = ""
+        self.receiver = ""
 
     @abstractmethod
     def send(self):
@@ -50,8 +52,6 @@ class Email(Notification):
 
     def __init__(self):
         Notification.__init__(self)
-        self.sender = ""
-        self.receiver = ""
         self.serveraddr = ""
         self.serverport = ""
         self.username = ""
@@ -99,7 +99,7 @@ class Email(Notification):
         try:
             self.logging.info("Sending email notification.")
             self.load_settings()
-            server = smtplib.SMTP(self.serveraddr, str(self.serverport))
+            server = smtplib.SMTP(self.serveraddr, self.serverport)
             server.ehlo()
             if self.tls:
                 server.starttls()
@@ -134,6 +134,8 @@ class SMS(Notification):
         """Load SMS settings from the core database."""
         try:
             field_names = '''
+                sender
+                receiver
                 twilio_acct_sid
                 twilio_auth_token
             '''.split()

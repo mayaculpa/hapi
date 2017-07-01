@@ -29,35 +29,35 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import print_function
 import datetime
+from utilities import LOGGING_FILE
 
 class Log(object):
-    """Hold information about logging."""
+    """Write logging information."""
 
-    def __init__(self, log_file):
-        """Initialize object with initial information such as file for writing."""
-        self.log_file = log_file
-        self.mask = "{date} - {name} - {log_type} - {string}"
-
+    @staticmethod
     def build_string(self, log_type, information):
         """Build string with mask and return it."""
-        string = self.mask.format(
+        mask = "{date} - {name} - {log_type} - {string}"
+        string = mask.format(
             date=datetime.datetime.now(),
-            name=self.log_file,
+            name=LOGGING_FILE,
             log_type=log_type,
             string=str(information),
         )
         return str(string)
 
+    @staticmethod
     def info(self, format_str, *values):
         """Append INFO in format % values to file."""
         string = self.build_string("INFO", format_str % values)
-        with open(self.log_file, "a") as log:
+        with open(LOGGING_FILE, "a") as log:
             log.write(string + "\n")
         print(string)
 
+    @staticmethod
     def exception(self, format_str, *values):
         """Append ERROR in format % values to file."""
         string = self.build_string("[!!] ERROR", format_str % values)
-        with open(self.log_file, "a") as log:
+        with open(LOGGING_FILE, "a") as log:
             log.write(string + "\n")
         print(string)
