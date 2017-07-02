@@ -35,7 +35,7 @@ main() {
 
     # Installing necessary system packages. python-dev needed for RPi.GPIO
     info "Installing necessay system packages: ${NECESSARY_PACKAGES[*]}"
-    apt-get install "${NECESSARY_PACKAGES[*]}"
+    sudo apt-get install "${NECESSARY_PACKAGES[*]}"
 
     if [ "$VIRTUAL_ENV" == "true" ]; then
         info "Enabling virtualenv at $VIRTUAL_PATH"
