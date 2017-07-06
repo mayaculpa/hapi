@@ -1,3 +1,5 @@
+#include <Arduino.h>
+
 /*
 #*********************************************************************
 #Copyright 2016 Maya Culpa, LLC
@@ -16,12 +18,12 @@
 #along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #*********************************************************************
 
-HAPI Remote Terminal Unit Firmware Code V3.1.0
+HAPI Remote Terminal Unit Firmware Code V3.1.1
 Authors: Tyler Reed, Mark Miller
 ESP Modification: John Archbold
 
-Sketch Date: June 13th, 2017
-Sketch Version: V3.1.0
+Sketch Date: June 29th, 2017
+Sketch Version: V3.1.1
 Implement of MQTT-based HAPInode (HN) for use in Monitoring and Control
 Implements mDNS discovery of MQTT broker
 Implements definitions for
@@ -545,4 +547,3 @@ void MQTTcallback(char* topic, byte* payload, unsigned int length) {
     }   // end strcmp NodeId
   }     // end Valid JSON object
 }
-

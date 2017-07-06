@@ -1,3 +1,5 @@
+#include <Arduino.h>
+
 /*
 #*********************************************************************
 #Copyright 2016 Maya Culpa, LLC
@@ -16,12 +18,12 @@
 #along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #*********************************************************************
 
-HAPI Remote Terminal Unit Firmware Code V3.1.0
+HAPI Remote Terminal Unit Firmware Code V3.1.1
 Authors: Tyler Reed, Mark Miller
 ESP Modification: John Archbold
 
-Sketch Date: June 13th, 2017
-Sketch Version: V3.1.0
+Sketch Date: June 29th, 2017
+Sketch Version: V3.1.1
 Implement of MQTT-based HAPInode (HN) for use in Monitoring and Control
 Implements mDNS discovery of MQTT broker
 Implements definitions for
@@ -237,7 +239,7 @@ float readLightSensor(int Device) {
   d = HapicData[Device];
 
   int RawADC = analogRead(d.hcs_sensepin);
-  //TODO
+//TODO
   Lux = (float)RawADC; // Need to do some processing to get lux from CDS reading
   return Lux;
 }
@@ -247,14 +249,13 @@ float readFlow(int Device) {
   //                      The averaging is done in software and stores a 30second rolling count
   ControlData d;
   d = HapicData[Device];
-
-  //TODO
+//TODO
   return (float)WaterFlowRate;
 }
 
 float readSensorPin(int Device) {
   float pinData;
-  //TODO
+//TODO
   return pinData;
 }
 
