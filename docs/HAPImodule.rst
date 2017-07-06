@@ -174,32 +174,37 @@ Usage
 
 .. code:: shell
 
-    $ python smart_module.py
-    2017-05-15 22:37:55.089210 - communicator.log - INFO - Communicator initialized
-    Mock Smart Module hosting asset  HSM-WT123-MOCK wt Environment
-    2017-05-15 22:37:55.091207 - smartmodule.log - INFO - Performing Discovery...
-    2017-05-15 22:37:55.091782 - smartmodule.log - INFO - Waiting Broker information on attempt: 1.
-    2017-05-15 22:37:56.092877 - smartmodule.log - INFO - MQTT Broker: ArchMain.local. IP: 192.168.0.99.
-    2017-05-15 22:37:56.093225 - communicator.log - INFO - Connecting to ArchMain.local. at 192.168.0.99.
-    2017-05-15 22:37:57.094778 - communicator.log - INFO - Connected with result code 0
+    (venv) $ python smart_module.py
+    2017-07-02 12:15:58.202878 - smartmodule.log - [*] INFO - Communicator initialized
+    Mock Smart Module hosting asset HSM-WT123-MOCK wt Environment.
+    2017-07-02 12:15:58.211355 - smartmodule.log - [*] INFO - Performing Broker discovery...
+    2017-07-02 12:16:01.213817 - smartmodule.log - [*] INFO - MQTT Broker: ArchMain.local. IP: 192.168.0.99.
+    2017-07-02 12:16:04.217127 - smartmodule.log - [*] INFO - Connecting to ArchMain.local. at 192.168.0.99.
+    2017-07-02 12:16:04.218420 - smartmodule.log - [*] INFO - Closing Zeroconf connection.
+    2017-07-02 12:16:04.239513 - smartmodule.log - [*] INFO - Connected with result code 0
     $SYS/broker/clients/total 0
+    2017-07-02 12:16:08.720840 - smartmodule.log - [*] INFO - No Scheduler found. Becoming the Scheduler.
+    2017-07-02 12:16:08.721437 - smartmodule.log - [*] INFO - Loading Schedule Data...
+    2017-07-02 12:16:08.748795 - smartmodule.log - [*] INFO - Schedule Data Loaded.
+    2017-07-02 12:16:08.749374 - smartmodule.log - [*] INFO -   Loading seconds job: System Status.
+    2017-07-02 12:16:08.749580 - smartmodule.log - [*] INFO -   Loading seconds job: Check Alert.
+    2017-07-02 12:16:08.750986 - smartmodule.log - [*] INFO - Scheduler program loaded.
+    2017-07-02 12:16:08.753495 - smartmodule.log - [*] INFO - Influxdb information loaded.
+    2017-07-02 12:16:08.755970 - smartmodule.log - [*] INFO - Site data loaded.
     $SYS/broker/clients/total 1
-    2017-05-15 22:38:02.648088 - smartmodule.log - INFO - No Scheduler found. Becoming the Scheduler.
-    2017-05-15 22:38:02.648342 - scheduler.log - INFO - Loading Schedule Data...
-    2017-05-15 22:38:02.648997 - scheduler.log - INFO - Schedule Data Loaded.
-    2017-05-15 22:38:02.649105 - scheduler.log - INFO -   Loading seconds job: System Status.
-    2017-05-15 22:38:02.649160 - scheduler.log - INFO -   Loading seconds job: Check Alert.
-    2017-05-15 22:38:02.649627 - smartmodule.log - INFO - Scheduler program loaded.
-    2017-05-15 22:38:02.650200 - smartmodule.log - INFO - Site data loaded.
-    Running command self.smart_module.on_query_status()
     Running command self.smart_module.on_check_alert()
-    STATUS/QUERY I might need to know how you are!
-    ASSET/QUERY/HSM-WT123-MOCK Is it warm here?
-    STATUS/RESPONSE [{'memory': {'cached': 913498112, 'used': 2294038528, 'free': 533913600}, 'disk': {'total': 52472872960, 'free': 36725215232, 'used': 13051768832}, 'network': {'packet_recv': 558630, 'packet_sent': 601295}, 'time': 1494898693.364454, 'hostname': 'ArchMain', 'boot': '2017-05-15 17:09:17', 'cpu': {'percentage': 3.2}, 'clients': 1}]
-    ASSET/RESPONSE/HSM-WT123-MOCK 8.0
-    2017-05-15 22:38:13.892977 - alert.log - INFO - Fetching alert param. from database
-    2017-05-15 22:38:13.893555 - alert.log - INFO - ALERT DETECTED. Value: 8.0.
-    2017-05-15 22:38:14.283729 - smartmodule.log - INFO - Wrote to analytic database: [{'fields': {'unit': 'C', 'value': '8.0'}, 'tags': {'site': u'HPF-0', 'asset': 'Indoor Temperature'}, 'time': '2017-05-15 22:38:14.010127', 'measurement': 'Environment'}].
+    ASSET/QUERY Is it warm here?
+    ASSET/RESPONSE/HSM-WT123-MOCK {"value_current": "31.0", "name": "Temperature Sensor", "context": "Environment", "virtual": 1, "type": "wt", "enabled": 1, "id": "HSM-WT123-MOCK", "unit": "C", "system": ""}
+    2017-07-02 12:16:19.070110 - smartmodule.log - [*] INFO - Wrote to analytic database.
+    2017-07-02 12:16:19.070215 - smartmodule.log - [*] INFO - Fetching alert parameters from database.
+    2017-07-02 12:16:19.070936 - smartmodule.log - [*] INFO - Closing Alert database connection.
+    2017-07-02 12:16:19.071006 - smartmodule.log - [*] INFO - [!] ALERT DETECTED. Value: 31.0.
+    ALERT/HSM-WT123-MOCK {"upper": 30.0, "lower": 10.0, "value_current": "31.0", "response": "email,sms", "message": "Houston, we have a problem", "notify_enabled": 1, "id": "HSM-WT123-MOCK"}
+    2017-07-02 12:16:19.071630 - smartmodule.log - [*] INFO - Sending email notification.
+    2017-07-02 12:16:19.072025 - smartmodule.log - [*] INFO - Mail settings loaded.
+    2017-07-02 12:16:22.287407 - smartmodule.log - [*] INFO - Email notification sent.
+    2017-07-02 12:16:22.485832 - smartmodule.log - [*] INFO - Sending SMS notification.
+    [...]
 
 
 An important note: we're currently using sqlite3 database to load schedule jobs and others information.
