@@ -11,8 +11,10 @@ VIRTUAL_ENV="false"
 VIRTUAL_PATH=""
 
 # System packages
-NECESSARY_PACKAGES=('avahi-daemon' 'python-dev' 'python-pip' 'mosquitto')
-# We still *need* influxdb and *maybe* grafana
+NECESSARY_PACKAGES=('avahi-daemon' 'python-dev' 'python-pip' 'mosquitto' 'sqlite3')
+
+# File dependencies
+file="./SDL_DS3231.py"
 
 # Information output, same as echo but with timestamp
 info() { echo "[*] [$(date)] : $*"; }
@@ -30,19 +32,21 @@ main() {
                 info "Error. You didn't provide a path for virtualenv."
                 exit -1
             fi
+	    VIRTUAL_PATH="$2"
             ;;
     esac
 
     # Installing necessary system packages. python-dev needed for RPi.GPIO
-    info "Installing necessay system packages: ${NECESSARY_PACKAGES[*]}"
-    sudo apt-get install "${NECESSARY_PACKAGES[*]}"
+    info "Installing necessary system packages: ${NECESSARY_PACKAGES[*]}"
+    info sudo apt-get install "${NECESSARY_PACKAGES[*]}"
+    sudo apt-get install ${NECESSARY_PACKAGES[*]}
 
     if [ "$VIRTUAL_ENV" == "true" ]; then
         info "Enabling virtualenv at $VIRTUAL_PATH"
         # virtualenv for legacy Python (i.e., Python 2)
         # sudo apt-get install virtualenv ;# use pip instead
         virtualenv "$VIRTUAL_PATH"
-        source "${VIRTUAL_PATH}/bin/activate"
+        source "${VIRTUAL_PATH}"/bin/activate
     fi
 
     info "Installing python modules..."
@@ -50,8 +54,13 @@ main() {
 
     # Installing a lone file from a project is ugly and suspicious.
     # Following needed only if running on real mode (with actual sensor data).
-    info "Fetching SDL module..."
-    wget https://raw.githubusercontent.com/switchdoclabs/RTC_SDL_DS3231/master/SDL_DS3231.py
+    info "Checking SDL module..."
+    if [ -e "$file" ]; then
+      info " SDL file exists"
+    else 
+      info " Fetching SDL_DS3231.py from github"
+      wget https://raw.githubusercontent.com/switchdoclabs/RTC_SDL_DS3231/master/SDL_DS3231.py
+    fi
 }
 
 main "$@"

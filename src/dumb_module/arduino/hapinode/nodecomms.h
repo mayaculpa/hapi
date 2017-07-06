@@ -16,12 +16,12 @@
 #along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #*********************************************************************
 
-HAPI Remote Terminal Unit Firmware Code V3.1.0
+HAPI Remote Terminal Unit Firmware Code V3.1.1
 Authors: Tyler Reed, Mark Miller
 ESP Modification: John Archbold
 
-Sketch Date: June 13th, 2017
-Sketch Version: V3.1.0
+Sketch Date: June 29th, 2017
+Sketch Version: V3.1.1
 Implement of MQTT-based HAPInode (HN) for use in Monitoring and Control
 Implements mDNS discovery of MQTT broker
 Implements definitions for
@@ -41,7 +41,7 @@ Communications Method
 // Make sure to update this for your own WiFi and/or MQTT Broker!
 // ==============================================================
 
-#define MQTT_broker_address "mqttbroker"    // IP address of mqtt broker
+#define MQTT_broker_default  "mqttbroker"    // Default hostname of mqtt broker
 #define MQTT_broker_username "mqttuser"      // Required if broker security is enabled
 #define MQTT_broker_password "mqttpass"
 #define MQTT_port 1883
