@@ -1,5 +1,4 @@
 ENV_DIC = ../../venv
-
 PACKAGES = avahi-daemon python-dev python-pip mosquitto sqlite3
 PYTHON_FILES = $(wildcard *.py)
 PIP_REQ = requirements.txt
@@ -15,6 +14,9 @@ endif
 	@sudo apt-get -y install $(PACKAGES)
 	@echo "[*] Fetching standalone module from github: $(SDL)"
 	@wget $(SDL)
+	@echo "[*] Copying configuration files."
+	@sudo cp -fv ../../docs/example_configs/mosquitto-example /etc/mosquitto/mosquitto.conf
+	@sudo cp -fv ../../docs/example_configs/avahi-example /etc/avahi/services/mosquitto.service
 
 clean-pyc:
 	@echo "[!] Cleaning compiled files."
@@ -28,13 +30,13 @@ clean-logs:
 	@echo "[!] Cleaning log files."
 	@rm -rfv *.log
 
-virtual: requirements.txt
+virtual:
 	@echo "[*] Building virtual environment for Python."
 	@sudo pip install virtualenv
 	@${VIRTUAL_ENV} $(ENV_DIC)
 	@echo "[!] Make sure you have sourced the virtualenv. If not, run: 'source ${ENV_DIC}/bin/activate'"
 
-packages:
+packages: requirements.txt
 	@echo "[!] Installing necessary packages."
 	@pip install -r requirements.txt
 
