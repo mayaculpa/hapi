@@ -70,7 +70,6 @@ class Asset(object):
             name
             unit
             virtual
-            context
             system
             enabled
         '''.split()
@@ -109,7 +108,7 @@ class SmartModule(object):
         self.longitude = ""
         self.latitude = ""
         self.scheduler = None
-        self.hostname = ""
+        self.hostname = socket.gethostname()
         self.last_status = ""
         self.ifconn = None
         self.rtc = rtc_interface.RTCInterface()
@@ -208,9 +207,9 @@ class SmartModule(object):
 
         self.comm.subscribe("SCHEDULER/RESPONSE")
         self.comm.send("SCHEDULER/QUERY", "Where are you?")
-        time.sleep(2) # Just wait for reply... Need a review?
+        Log.info("Waiting for Scheduler response...")
+        time.sleep(5) # Just wait for reply... Need a review?
 
-        self.hostname = socket.gethostname()
         self.comm.send("ANNOUNCE", self.hostname + " is online.")
 
         t_end = time.time() + 2
@@ -287,7 +286,7 @@ class SmartModule(object):
                     }}]
         meminfo = [{"measurement": "memory", "tags": {"asset": self.name}, "time": timestamp,
                     "fields": {
-                        "unit": "bytes",
+                        "unit": "KBytes",
                         "free": information["memory"]["free"],
                         "used": information["memory"]["used"],
                         "cached": information["memory"]["cached"]
@@ -677,10 +676,10 @@ class DataSync(object):
 def main():
     try:
         smart_module = SmartModule()
-        smart_module.discover()
-        smart_module.load_influx_settings()
         smart_module.asset.load_asset_info()
         smart_module.load_site_data()
+        smart_module.discover()
+        smart_module.load_influx_settings()
     except Exception as excpt:
         Log.exception("Error initializing Smart Module. %s.", excpt)
 
