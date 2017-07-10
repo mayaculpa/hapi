@@ -3,7 +3,6 @@
 
 """
 HAPI Smart Module v2.1.2
-Authors: Tyler Reed, Pedro Freitas
 Release: April 2017 Beta Milestone
 
 Copyright 2016 Maya Culpa, LLC
@@ -34,14 +33,13 @@ from multiprocessing import Process
 import urllib2
 import json
 import sqlite3
-import log
+from log import Log
 import schedule
 import communicator
 from influxdb import InfluxDBClient
 from status import SystemStatus
 import asset_interface
 import rtc_interface
-from alert import Alert
 import utilities
 from zeroconf import ServiceBrowser, ServiceStateChange, Zeroconf
 
@@ -50,20 +48,38 @@ reload(sys)
 class Asset(object):
     """Hold Asset (sensor) information."""
     def __init__(self):
-        self.id = "1"
-        self.name = "Indoor Temperature"
-        self.unit = "C"
-        self.type = "wt"
+        self.id = ""
+        self.name = ""
+        self.unit = ""
         self.virtual = 0
-        self.context = "Environment"
-        self.system = "Test"
-        self.enabled = True
-        self.value = None
-        self.alert = Alert(self.id)
+        self.context = ""
+        self.system = ""
+        self.enabled = False
+        self.type = ""
+        self.value_current = None
 
     def __str__(self):
-        """Return Asset information in JSON."""
-        return str([{"id": self.id, "name": self.name, "value": self.value}])
+        """Return Asset information in (almost) JSON."""
+        return str({"id": self.id, "name": self.name, "unit": self.unit, "virtual": self.virtual,
+                    "context": self.context, "system": self.system, "enabled": self.enabled,
+                    "type": self.type, "value_current": self.value_current})
+
+    def load_asset_info(self):
+        """Load asset information based on database."""
+        field_names = '''
+            name
+            unit
+            virtual
+            system
+            enabled
+        '''.split()
+        sql = "SELECT {fields} FROM assets WHERE id = '{asset}' LIMIT 1;".format(
+            fields=', '.join(field_names), asset=str(self.id))
+        database = sqlite3.connect(utilities.DB_CORE)
+        db_elements = database.cursor().execute(sql).fetchone()
+        for field_name, field_value in zip(field_names, db_elements):
+            setattr(self, field_name, field_value)
+        database.close()
 
 class SmartModule(object):
     """Represents a HAPI Smart Module (Implementation).
@@ -91,13 +107,10 @@ class SmartModule(object):
         self.location = ""
         self.longitude = ""
         self.latitude = ""
-        self.twilio_acct_sid = ""
-        self.twilio_auth_token = ""
         self.scheduler = None
-        self.hostname = ""
+        self.hostname = socket.gethostname()
         self.last_status = ""
-        self.ifconn = InfluxDBClient("127.0.0.1", 8086, "root", "root")
-        self.log = log.Log("smartmodule.log")
+        self.ifconn = None
         self.rtc = rtc_interface.RTCInterface()
         self.rtc.power_on_rtc()
         self.launch_time = self.rtc.get_datetime()
@@ -108,13 +121,37 @@ class SmartModule(object):
         self.ai = asset_interface.AssetInterface(self.asset.type, self.rtc.mock)
         self.rtc.power_off_rtc()
 
-    def become_broker(self):
-        """If no broker found. SM performs operation to become the broker."""
+    def load_influx_settings(self):
+        """Load Influxdb server information stored in database base."""
         try:
-            # We will change it soon!
-            os.system("sudo systemctl start avahi-daemon.service")
+            settings = {}
+            field_names = '''
+                server
+                port
+                username
+                password
+            '''.split()
+            sql = 'SELECT {fields} FROM influx_settings LIMIT 1;'.format(
+                fields=', '.join(field_names))
+            database = sqlite3.connect(utilities.DB_CORE)
+            db_elements = database.cursor().execute(sql).fetchone()
+            for field, value in zip(field_names, db_elements):
+                settings[field] = value
+            self.ifconn = InfluxDBClient(
+                settings["server"], settings["port"], settings["username"], settings["password"]
+            )
+            Log.info("Influxdb information loaded.")
         except Exception as excpt:
-            self.log.info("Error trying to become the Broker: %s.", excpt)
+            Log.exception("Trying to load Influx server information: %s.", excpt)
+        finally:
+            database.close()
+
+    def become_broker(self):
+        """If no broker found SM performs operation(s) to become the broker."""
+        try:
+            os.system("sudo systemctl start avahi-daemon.service") # We will change it soon!
+        except Exception as excpt:
+            Log.info("Error trying to become the Broker: %s.", excpt)
 
     def find_service(self, zeroconf, service_type, name, state_change):
         """Check for published MQTT. If it finds port 1883 of type '_mqtt', update broker name."""
@@ -133,7 +170,7 @@ class SmartModule(object):
             pass
 
     def find_broker(self, zeroconf):
-        """Create zeroconf object, if needed, and browser for services."""
+        """Browser for our (MQTT) services using Zeroconf."""
         browser = ServiceBrowser(zeroconf, "_mqtt._tcp.local.", handlers=[self.find_service])
 
     def discover(self):
@@ -143,60 +180,59 @@ class SmartModule(object):
             asset_type=self.asset.type,
             asset_context=self.asset.context))
 
-        zeroconf = Zeroconf()
-        for x in range(0, 5):
-            # Try to locate the MQTT Broker. If can't find, become one.
-            self.log.info("Performing Discovery...")
+        try:
+            max_sleep_time = 3 # Calling sleep should be reviewed.
+            zeroconf = Zeroconf()
+            Log.info("Performing Broker discovery...")
             self.find_broker(zeroconf)
-            self.log.info("Waiting Broker information on attempt: %d." % (x + 1))
-            time.sleep(1)
-            if self.comm.broker_name or self.comm.broker_ip:
-                self.log.info("MQTT Broker: {broker_name} IP: {broker_ip}.".format(
+            time.sleep(max_sleep_time) # Wait for max_sleep_time to see if we found it.
+            if self.comm.broker_name or self.comm.broker_ip: # Found it.
+                Log.info("MQTT Broker: {broker_name} IP: {broker_ip}.".format(
                     broker_name=self.comm.broker_name,
                     broker_ip=self.comm.broker_ip))
-                break
-            else:
+            else: # Make necessary actions to become the broker.
+                Log.info("Broker not found. Becoming the broker.")
                 self.become_broker()
-        else:
-            self.log.info("[Exiting] Couldn't find or become the broker.")
-            sys.exit(-1)
+            time.sleep(max_sleep_time)
+            self.comm.connect() # Now it's time to connect to the broker.
+        except Exception as excpt:
+            Log.exception("[Exiting] Trying to find or become the broker.")
+        finally:
+            Log.info("Closing Zeroconf connection.")
+            zeroconf.close()
 
-        self.comm.connect()
-        # we could leave it open to handle removed MQTT service, if that was the broker
-        zeroconf.close()
         t_end = time.time() + 10
         while (time.time() < t_end) and not self.comm.is_connected:
             time.sleep(1)
 
         self.comm.subscribe("SCHEDULER/RESPONSE")
         self.comm.send("SCHEDULER/QUERY", "Where are you?")
-        # Just wait for reply... We must review it.
-        time.sleep(2)
+        Log.info("Waiting for Scheduler response...")
+        time.sleep(5) # Just wait for reply... Need a review?
 
-        self.hostname = socket.gethostname()
         self.comm.send("ANNOUNCE", self.hostname + " is online.")
 
         t_end = time.time() + 2
         while (time.time() < t_end) and not self.comm.is_connected:
             time.sleep(1)
 
-        if not self.comm.scheduler_found:
-            # Loading scheduled jobs
+        if not self.comm.scheduler_found: # Become the Scheduler (necessary actions as Scheduler)
             try:
-                self.log.info("No Scheduler found. Becoming the Scheduler.")
+                Log.info("No Scheduler found. Becoming the Scheduler.")
                 self.scheduler = Scheduler()
                 self.scheduler.smart_module = self
                 self.scheduler.prepare_jobs(self.scheduler.load_schedule())
                 self.comm.scheduler_found = True
                 self.comm.subscribe("SCHEDULER/QUERY")
                 self.comm.unsubscribe("SCHEDULER/RESPONSE")
-                self.comm.subscribe("STATUS/RESPONSE")
+                self.comm.subscribe("STATUS/RESPONSE" + "/#")
                 self.comm.subscribe("ASSET/RESPONSE" + "/#")
-                self.comm.send("SCHEDULER/RESPONSE", self.hostname + ".local")
-                self.comm.send("ANNOUNCE", self.hostname + ".local is running the Scheduler.")
-                self.log.info("Scheduler program loaded.")
+                self.comm.subscribe("ALERT" + "/#")
+                self.comm.send("SCHEDULER/RESPONSE", self.hostname)
+                self.comm.send("ANNOUNCE", self.hostname + " is running the Scheduler.")
+                Log.info("Scheduler program loaded.")
             except Exception as excpt:
-                self.log.exception("Error initializing scheduler. %s.", excpt)
+                Log.exception("Error initializing scheduler. %s.", excpt)
 
     def load_site_data(self):
         field_names = '''
@@ -209,8 +245,6 @@ class SmartModule(object):
             location
             longitude
             latitude
-            twilio_acct_sid
-            twilio_auth_token
         '''.split()
         try:
             sql = 'SELECT {fields} FROM site LIMIT 1;'.format(
@@ -220,17 +254,17 @@ class SmartModule(object):
             for row in db_elements:
                 for field_name, field_value in zip(field_names, row):
                     setattr(self, field_name, field_value)
-            database.close()
-            self.log.info("Site data loaded.")
+            Log.info("Site data loaded.")
         except Exception as excpt:
-            self.log.exception("Error loading site data: %s.", excpt)
+            Log.exception("Error loading site data: %s.", excpt)
+        finally:
+            database.close()
 
     def connect_influx(self, database_name):
         """Connect to database named database_name on InfluxDB server.
         Create database if it does not already exist.
         Return the connection to the database."""
 
-        self.ifconn = InfluxDBClient("127.0.0.1", 8086, "root", "root")
         databases = self.ifconn.get_list_database()
         for db in databases:
             if database_name in db.values():
@@ -248,62 +282,48 @@ class SmartModule(object):
         cpuinfo = [{"measurement": "cpu", "tags": {"asset": self.name}, "time": timestamp,
                     "fields": {
                         "unit": "percentage",
-                        "load": information.cpu["percentage"]
-                    }
-                   }]
+                        "load": information["cpu"]["percentage"]
+                    }}]
         meminfo = [{"measurement": "memory", "tags": {"asset": self.name}, "time": timestamp,
                     "fields": {
-                        "unit": "bytes",
-                        "free": information.memory["free"],
-                        "used": information.memory["used"],
-                        "cached": information.memory["cached"]
-                    }
-                   }]
+                        "unit": "KBytes",
+                        "free": information["memory"]["free"],
+                        "used": information["memory"]["used"],
+                        "cached": information["memory"]["cached"]
+                    }}]
         netinfo = [{"measurement": "network", "tags": {"asset": self.name}, "time": timestamp,
                     "fields": {
                         "unit": "packets",
-                        "packet_recv": information.network["packet_recv"],
-                        "packet_sent": information.network["packet_sent"]
-                    }
-                   }]
+                        "packet_recv": information["network"]["packet_recv"],
+                        "packet_sent": information["network"]["packet_sent"]
+                    }}]
         botinfo = [{"measurement": "boot", "tags": {"asset": self.name}, "time": timestamp,
                     "fields": {
                         "unit": "timestamp",
-                        "date": information.boot
-                    }
-                   }]
+                        "date": information["boot"]
+                    }}]
         diskinf = [{"measurement": "disk", "tags": {"asset": self.name}, "time": timestamp,
                     "fields": {
                         "unit": "bytes",
-                        "total": information.disk["total"],
-                        "free": information.disk["free"],
-                        "used": information.disk["used"]
-                    }
-                   }]
+                        "total": information["disk"]["total"],
+                        "free": information["disk"]["free"],
+                        "used": information["disk"]["used"]
+                    }}]
         tempinf = [{"measurement": "internal", "tags": {"asset": self.name}, "time": timestamp,
                     "fields": {
-                    "unit": "C",
-                    "unit temp": str(self.rtc.get_temp()),
-                    }
-                   }]
+                        "unit": "C",
+                        "unit temp": str(self.rtc.get_temp()),
+                    }}]
 
-        ctsinfo = [{"measurement": "clients", "tags": {"asset": self.name}, "time": timestamp,
-                    "fields": {
-                        "unit": "integer",
-                        "clients": information.clients
-                    }
-                   }]
-        json = cpuinfo + meminfo + netinfo + botinfo + diskinf + tempinf + ctsinfo
-        conn.write_points(json)
+        conn.write_points(cpuinfo + meminfo + netinfo + botinfo + diskinf + tempinf)
 
-    def get_status(self, brokerconnections):
+    def get_status(self):
         """Fetch system information (stats)."""
         try:
             sysinfo = SystemStatus(update=True)
-            sysinfo.clients = brokerconnections
             return sysinfo
         except Exception as excpt:
-            self.log.exception("Error getting System Status: %s.", excpt)
+            Log.exception("Error getting System Status: %s.", excpt)
 
     def on_query_status(self):
         """It'll be called by the Scheduler to ask for System Status information."""
@@ -311,24 +331,24 @@ class SmartModule(object):
 
     def on_check_alert(self):
         """It'll called by the Scheduler to ask for Alert Conditions."""
-        self.comm.send("ASSET/QUERY/" + self.asset.id, "Is it warm here?")
+        self.comm.send("ASSET/QUERY", "Is it warm here?")
 
     def get_asset_data(self):
         try:
-            value = str(self.ai.read_value())
+            self.asset.value_current = str(self.ai.read_value())
         except Exception as excpt:
-            self.log.exception("Error getting asset data: %s.", excpt)
-            value = -1000
+            Log.exception("Error getting asset data: %s.", excpt)
+            self.asset.value_current = -1000
 
-        return value
+        return self.asset.value_current
 
     def log_sensor_data(self, data, virtual):
         if not virtual:
             try:
-                self.push_data(self.asset.name, self.asset.context, self.asset.value,
+                self.push_data(self.asset.name, self.asset.context, self.asset.value_current,
                                self.asset.unit)
             except Exception as excpt:
-                self.log.exception("Error logging sensor data: %s.", excpt)
+                Log.exception("Error logging sensor data: %s.", excpt)
         else:
             # For virtual assets, assume that the data is already parsed JSON
             unit_symbol = {
@@ -342,7 +362,7 @@ class SmartModule(object):
                     self.push_data(factor, "Environment", value, unit_symbol[factor])
 
             except Exception as excpt:
-                self.log.exception("Error logging sensor data: %s.", excpt)
+                Log.exception("Error logging sensor data: %s.", excpt)
 
     def push_data(self, asset_name, asset_context, value, unit):
         try:
@@ -362,9 +382,9 @@ class SmartModule(object):
                 }
             ]
             conn.write_points(json_body)
-            self.log.info("Wrote to analytic database: %s." % json_body)
+            Log.info("Wrote to analytic database.")
         except Exception as excpt:
-            self.log.exception("Error writing to analytic database: %s.", excpt)
+            Log.exception("Error writing to analytic database: %s.", excpt)
 
     def get_weather(self):
         response = ""
@@ -384,7 +404,7 @@ class SmartModule(object):
             response = parsed_json['current_observation']
             f.close()
         except Exception as excpt:
-            self.log.exception("Error getting weather data: %s.", excpt)
+            Log.exception("Error getting weather data: %s.", excpt)
         return response
 
     def log_command(self, job, result):
@@ -394,13 +414,14 @@ class SmartModule(object):
                 INSERT INTO command_log (timestamp, command, result)
                 VALUES (?, ?, ?)
             ''', (now, job.name, result)
-            self.log.info("Executed %s." % job.name)
+            Log.info("Executed %s.", job.name)
             database = sqlite3.connect(utilities.DB_HIST)
             database.cursor().execute(*command)
             database.commit()
-            database.close()
         except Exception as excpt:
-            self.log.exception("Error logging command: %s.", excpt)
+            Log.exception("Error logging command: %s.", excpt)
+        finally:
+            database.close()
 
     def get_env(self):
         now = datetime.datetime.now()
@@ -418,8 +439,8 @@ class SmartModule(object):
                - v{sys_version}
                - location: {executable}
               Timestamp: {timestamp}
-              Uptime: This Smart Module has been online for '''
-                  '''{days} days, {hours} hours, {minutes} minutes and {seconds} seconds.
+              Uptime: This Smart Module has been online for:
+              {days} days, {hours} hours, {minutes} minutes and {seconds} seconds.
         ''').format(
             version=utilities.VERSION,
             platform=sys.platform,
@@ -436,14 +457,13 @@ class SmartModule(object):
         try:
             self.comm.send("ENV/RESPONSE", s)
         except Exception as excpt:
-            self.log.exception("Error getting environment data: %s.", excpt)
+            Log.exception("Error getting environment data: %s.", excpt)
 
 class Scheduler(object):
     def __init__(self):
         self.running = True
         self.smart_module = None
         self.processes = []
-        self.log = log.Log("scheduler.log")
 
     class Job(object):
         def __init__(self):
@@ -474,12 +494,12 @@ class Scheduler(object):
             )
             command = command.encode("ascii")
             timeout = int(timeout)
-            self.site.comm.send("COMMAND/" + job.rtuid, command)
+            self.smart_module.comm.send("COMMAND/" + job.rtuid, command)
             time.sleep(timeout)
 
     def load_schedule(self):
         jobs = []
-        self.log.info("Loading Schedule Data...")
+        Log.info("Loading Schedule Data...")
         field_names = '''
             id
             name
@@ -502,43 +522,39 @@ class Scheduler(object):
                 for field_name, field_value in zip(field_names, row):
                     setattr(job, field_name, field_value)
                 jobs.append(job)
-            database.close()
-            self.log.info("Schedule Data Loaded.")
+            Log.info("Schedule Data Loaded.")
         except Exception as excpt:
-            self.log.exception("Error loading schedule. %s.", excpt)
+            Log.exception("Error loading schedule. %s.", excpt)
+        finally:
+            database.close()
 
         return jobs
 
     def prepare_jobs(self, jobs):
-        # It still has space for improvements.
         suffixed_names = {
-            # 'year': 'yearly',  # Not supported by schedule library.
-            # 'month': 'monthly',  # Not supported by schedule library.
             'week': 'weekly',
             'day': 'daily',
             'hour': 'hourly',
-            'minute': 'minutes',  # What would be better? Need to change log string also?
-            'second': 'seconds',  # What would be better? Need to change log string also?
+            'minute': 'minutes',
+            'second': 'seconds',
         }
         for job in jobs:
             if not job.enabled:
                 continue
 
             interval_name = job.time_unit.lower()
-            if job.interval > -1:  # What does -1 mean?
+            if job.interval > 0: # There can't be a job less than 0 (0 minutes? 0 seconds?)
                 plural_interval_name = interval_name + 's'
                 d = getattr(schedule.every(job.interval), plural_interval_name)
                 d.do(self.run_job, job)
-                self.log.info("  Loading %s job: %s." % (
-                    suffixed_names[interval_name],
-                    job.name))
+                Log.info("  Loading %s job: %s.", suffixed_names[interval_name], job.name)
             elif interval_name == 'day':
                 schedule.every().day.at(job.at_time).do(self.run_job, job)
-                self.log.info("  Loading time-based job: " + job.name)
+                Log.info("  Loading time-based job: " + job.name)
             else:
                 d = getattr(schedule.every(), interval_name)
                 d.do(self.run_job, job)
-                self.log.info("  Loading %s job: %s" % (interval_name, job.name))
+                Log.info("  Loading %s job: %s", interval_name, job.name)
 
     def run_job(self, job):
         if not self.running or not job.enabled:
@@ -556,7 +572,7 @@ class Scheduler(object):
                 response = eval(job.command)
                 self.smart_module.log_sensor_data(response, True)
             except Exception as excpt:
-                self.log.exception("Error running job. %s.", excpt)
+                Log.exception("Error running job. %s.", excpt)
         else:
             try:
                 if job.sequence != "":
@@ -568,7 +584,7 @@ class Scheduler(object):
                         ORDER BY step ;
                     ''', (job.sequence,)
                     database = sqlite3.connect(utilities.DB_CORE)
-                    seq_jobs = self.database.cursor().execute(*command)
+                    seq_jobs = database.cursor().execute(*command)
                     #print('len(seq_jobs) =', len(seq_jobs))
                     p = Process(target=self.process_sequence, args=(seq_jobs, job, job_rtu,
                                                                     seq_result,))
@@ -578,11 +594,11 @@ class Scheduler(object):
                     print('Running command', job.command)
                     # Check pre-defined jobs
                     if job.name == "Log Data":
-                        self.site.comm.send("QUERY/#", "query")
+                        self.smart_module.comm.send("QUERY/#", "query")
                         # self.site.log_sensor_data(response, False, self.logger)
 
                     elif job.name == "Log Status":
-                        self.site.comm.send("REPORT/#", "report")
+                        self.smart_module.comm.send("REPORT/#", "report")
 
                     else:
                         eval(job.command)
@@ -592,10 +608,9 @@ class Scheduler(object):
                     #self.log_command(job, "")
 
             except Exception as excpt:
-                self.log.exception("Error running job: %s.", excpt)
+                Log.exception("Error running job: %s.", excpt)
 
 class DataSync(object):
-    log = log.Log("datasync.log")
     @staticmethod
     def read_db_version():
         version = ""
@@ -605,11 +620,12 @@ class DataSync(object):
             data = database.cursor().execute(sql)
             for element in data:
                 version = element[0]
-            database.close()
-            DataSync.log.info("Read database version: %s." % version)
+            Log.info("Read database version: %s.", version)
             return version
         except Exception as excpt:
-            DataSync.log.exception("Error reading database version: %s.", excpt)
+            Log.exception("Error reading database version: %s.", excpt)
+        finally:
+            database.close()
 
     @staticmethod
     def write_db_version():
@@ -619,10 +635,11 @@ class DataSync(object):
             database = sqlite3.connect(utilities.DB_CORE)
             database.cursor().execute(*command)
             database.commit()
-            database.close()
-            DataSync.log.info("Wrote database version: %s." % version)
+            Log.info("Wrote database version: %s.", version)
         except Exception as excpt:
-            DataSync.log.exception("Error writing database version: %s.", excpt)
+            Log.exception("Error writing database version: %s.", excpt)
+        finally:
+            database.close()
 
     @staticmethod
     def publish_core_db(comm):
@@ -639,9 +656,9 @@ class DataSync(object):
             comm.unsubscribe("SYNCHRONIZE/DATA")
             comm.send("SYNCHRONIZE/DATA", byteArray)
             #comm.subscribe("SYNCHRONIZE/DATA")
-            DataSync.log.info("Published database.")
+            Log.info("Published database.")
         except Exception as excpt:
-            DataSync.log.exception("Error publishing database: %s.", excpt)
+            Log.exception("Error publishing database: %s.", excpt)
 
     def synchronize_core_db(self, data):
         try:
@@ -652,49 +669,26 @@ class DataSync(object):
             command = 'sqlite3 -init {file} hapi_new.db ""'.format(file=incoming)
             subprocess.call(command, shell=True)
 
-            DataSync.log.info("Synchronized database.")
+            Log.info("Synchronized database.")
         except Exception as excpt:
-            DataSync.log.exception("Error synchronizing database: %s.", excpt)
+            Log.exception("Error synchronizing database: %s.", excpt)
 
 def main():
-    #max_log_size = 1000000
-
-    # # Setup Logging
-    # logger_level = logging.DEBUG
-    # logger = logging.getLogger(utilities.SM_LOGGER)
-    # logger.setLevel(logger_level)
-    #
-    # # create logging file handler
-    # file_handler = logging.FileHandler('hapi_sm.log', 'a')
-    # file_handler.setLevel(logger_level)
-    #
-    # # create logging console handler
-    # console_handler = logging.StreamHandler()
-    # console_handler.setLevel(logger_level)
-    #
-    # #Set logging format
-    # formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    # file_handler.setFormatter(formatter)
-    # console_handler.setFormatter(formatter)
-    # logger.addHandler(file_handler)
-    # logger.addHandler(console_handler)
-
-    logging = log.Log("smartmodule.log")
     try:
         smart_module = SmartModule()
-        smart_module.discover()
+        smart_module.asset.load_asset_info()
         smart_module.load_site_data()
-
+        smart_module.discover()
+        smart_module.load_influx_settings()
     except Exception as excpt:
-        logging.exception("Error initializing Smart Module. %s.", excpt)
+        Log.exception("Error initializing Smart Module. %s.", excpt)
 
     while 1:
         try:
             time.sleep(0.5)
             schedule.run_pending()
-
         except Exception as excpt:
-            logging.exception("Error in Smart Module main loop. %s.", excpt)
+            Log.exception("Error in Smart Module main loop. %s.", excpt)
             break
 
 if __name__ == "__main__":

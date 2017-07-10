@@ -72,7 +72,6 @@ Communications Protocol: Ethernet, USB
 
 
 enum pin_control_enum {
-    // code relies on following order
     UNUSED_PIN, // or reserved
     DIGITAL_INPUT_PIN,
     DIGITAL_INPUT_PULLUP_PIN,
@@ -378,10 +377,10 @@ String getPinArray() {
   String response = "";
   for (int i = 0; i < NUM_DIGITAL+NUM_ANALOG; i++) {
     if (i <= (NUM_DIGITAL-1)) {
-      response = response + String(i) + String(pinControl[i]);
+      response += String(i) + String(pinControl[i]);
     }
     else {
-      response = response + "A" + String(i - NUM_DIGITAL) + String(pinControl[i]);
+      response += "A" + String(i - NUM_DIGITAL) + String(pinControl[i]);
     }
   }
   return response;
@@ -394,13 +393,13 @@ void assembleResponse(String &responseString, String varName, String value) {
   }
 
   if (!varName.equals("")) {
-    responseString = responseString + "\"" + varName + "\"" + ":" + "\"" + value + "\"" + ",";
+    responseString += "\"" + varName + "\"" + ":" + "\"" + value + "\"" + ",";
   }
   else {
     if (responseString.endsWith(",")) {
       responseString = responseString.substring(0, responseString.length() - 1);
     }
-    responseString = responseString + "}";
+    responseString += "}";
   }
 }
 
@@ -534,7 +533,7 @@ float readThermistorTemp(int iDevice) {
 
   Temp = log(10000.0*((1024.0/RawADC-1)));
   Temp = 1 / (0.001129148 + (0.000234125 + (0.0000000876741 * Temp * Temp ))* Temp );
-  Temp = Temp - 273.15;            // Convert Kelvin to Celsius
+  Temp -= 273.15;            // Convert Kelvin to Celsius
   if (!metric) {
      Temp = (Temp * 9.0)/ 5.0 + 32.0; // Convert Celsius to Fahrenheit
   }
@@ -587,8 +586,15 @@ String buildResponse() {
 //  assembleResponse(response, "lastcmd", lastCommand);
   //Process digital pins
   for (int i = 0; i < NUM_DIGITAL; i++) {
-    if (0 < pinControl[i] && pinControl[i] < 5) {
+    switch (pinControl[i]) {
+    case DIGITAL_INPUT_PIN:
+    case DIGITAL_INPUT_PULLUP_PIN:
+    case DIGITAL_OUTPUT_PIN:
+    case ANALOG_OUTPUT_PIN:
       assembleResponse(response, (String)i, (String)digitalRead(i));
+      break;
+    default:
+      break;
     }
   }
 

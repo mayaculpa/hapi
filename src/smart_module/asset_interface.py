@@ -3,7 +3,6 @@
 
 '''
 HAPI Generic Asset Interface
-Authors: Tyler Reed
 Release: April 2017, Alpha Milestone
 Copyright 2016 Maya Culpa, LLC
 
@@ -33,8 +32,6 @@ class AssetInterface(object):
             self.mock = True
         else:
             self.asset_lib = importlib.import_module("asset_" + str(asset_type))
-        # Not sure why we should use it?
-        #eval('from "asset_" + str(asset_type) import AssetImpl')
 
     def read_value(self):
         if self.mock:
