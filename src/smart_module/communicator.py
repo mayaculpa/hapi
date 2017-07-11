@@ -111,10 +111,10 @@ class Communicator(object):
             asset_id = msg.topic.split("/")[2]
             asset_info = json.loads(msg.payload)
             self.smart_module.push_data(asset_info["name"], asset_info["context"],
-                asset_info["value_current"], asset_info["unit"])
+                asset_info["value"], asset_info["unit"])
             alert = Alert()
             alert.update_alert(asset_id)
-            if alert.check_alert(asset_info["value_current"]):
+            if alert.check_alert(asset_info["value"]):
                 json_alert = str(alert).replace("u'", "'").replace("'", "\"")
                 self.send("ALERT/" + asset_id, json_alert)
 
@@ -157,14 +157,14 @@ class Communicator(object):
             asset_id = msg.topic.split("/")[1]
             site_name = self.smart_module.name
             time_now = datetime.datetime.now()
-            value_now = asset_payload["value_current"]
+            value = asset_payload["value"]
             try:
                 if "email" in asset_payload["response"]:
                     notify = notification.Email()
                     notify.send(
                         notify.subject.format(site=site_name, asset=asset_id),
                         notify.message.format(
-                            time=time_now, site=site_name, asset=asset_id, value=value_now)
+                            time=time_now, site=site_name, asset=asset_id, value=value)
                     )
                 if "sms" in asset_payload["response"]:
                     notify = notification.SMS()
@@ -172,7 +172,7 @@ class Communicator(object):
                         "from",
                         "to",
                         notify.message.format(
-                            time=time_now, site=site_name, asset=asset_id, value=value_now)
+                            time=time_now, site=site_name, asset=asset_id, value=value)
                     )
             except Exception as excpt:
                 Log.exception("Trying to send notification: %s.", excpt)
