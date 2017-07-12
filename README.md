@@ -30,10 +30,10 @@ See src/smart-module/README.rst for details about smart module.
 http://hapihq.com/
 
 ## Wiki Page
-Don't forget to check our Wiki Page.
+Don't forget to check our Read The Docs.
 Note: we're currently redefining a few things. You might want to check it again later.
 
-![HAPI Wiki Page](/../../wiki "Wiki Page")
+[HAPI Read The Docs](http://hapi.readthedocs.io)
 
 ## Open Source
 HAPI is an open project, meaning anyone and everyone can participate to the best of their ability.
