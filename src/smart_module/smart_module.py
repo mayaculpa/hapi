@@ -47,7 +47,7 @@ reload(sys)
 
 class Asset(object):
     """Hold Asset (sensor) information."""
-    def __init__(self):
+    def __init__(self, host):
         self.id = ""
         self.name = ""
         self.unit = ""
@@ -56,13 +56,16 @@ class Asset(object):
         self.system = ""
         self.enabled = False
         self.type = ""
-        self.value_current = None
+        self.value = None
+        self.time = ""
+        self.module = host
 
     def __str__(self):
         """Return Asset information in (almost) JSON."""
         return str({"id": self.id, "name": self.name, "unit": self.unit, "virtual": self.virtual,
                     "context": self.context, "system": self.system, "enabled": self.enabled,
-                    "type": self.type, "value_current": self.value_current})
+                    "type": self.type, "value": self.value, "time": self.time,
+                    "module": self.module})
 
     def load_asset_info(self):
         """Load asset information based on database."""
@@ -114,7 +117,7 @@ class SmartModule(object):
         self.rtc = rtc_interface.RTCInterface()
         self.rtc.power_on_rtc()
         self.launch_time = self.rtc.get_datetime()
-        self.asset = Asset()
+        self.asset = Asset(self.hostname)
         self.asset.id = self.rtc.get_id()
         self.asset.context = self.rtc.get_context()
         self.asset.type = self.rtc.get_type()
@@ -335,17 +338,18 @@ class SmartModule(object):
 
     def get_asset_data(self):
         try:
-            self.asset.value_current = str(self.ai.read_value())
+            self.asset.time = str(time.time())
+            self.asset.value = str(self.ai.read_value())
         except Exception as excpt:
             Log.exception("Error getting asset data: %s.", excpt)
-            self.asset.value_current = -1000
+            self.asset.value = -1000
 
-        return self.asset.value_current
+        return self.asset.value
 
     def log_sensor_data(self, data, virtual):
         if not virtual:
             try:
-                self.push_data(self.asset.name, self.asset.context, self.asset.value_current,
+                self.push_data(self.asset.name, self.asset.context, self.asset.value,
                                self.asset.unit)
             except Exception as excpt:
                 Log.exception("Error logging sensor data: %s.", excpt)

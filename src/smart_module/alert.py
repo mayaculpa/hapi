@@ -36,7 +36,7 @@ class Alert(object):
         self.upper_threshold = 0.0
         self.message = ""
         self.response_type = ""
-        self.value_current = 0.0
+        self.value = 0.0
         self.notify_enabled = False
 
     def __str__(self):
@@ -46,7 +46,7 @@ class Alert(object):
                     "upper": self.upper_threshold,
                     "message": self.message,
                     "response": self.response_type,
-                    "value_current": self.value_current,
+                    "value": self.value,
                     "notify_enabled": self.notify_enabled})
 
     def update_alert(self, asset_id):
@@ -77,9 +77,9 @@ class Alert(object):
 
     def check_alert(self, current_value):
         """Check for alert to a given _value_."""
-        self.value_current = current_value
-        if self.lower_threshold <= float(current_value) <= self.upper_threshold:
+        self.value = current_value
+        if self.lower_threshold <= float(self.value) <= self.upper_threshold:
             return False
 
-        Log.info("[!] ALERT DETECTED. Value: %s.", current_value)
+        Log.info("[!] ALERT DETECTED. Value: %s.", self.value)
         return True
