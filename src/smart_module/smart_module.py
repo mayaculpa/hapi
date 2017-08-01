@@ -307,7 +307,7 @@ class SmartModule(object):
                     }}]
         diskinf = [{"measurement": "disk", "tags": {"asset": self.name}, "time": timestamp,
                     "fields": {
-                        "unit": "bytes",
+                        "unit": "KBytes",
                         "total": information["disk"]["total"],
                         "free": information["disk"]["free"],
                         "used": information["disk"]["used"]
