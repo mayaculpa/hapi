@@ -177,7 +177,7 @@ int pinDefaults[NUM_DIGITAL+NUM_ANALOG] = {
 // Default pin allocation
 #define LIGHT_SENSORPIN 2 // Reserved pin for a Light sensor
 #define FLOW_SENSORPIN 4  // Reserved pin for a flow sensor
-#define DHT_PIN 12        // Reserved pin for DHT-22 sensor
+#define DHT_PIN 2        // Reserved pin for DHT-22 sensor
 #define WIRE_PIN  13      // Reserved pin for 1-Wire bus
 #define PH_SENSORPIN 14   // Reserved pin for pH probe
 #define TDS_SENSORPIN 15  // Reserved pin for TDS probe
@@ -195,6 +195,18 @@ int pinDefaults[NUM_DIGITAL+NUM_ANALOG] = {
 #define spHDn_PIN A0      // pHDown pump sensor pin
 #define cLamp_PIN 12      // Lamp control pin
 #define sLamp_PIN A0      // Analog Lamp sensor pin
+#define sLux_PIN  32      // Light sensor pin
+#define spH_PIN   35      // pH sensor pin
+
+#define sTDS_PIN 34       // Analog TDS sensor pin
+#define sWtrFlow_PIN 36   // Water flow sensor pin
+#define cWtrPump_PIN 4    // Water pump control pin
+#define cWtrFill_PIN 5    // Fill pump control pin
+#define sWtrFloat_PIN 39  // Fill float sensor pin
+
+#define SDA_PIN 21        // Default pin for I2C
+#define SCL_PIN 22        // Default pin for I2C
+
 
 // Default pin modes
 // Analog input pins are assumed to be used as analog input pins

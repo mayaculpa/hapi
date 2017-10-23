@@ -33,13 +33,13 @@ Communications Protocol: Ethernet, USB
 
 //**** Begin Board Selection Section ****
 //#define RTU_ENET          // Define for Arduino 2560 via Ethernet shield
-#define RTU_USB           // Define for Arduino 2560 via USB
+//#define RTU_USB           // Define for Arduino 2560 via USB
 //#define RTU_UNO           // Define for Arduino UNO via USB
-//#define RTU_ESP           // Define for NodeMCU, or ESP8266-based device
+#define RTU_ESP           // Define for NodeMCU, or ESP8266-based device
 
 // Required for ESP (WiFi) connection
-//#define HAPI_SSID "your_ssid"
-//#define HAPI_PWD  "your_pwd"
+#define HAPI_SSID "PROTOHAUS"
+#define HAPI_PWD  "PH-Wlan-2016#"
 
 //**** Begin Board Selection Section ****
 
@@ -58,6 +58,16 @@ Communications Protocol: Ethernet, USB
 #include <OneWire.h>
 #include <DallasTemperature.h>
 
+// Pin type description used for all boards
+enum pin_control_enum {
+    UNUSED_PIN, // or reserved
+    DIGITAL_INPUT_PIN,
+    DIGITAL_INPUT_PULLUP_PIN,
+    DIGITAL_OUTPUT_PIN,
+    ANALOG_OUTPUT_PIN,
+    ANALOG_INPUT_PIN
+};
+
 #ifdef RTU_ENET
 #define NUM_DIGITAL 54    // Number of digital I/O pins
 #define NUM_ANALOG  16    // Number of analog I/O pins
@@ -70,15 +80,6 @@ Communications Protocol: Ethernet, USB
 #define DHTTYPE DHT22    // Sets DHT type
 #define DHTPIN 12        // Reserved pin for DHT-22 sensor
 
-
-enum pin_control_enum {
-    UNUSED_PIN, // or reserved
-    DIGITAL_INPUT_PIN,
-    DIGITAL_INPUT_PULLUP_PIN,
-    DIGITAL_OUTPUT_PIN,
-    ANALOG_OUTPUT_PIN,
-    ANALOG_INPUT_PIN
-};
 // Default pin modes
 // Analog input pins are assumed to be used as analog input pins
 enum pin_control_enum pinControl[NUM_DIGITAL+NUM_ANALOG] = {
@@ -311,7 +312,7 @@ String RTUID = "RTU301";             // This RTUs Unique ID Number - unique acro
 #ifdef RTU_UNO
 String RTUID = "RTU201";             // This RTUs Unique ID Number - unique across site
 #endif
-idle_mode = false;         // a boolean representing the idle mode of the RTU
+boolean idle_mode = false;         // a boolean representing the idle mode of the RTU
 boolean metric = true;             // should values be returned in metric or US customary units
 String inputString = "";           // A string to hold incoming data
 String inputCommand = "";          // A string to hold the command
@@ -377,7 +378,8 @@ String getPinArray() {
   String response = "";
   for (int i = 0; i < NUM_DIGITAL+NUM_ANALOG; i++) {
     if (i <= (NUM_DIGITAL-1)) {
-      response += String(i) + String(pinControl[i]);
+//      response += String(i) + String(pinControl[i]);
+      response += "D" + String(i) + String(pinControl[i]);
     }
     else {
       response += "A" + String(i - NUM_DIGITAL) + String(pinControl[i]);
@@ -684,7 +686,7 @@ String getStatus() {
   retval += "Analog= " + String(NUM_ANALOG) + "\n";
   retval += "Free SRAM: " + String(freeRam()) + "k\n";
 
-  retval += "Idle Mode: " + (idle_mode ? "True" : "False");
+  retval += String("Idle Mode: ") + (idle_mode ? String("True") : String("False"));
 
   return retval;
 
@@ -757,9 +759,9 @@ void setup() {
     Serial.print(".");
   }
   WiFi.macAddress(mac);
-    Serial.print("IP address: ");
-    Serial.println(WiFi.localIP());
-    rtuServer.begin();
+  Serial.print("IP address: ");
+  Serial.println(WiFi.localIP());
+  rtuServer.begin();
 #endif
 
   Serial.println("Starting communications  ...");
