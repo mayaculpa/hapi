@@ -1,0 +1,13 @@
+language: c
+sudo: false
+before_install:
+  - source <(curl -SLs https://raw.githubusercontent.com/adafruit/travis-ci-arduino/master/install.sh)
+install:
+  - arduino/arduino --install-library "Adafruit Circuit Playground,Adafruit Unified Sensor,ArduinoJson,Bounce2,DallasTemperature,DHT sensor library,DS1307RTC,Firmata,OneWire,PubSubClient,Time,TimeAlarms"
+  - git clone https://github.com/probonopd/TimeLord.git Arduino/libraries/TimeLord
+script:
+  - build_platform esp8266
+notifications:
+  email:
+    on_success: change
+    on_failure: change
