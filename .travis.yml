@@ -1,12 +1,22 @@
 language: c
 sudo: false
 before_install:
-  - source <(curl -SLs https://raw.githubusercontent.com/adafruit/travis-ci-arduino/master/install.sh)
+  - "/sbin/start-stop-daemon --start --quiet --pidfile /tmp/custom_xvfb_1.pid --make-pidfile --background --exec /usr/bin/Xvfb -- :1 -ac -screen 0 1280x1024x16"
+  - sleep 3
+  - export DISPLAY=:1.0
+  - wget http://downloads.arduino.cc/arduino-1.8.5-linux64.tar.xz
+  - tar xf arduino-1.8.5-linux64.tar.xz
+  - mv arduino-1.8.5 $HOME/arduino_ide
+  - export PATH="$HOME/arduino_ide:$PATH"
 install:
-  - arduino/arduino --install-library "Adafruit Circuit Playground,Adafruit Unified Sensor,ArduinoJson,Bounce2,DallasTemperature,DHT sensor library,DS1307RTC,Firmata,OneWire,PubSubClient,Time,TimeAlarms"
-  - git clone https://github.com/probonopd/TimeLord.git Arduino/libraries/TimeLord
+  - arduino --install-library "Adafruit Circuit Playground,Adafruit Unified Sensor,ArduinoJson,Bounce2,DallasTemperature,DHT sensor library,DS1307RTC,Firmata,OneWire,PubSubClient,Time,TimeAlarms"
+  - git clone https://github.com/probonopd/TimeLord.git $HOME/arduino-ide/libraries/TimeLord
+  - arduino --pref "boardsmanager.additional.urls=http://arduino.esp8266.com/stable/package_esp8266com_index.json" --save-prefs
+  - arduino --install-boards esp8266:esp8266
+  - arduino --board esp8266:esp8266:generic --save-prefs
+  - arduino --pref "compiler.warning_level=all" --save-prefs
 script:
-  - build_platform esp8266
+  - arduino --verify --board esp8266:esp8266:huzzah $PWD/src/dumb_module/arduino/hapifirmware/hapifirmware.ino
 notifications:
   email:
     on_success: change
