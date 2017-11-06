@@ -38,8 +38,8 @@ Communications Protocol: Ethernet, USB
 #define RTU_ESP           // Define for NodeMCU, or ESP8266-based device
 
 // Required for ESP (WiFi) connection
-#define HAPI_SSID "PROTOHAUS"
-#define HAPI_PWD  "PH-Wlan-2016#"
+#define HAPI_SSID "your_ssid"
+#define HAPI_PWD  "your_ssid"
 
 //**** Begin Board Selection Section ****
 
@@ -378,8 +378,7 @@ String getPinArray() {
   String response = "";
   for (int i = 0; i < NUM_DIGITAL+NUM_ANALOG; i++) {
     if (i <= (NUM_DIGITAL-1)) {
-//      response += String(i) + String(pinControl[i]);
-      response += "D" + String(i) + String(pinControl[i]);
+      response += String(i) + String(pinControl[i]);
     }
     else {
       response += "A" + String(i - NUM_DIGITAL) + String(pinControl[i]);
