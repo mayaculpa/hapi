@@ -38,8 +38,10 @@ Communications Protocol: Ethernet, USB
 #define RTU_ESP           // Define for NodeMCU, or ESP8266-based device
 
 // Required for ESP (WiFi) connection
+#ifndef HAPI_SSID
 #define HAPI_SSID "your_ssid"
 #define HAPI_PWD  "your_ssid"
+#endif
 
 //**** Begin Board Selection Section ****
 
@@ -362,6 +364,12 @@ struct FuncDef {   //define a structure to associate a Name to generic function 
   GenericFP fPtr;
 };
 
+float readTemperature(int iDevice);
+float readHumidity(int iDevice);
+float readThermistorTemp(int iDevice);
+float readWaterTemperature(int iDevice);
+float readpH(int iDevice);
+
 //Create a FuncDef for each custom function
 //Format: abbreviation, context, pin, function
 FuncDef func1 = {"tmp", "dht", -1, &readTemperature};
@@ -632,6 +640,8 @@ String buildResponse() {
   assembleResponse(response, "", ""); //closes up the response string
   return response;
 }
+
+int freeRam ();
 
 String getStatus() {
   // Returns the current status of the RTU itself
