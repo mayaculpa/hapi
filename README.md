@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/mayaculpa/hapi.svg?master)](https://travis-ci.org/mayaculpa/hapi)
+
 ![HAPI Project](/docs/img/hapi.png?raw=true "HAPI Project")
 
 # Zero-footprint Autonomous Food Production

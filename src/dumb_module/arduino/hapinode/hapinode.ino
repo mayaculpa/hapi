@@ -44,8 +44,8 @@ Communications Method
 
 //**ESP Based
 // Board Type
-//#define HN_ESP8266
-#define HN_ESP32
+#define HN_ESP8266
+//#define HN_ESP32
 
 // Connection Type
 // ===============
@@ -116,19 +116,19 @@ unsigned long mscount;      // millisecond counter
 time_t epoch;               // UTC seconds
 time_t currentTime;         // Local value
 
-String HAPI_FW_VERSION = F("V3.1.1");    // The version of the firmware the HN is running
+String HAPI_FW_VERSION = "V3.1.1";    // The version of the firmware the HN is running
 #ifdef HN_ENET
-String HN_base = F("HN2");             // Prefix for mac address
+String HN_base = "HN2";             // Prefix for mac address
 #endif
 #ifdef HN_ESP8266
-String HN_base = F("HN3");             // Prefix for mac address
+String HN_base = "HN3";             // Prefix for mac address
 #endif
 #ifdef HN_ESP32
-String HN_base = F("HN4");             // Prefix for mac address
+String HN_base = "HN4";             // Prefix for mac address
 #endif
 
-String HN_Id = F("HNx");              // HN address
-String HN_status = F("Online");
+String HN_Id = "HNx";              // HN address
+String HN_status = "Online";
 
 boolean idle_mode = false;         // a boolean representing the idle mode of the HN
 boolean metric = true;             // should values be returned in metric or US customary units

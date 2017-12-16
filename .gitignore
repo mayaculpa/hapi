@@ -111,3 +111,8 @@ SDL_DS3231.py
 docs/_build/
 docs/_static/
 docs/_templates/
+
+# VSCode
+.pioenvs
+.piolibdeps
+.vscode

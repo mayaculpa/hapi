@@ -1,0 +1,18 @@
+language: python
+python:
+    - "2.7"
+
+# Cache PlatformIO packages using Travis CI container-based infrastructure
+sudo: false
+cache:
+    directories:
+        - "~/.platformio"
+
+env:
+    - PLATFORMIO_CI_SRC=src/dumb_module/arduino/hapifirmware
+
+install:
+    - pip install -U platformio
+
+script:
+    - platformio ci --project-conf=src/dumb_module/arduino/hapifirmware/platformio.ini --board=esp12e

@@ -49,7 +49,7 @@ Communications Method
 #define UDP_port 2390
 #define NTP_port 123
 
-#define HAPI_SSID "HAPInet"
-#define HAPI_PWD  "HAPIconnect"
+#define HAPI_SSID "PROTOHAUS"
+#define HAPI_PWD  "PH-Wlan-2016#"
 
 #endif //HAPIWiFi_H
