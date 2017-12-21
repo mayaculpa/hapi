@@ -1,6 +1,8 @@
 #include <Arduino.h>
 
-void setupTime()  {
+#include "hapi_time.h"
+
+void HapiTime::setupTime()  {
   setSyncInterval(60);        // Set minimum seconds between re-sync via now() call
   setSyncProvider(RTC.get);   // Get the time from the RTC during operation
   epoch = getNtpTime();       // Get the time from ntp (if available)
@@ -15,11 +17,11 @@ void setupTime()  {
   Serial.println(F("RTC has the system time"));
 }
 
-void updateRTC(void) {
+void HapiTime::updateRTC(void) {
     setupTime();          // initialize RTC using ntp, if available
 }
 
-void digitalClockDisplay(){
+void HapiTime::digitalClockDisplay(){
   // digital clock display of the time
   Serial.print(hour());
   printDigits(minute());
@@ -33,7 +35,7 @@ void digitalClockDisplay(){
   Serial.println(); 
 }
 
-void printDigits(int digits){
+void HapiTime::printDigits(int digits){
   // utility function for digital clock display: prints preceding colon and leading 0
   Serial.print(F(":"));
   if(digits < 10)
@@ -41,7 +43,7 @@ void printDigits(int digits){
   Serial.print(digits);
 }
 
-void flashLED(void) {
+void HapiTime::flashLED(void) {
     digitalClockDisplay();
     ledState = !ledState;
     digitalWrite(LED_PIN, ledState ? HIGH : LOW);

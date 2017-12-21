@@ -36,6 +36,8 @@ Communications Method
   MQTT        Listens for messages on Port 1883
 */
 
+#include "hapi_time.h"
+
 //**** Begin Board Configuration Section ****
 
 // Board Type
@@ -44,8 +46,8 @@ Communications Method
 
 //**ESP Based
 // Board Type
-#define HN_ESP8266
-//#define HN_ESP32
+//#define HN_ESP8266
+#define HN_ESP32
 
 // Connection Type
 // ===============
@@ -472,7 +474,7 @@ void setup() {
   Serial.print(F("Local IP:   "));
   Serial.println(ntpServerIP);
 
-  setupTime();          // initialize RTC using ntp, if available
+  HapiTime::setupTime();          // initialize RTC using ntp, if available
   mscount = millis();   // initialize the millisecond counter
 
 // Start MQTT support
@@ -506,10 +508,10 @@ void setup() {
   currentTime = now();
   Serial.println(F("Setup Complete. Listening for topics .."));
 // Create the recurring calls, to trigger at or after time
-  Alarm.timerRepeat(1, flashLED);         // Every    second
+  Alarm.timerRepeat(1, HapiTime::flashLED);         // Every    second
   Alarm.timerRepeat(2, checkControls);    // Every  2 seconds
   Alarm.timerRepeat(5, hapiSensors);      // Every  5 seconds
-  Alarm.alarmRepeat(3,30,0,updateRTC);    // 3:30am every day
+  Alarm.alarmRepeat(3,30,0, HapiTime::updateRTC);    // 3:30am every day
 }
 
 void loop() {
