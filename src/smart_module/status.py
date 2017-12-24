@@ -54,9 +54,9 @@ class SystemStatus(object):
         self.boot = datetime.datetime.fromtimestamp(psutil.boot_time()).strftime(
             "%Y-%m-%d %H:%M:%S")
         virtual_memory = psutil.virtual_memory()
-        self.memory["used"] = virtual_memory.used
-        self.memory["free"] = virtual_memory.free
-        self.memory["cached"] = virtual_memory.cached
+        self.memory["used"] = int(virtual_memory.used/1024)
+        self.memory["free"] = int(virtual_memory.free/1024)
+        self.memory["cached"] = int(virtual_memory.cached/1024)
         net_io_counters = psutil.net_io_counters()
         self.network["packet_sent"] = net_io_counters.packets_sent
         self.network["packet_recv"] = net_io_counters.packets_recv

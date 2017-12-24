@@ -307,7 +307,7 @@ class SmartModule(object):
                     }}]
         diskinf = [{"measurement": "disk", "tags": {"asset": self.name}, "time": timestamp,
                     "fields": {
-                        "unit": "bytes",
+                        "unit": "KBytes",
                         "total": information["disk"]["total"],
                         "free": information["disk"]["free"],
                         "used": information["disk"]["used"]
@@ -581,38 +581,39 @@ class Scheduler(object):
             try:
                 if job.sequence != "":
                     print('Running sequence', job.sequence)
-                    command = '''
-                        SELECT name, command, step_name, timeout
-                        FROM sequence
-                        WHERE name=?
-                        ORDER BY step ;
-                    ''', (job.sequence,)
-                    database = sqlite3.connect(utilities.DB_CORE)
-                    seq_jobs = database.cursor().execute(*command)
-                    #print('len(seq_jobs) =', len(seq_jobs))
-                    p = Process(target=self.process_sequence, args=(seq_jobs, job, job_rtu,
-                                                                    seq_result,))
-                    p.start()
-                    database.close()
+                    # command = '''
+                    #     SELECT name, command, step_name, timeout
+                    #     FROM sequence
+                    #     WHERE name=?
+                    #     ORDER BY step ;
+                    # ''', (job.sequence,)
+                    # database = sqlite3.connect(utilities.DB_CORE)
+                    # seq_jobs = database.cursor().execute(*command)
+                    # #print('len(seq_jobs) =', len(seq_jobs))
+                    # p = Process(target=self.process_sequence, args=(seq_jobs, job, job_rtu,
+                    #                                                 seq_result,))
+                    # p.start()
                 else:
-                    print('Running command', job.command)
+                    print('Running command', str(job.command))
                     # Check pre-defined jobs
-                    if job.name == "Log Data":
-                        self.smart_module.comm.send("QUERY/#", "query")
-                        # self.site.log_sensor_data(response, False, self.logger)
-
-                    elif job.name == "Log Status":
-                        self.smart_module.comm.send("REPORT/#", "report")
-
-                    else:
-                        eval(job.command)
-                        # if job_rtu is not None:  #??? job_rtu is always None. Bug?
-                        #     self.site.comm.send("COMMAND/" + job.rtuid, job.command)
-
-                    #self.log_command(job, "")
-
+                    # if job.name == "Log Data":
+                    #     self.smart_module.comm.send("QUERY/#", "query")
+                    #     # self.site.log_sensor_data(response, False, self.logger)
+                    #
+                    # elif job.name == "Log Status":
+                    #     self.smart_module.comm.send("REPORT/#", "report")
+                    #
+                    # else:
+                    exec(job.command)
+                    #     eval(job.command)
+                    #     # if job_rtu is not None:  #??? job_rtu is always None. Bug?
+                    #     #     self.site.comm.send("COMMAND/" + job.rtuid, job.command)
+                    #
+                    # #self.log_command(job, "")
             except Exception as excpt:
                 Log.exception("Error running job: %s.", excpt)
+            #finally:
+            #    database.close()
 
 class DataSync(object):
     @staticmethod
